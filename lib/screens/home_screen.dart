@@ -18,12 +18,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFFFF0F3), // soft-pink
+      extendBody: true,
       body: SafeArea(
+        bottom: false,
         child: Column(
           children: [
-            // Header
+            // Header with gradient background
             Padding(
-              padding: const EdgeInsets.fromLTRB(28, 32, 28, 32),
+              padding: const EdgeInsets.fromLTRB(24, 40, 24, 24),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -37,56 +39,63 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                             'Hello, Maker!',
                             style: TextStyle(
                               fontFamily: 'Fredoka',
-                              fontSize: 28,
-                              fontWeight: FontWeight.bold,
-                              color: const Color(0xFFFF4D8D), // vibrant-pink
+                              fontSize: 24,
+                              fontWeight: FontWeight.w700,
+                              color: const Color(0xFFFF85A2), // strawberry
                               height: 1.2,
                             ),
                           ),
-                          const SizedBox(width: 8),
+                          const SizedBox(width: 6),
                           const Icon(
                             Icons.auto_awesome,
-                            color: Color(0xFFFF4D8D),
-                            size: 24,
+                            color: Color(0xFFFFD700), // sparkle
+                            size: 20,
                           ),
                         ],
                       ),
-                      const SizedBox(height: 4),
+                      const SizedBox(height: 2),
                       Text(
-                        'Let\'s create something cute',
+                        'Ready to create magic today?',
                         style: TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.w600,
-                          color: const Color(0xFF5C5456).withOpacity(0.6),
-                          letterSpacing: 0.5,
+                          color: const Color(0xFF6B7280),
+                          letterSpacing: 0,
                         ),
                       ),
                     ],
                   ),
-                  // Profile Avatar
+                  // Profile Avatar with 3D effect
                   Container(
-                    width: 44,
-                    height: 44,
+                    width: 48,
+                    height: 48,
                     decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: Colors.white, width: 2),
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.white, width: 3),
                       boxShadow: [
                         BoxShadow(
-                          color: const Color(0xFFFF4D8D).withOpacity(0.05),
-                          blurRadius: 16,
-                          spreadRadius: 4,
+                          color: Colors.black.withOpacity(0.1),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
                         ),
                       ],
                     ),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(18),
-                      child: Container(
-                        color: const Color(0xFFFFD1DC),
-                        child: const Icon(
-                          Icons.person,
-                          color: Color(0xFFFF4D8D),
-                          size: 24,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        gradient: LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [
+                            const Color(0xFFFFD1DC),
+                            const Color(0xFFFF85A2),
+                          ],
                         ),
+                      ),
+                      child: const Icon(
+                        Icons.person,
+                        color: Colors.white,
+                        size: 24,
                       ),
                     ),
                   ),
@@ -97,90 +106,154 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             // Main Content
             Expanded(
               child: SingleChildScrollView(
+                physics: const BouncingScrollPhysics(),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Start New Puzzle Button
+                    const SizedBox(height: 20), // 增加顶部间距
+                    
+                    // Start New Puzzle - 3D Button with decorations
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 24),
-                      child: Material(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(20),
-                        elevation: 0,
-                        shadowColor: const Color(0xFFFF4D8D).withOpacity(0.12),
-                        child: InkWell(
-                          onTap: _isLoading ? null : _startCreating,
-                          borderRadius: BorderRadius.circular(20),
-                          child: Container(
-                            padding: const EdgeInsets.all(24),
-                            child: Row(
-                              children: [
-                                // Icon
-                                Container(
-                                  width: 64,
-                                  height: 64,
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFFFF4D8D),
-                                    borderRadius: BorderRadius.circular(20),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: const Color(0xFFFF4D8D).withOpacity(0.2),
-                                        blurRadius: 20,
-                                        offset: const Offset(0, 8),
-                                      ),
-                                    ],
-                                  ),
-                                  child: const Icon(
-                                    Icons.photo_camera,
-                                    color: Colors.white,
-                                    size: 32,
-                                  ),
-                                ),
-                                const SizedBox(width: 20),
-                                // Text
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        'Start New Puzzle',
-                                        style: TextStyle(
-                                          fontFamily: 'Fredoka',
-                                          fontSize: 20,
-                                          fontWeight: FontWeight.bold,
-                                          color: const Color(0xFFFF4D8D),
-                                        ),
-                                      ),
-                                      const SizedBox(height: 4),
-                                      Text(
-                                        'COMBINE YOUR MOTION PHOTOS',
-                                        style: TextStyle(
-                                          fontSize: 10,
-                                          fontWeight: FontWeight.bold,
-                                          color: const Color(0xFF5C5456).withOpacity(0.4),
-                                          letterSpacing: 1.5,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                // Arrow
-                                Container(
-                                  padding: const EdgeInsets.all(8),
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFFFFF0F3),
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  child: const Icon(
-                                    Icons.chevron_right,
-                                    color: Color(0xFFFF4D8D),
-                                    size: 24,
-                                  ),
-                                ),
-                              ],
+                      child: Stack(
+                        clipBehavior: Clip.none,
+                        children: [
+                          // 3D shadow layer
+                          Positioned(
+                            top: 8,
+                            left: 0,
+                            right: 0,
+                            child: Container(
+                              height: 200,
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFE66A85),
+                                borderRadius: BorderRadius.circular(48),
+                              ),
                             ),
                           ),
-                        ),
+                          // Main Button
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(48),
+                            child: Container(
+                              width: double.infinity,
+                              height: 200,
+                              child: Material(
+                                color: const Color(0xFFFF85A2),
+                                child: InkWell(
+                                  onTap: _isLoading ? null : _startCreating,
+                                  child: Stack(
+                                    children: [
+                                      // Decorative circles
+                                      Positioned(
+                                        top: -24,
+                                        left: -24,
+                                        child: Container(
+                                          width: 96,
+                                          height: 96,
+                                          decoration: BoxDecoration(
+                                            shape: BoxShape.circle,
+                                            color: Colors.white.withOpacity(0.2),
+                                          ),
+                                        ),
+                                      ),
+                                      Positioned(
+                                        bottom: -40,
+                                        right: -24,
+                                        child: Container(
+                                          width: 128,
+                                          height: 128,
+                                          decoration: BoxDecoration(
+                                            shape: BoxShape.circle,
+                                            color: Colors.white.withOpacity(0.1),
+                                          ),
+                                        ),
+                                      ),
+                                      // Main content
+                                      Center(
+                                        child: Column(
+                                          mainAxisAlignment: MainAxisAlignment.center,
+                                          children: [
+                                            // Camera icon in white circle
+                                            Container(
+                                              width: 64,
+                                              height: 64,
+                                              decoration: BoxDecoration(
+                                                color: Colors.white,
+                                                shape: BoxShape.circle,
+                                                boxShadow: [
+                                                  BoxShadow(
+                                                    color: Colors.black.withOpacity(0.15),
+                                                    blurRadius: 12,
+                                                    offset: const Offset(0, 4),
+                                                  ),
+                                                ],
+                                              ),
+                                              child: const Icon(
+                                                Icons.photo_camera,
+                                                color: Color(0xFFFF85A2),
+                                                size: 32,
+                                              ),
+                                            ),
+                                            const SizedBox(height: 16),
+                                            Row(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                const Icon(
+                                                  Icons.add,
+                                                  color: Colors.white,
+                                                  size: 24,
+                                                ),
+                                                const SizedBox(width: 8),
+                                                Text(
+                                                  'New Puzzle',
+                                                  style: TextStyle(
+                                                    fontFamily: 'Fredoka',
+                                                    fontSize: 20,
+                                                    fontWeight: FontWeight.w700,
+                                                    color: Colors.white,
+                                                    letterSpacing: 0,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                          // Heart decoration - 最外层，不会被裁剪
+                          Positioned(
+                            top: -12,
+                            right: 8,
+                            child: Transform.rotate(
+                              angle: 0.3,
+                              child: Container(
+                                width: 40,
+                                height: 40,
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(16),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withOpacity(0.1),
+                                      blurRadius: 8,
+                                      offset: const Offset(0, 2),
+                                    ),
+                                  ],
+                                ),
+                                child: const Icon(
+                                  Icons.favorite,
+                                  color: Color(0xFFFF85A2),
+                                  size: 24,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
 
@@ -188,7 +261,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
                     // Inspiration Section
                     Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 28),
+                      padding: const EdgeInsets.symmetric(horizontal: 24),
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
@@ -196,54 +269,65 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                             'Inspiration',
                             style: TextStyle(
                               fontFamily: 'Fredoka',
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              color: const Color(0xFF5C5456),
+                              fontSize: 20,
+                              fontWeight: FontWeight.w700,
+                              color: const Color(0xFF1F2937),
                             ),
                           ),
                           Icon(
-                            Icons.auto_awesome_motion,
-                            color: const Color(0xFFFF4D8D).withOpacity(0.5),
-                            size: 20,
+                            Icons.auto_fix_high,
+                            color: const Color(0xFFFF85A2),
+                            size: 24,
                           ),
                         ],
                       ),
                     ),
                     const SizedBox(height: 16),
 
-                    // Inspiration Cards
+                    // Inspiration Cards with kawaii shadows
                     SizedBox(
-                      height: 200,
+                      height: 240,
                       child: ListView.builder(
                         scrollDirection: Axis.horizontal,
                         padding: const EdgeInsets.symmetric(horizontal: 24),
+                        physics: const BouncingScrollPhysics(),
                         itemCount: 3,
                         itemBuilder: (context, index) {
                           return Padding(
-                            padding: const EdgeInsets.only(right: 20),
+                            padding: const EdgeInsets.only(right: 16),
                             child: Container(
-                              width: 150,
+                              width: 140,
+                              padding: const EdgeInsets.all(8),
                               decoration: BoxDecoration(
                                 color: Colors.white,
-                                borderRadius: BorderRadius.circular(20),
-                                border: Border.all(color: Colors.white, width: 2),
+                                borderRadius: BorderRadius.circular(32),
                                 boxShadow: [
                                   BoxShadow(
-                                    color: const Color(0xFFFF4D8D).withOpacity(0.12),
-                                    blurRadius: 25,
-                                    offset: const Offset(0, 10),
+                                    color: const Color(0xFFFF85A2).withOpacity(0.4),
+                                    blurRadius: 30,
+                                    offset: const Offset(0, 12),
+                                    spreadRadius: -10,
                                   ),
                                 ],
                               ),
                               child: ClipRRect(
-                                borderRadius: BorderRadius.circular(18),
+                                borderRadius: BorderRadius.circular(24),
                                 child: Container(
-                                  color: const Color(0xFFFFD1DC).withOpacity(0.3),
+                                  decoration: BoxDecoration(
+                                    gradient: LinearGradient(
+                                      begin: Alignment.topLeft,
+                                      end: Alignment.bottomRight,
+                                      colors: [
+                                        const Color(0xFFFFD1DC).withOpacity(0.3),
+                                        const Color(0xFFFF85A2).withOpacity(0.2),
+                                      ],
+                                    ),
+                                  ),
                                   child: const Center(
                                     child: Icon(
                                       Icons.image,
                                       size: 48,
-                                      color: Color(0xFFFF4D8D),
+                                      color: Color(0xFFFF85A2),
                                     ),
                                   ),
                                 ),
@@ -256,44 +340,37 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
                     const SizedBox(height: 40),
 
-                    // Recent Creations Section
+                    // My Studio Section
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 24),
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Text(
-                            'Recent Creations',
+                            'My Studio',
                             style: TextStyle(
                               fontFamily: 'Fredoka',
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              color: const Color(0xFF5C5456),
+                              fontSize: 20,
+                              fontWeight: FontWeight.w700,
+                              color: const Color(0xFF1F2937),
                             ),
                           ),
                           Container(
                             padding: const EdgeInsets.symmetric(
-                              horizontal: 16,
-                              vertical: 6,
+                              horizontal: 12,
+                              vertical: 4,
                             ),
                             decoration: BoxDecoration(
-                              color: Colors.white,
+                              color: Colors.white.withOpacity(0.5),
                               borderRadius: BorderRadius.circular(20),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: const Color(0xFFFF4D8D).withOpacity(0.12),
-                                  blurRadius: 25,
-                                  offset: const Offset(0, 10),
-                                ),
-                              ],
                             ),
                             child: Text(
-                              'VIEW STUDIO',
+                              'VIEW ALL',
                               style: TextStyle(
                                 fontSize: 10,
-                                fontWeight: FontWeight.bold,
-                                color: const Color(0xFFFF4D8D),
-                                letterSpacing: 1.5,
+                                fontWeight: FontWeight.w700,
+                                color: const Color(0xFFFF85A2),
+                                letterSpacing: 1.2,
                               ),
                             ),
                           ),
@@ -302,7 +379,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     ),
                     const SizedBox(height: 16),
 
-                    // Recent Cards Grid
+                    // Studio Cards Grid
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 24),
                       child: GridView.count(
@@ -312,12 +389,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                         shrinkWrap: true,
                         physics: const NeverScrollableScrollPhysics(),
                         children: [
-                          _buildRecentCard('Sweet Picnic', 'JUN 12'),
-                          _buildRecentCard('Summer Skies', 'JUN 10'),
+                          _buildRecentCard('Sweet Picnic', '12 MIN AGO'),
+                          _buildRecentCard('Summer Skies', '2 HOURS AGO'),
                         ],
                       ),
                     ),
-                    const SizedBox(height: 120),
+                    const SizedBox(height: 140),
                   ],
                 ),
               ),
@@ -325,36 +402,37 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           ],
         ),
       ),
-      // Bottom Navigation
+      // Bottom Navigation with blur effect
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
             colors: [
-              const Color(0xFFFFF0F3).withOpacity(0),
-              const Color(0xFFFFF0F3).withOpacity(0.9),
-              const Color(0xFFFFF0F3),
+              Colors.transparent,
+              Colors.white.withOpacity(0.9),
             ],
           ),
         ),
         child: SafeArea(
+          top: false,
           child: Padding(
             padding: const EdgeInsets.fromLTRB(32, 16, 32, 40),
             child: Container(
-              height: 72,
+              height: 80,
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.9),
-                borderRadius: BorderRadius.circular(20),
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(40),
                 border: Border.all(
-                  color: Colors.white.withOpacity(0.5),
+                  color: Colors.white.withOpacity(0.8),
                   width: 1,
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: const Color(0xFFFF4D8D).withOpacity(0.12),
-                    blurRadius: 25,
-                    offset: const Offset(0, 10),
+                    color: const Color(0xFFFF85A2).withOpacity(0.4),
+                    blurRadius: 30,
+                    offset: const Offset(0, 12),
+                    spreadRadius: -10,
                   ),
                 ],
               ),
@@ -363,7 +441,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 children: [
                   _buildNavItem(Icons.home, 'Home', true),
                   _buildNavItem(Icons.explore, 'Discover', false),
-                  _buildNavItem(Icons.account_circle, 'Profile', false),
+                  _buildNavItem(Icons.person, 'Profile', false),
                 ],
               ),
             ),
@@ -373,81 +451,85 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     );
   }
 
-  Widget _buildRecentCard(String title, String date) {
+  Widget _buildRecentCard(String title, String timeAgo) {
     return Container(
+      padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white, width: 2),
+        borderRadius: BorderRadius.circular(32),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFFFF4D8D).withOpacity(0.12),
-            blurRadius: 25,
-            offset: const Offset(0, 10),
+            color: const Color(0xFFFF85A2).withOpacity(0.4),
+            blurRadius: 30,
+            offset: const Offset(0, 12),
+            spreadRadius: -10,
           ),
         ],
       ),
-      child: Padding(
-        padding: const EdgeInsets.all(10),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
-              child: Container(
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(14),
-                  color: const Color(0xFFFFD1DC).withOpacity(0.3),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(24),
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    const Color(0xFFFFD1DC).withOpacity(0.3),
+                    const Color(0xFFFF85A2).withOpacity(0.2),
+                  ],
                 ),
-                child: const Center(
-                  child: Icon(
-                    Icons.image,
-                    size: 48,
-                    color: Color(0xFFFF4D8D),
-                  ),
+              ),
+              child: const Center(
+                child: Icon(
+                  Icons.image,
+                  size: 48,
+                  color: Color(0xFFFF85A2),
                 ),
               ),
             ),
-            const SizedBox(height: 12),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 6),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF5C5456),
+          ),
+          const SizedBox(height: 8),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF1F2937),
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 2),
+                Row(
+                  children: [
+                    Icon(
+                      Icons.schedule,
+                      size: 10,
+                      color: const Color(0xFFFF85A2),
                     ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 4),
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.calendar_today,
-                        size: 12,
-                        color: const Color(0xFFFF4D8D).withOpacity(0.4),
+                    const SizedBox(width: 4),
+                    Text(
+                      timeAgo,
+                      style: TextStyle(
+                        fontSize: 9,
+                        fontWeight: FontWeight.w700,
+                        color: const Color(0xFF9CA3AF),
                       ),
-                      const SizedBox(width: 6),
-                      Text(
-                        date,
-                        style: TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
-                          color: const Color(0xFF5C5456).withOpacity(0.4),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
+                    ),
+                  ],
+                ),
+              ],
             ),
-            const SizedBox(height: 4),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -458,21 +540,18 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       children: [
         Icon(
           icon,
-          size: 28,
-          color: isActive
-              ? const Color(0xFFFF4D8D)
-              : const Color(0xFF5C5456).withOpacity(0.4),
+          size: isActive ? 36 : 32,
+          weight: 700,
+          color: isActive ? const Color(0xFFFF85A2) : const Color(0xFFFFC1CC),
         ),
-        const SizedBox(height: 4),
+        const SizedBox(height: 2),
         Text(
           label.toUpperCase(),
           style: TextStyle(
             fontSize: 9,
-            fontWeight: FontWeight.bold,
+            fontWeight: FontWeight.w900,
             letterSpacing: 1.5,
-            color: isActive
-                ? const Color(0xFFFF4D8D)
-                : const Color(0xFF5C5456).withOpacity(0.4),
+            color: isActive ? const Color(0xFFFF85A2) : const Color(0xFFFFC1CC),
           ),
         ),
       ],

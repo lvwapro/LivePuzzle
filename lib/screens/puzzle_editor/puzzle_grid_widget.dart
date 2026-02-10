@@ -8,6 +8,8 @@ class PuzzleGridWidget extends StatelessWidget {
   final Map<int, Uint8List?> cellImages;
   final int photoCount;
   final Function(int) onCellTap;
+  final VoidCallback onBackgroundTap;
+  final Function(int fromIndex, int toIndex)? onReorder;  // 🔥 拖拽重排回调
 
   const PuzzleGridWidget({
     super.key,
@@ -15,34 +17,19 @@ class PuzzleGridWidget extends StatelessWidget {
     required this.cellImages,
     required this.photoCount,
     required this.onCellTap,
+    required this.onBackgroundTap,
+    this.onReorder,  // 可选
   });
 
   @override
   Widget build(BuildContext context) {
-    // 🔥 增加宽度以显示更清晰的图片
-    const double fixedWidth = 360.0;
-    
-    return Center(
-      child: Container(
-        width: fixedWidth,
-        height: 600.0,
-        decoration: BoxDecoration(
-          color: Colors.grey.shade50,
-          boxShadow: [
-            BoxShadow(
-              color: const Color(0xFFFF85A1).withOpacity(0.15),
-              blurRadius: 40,
-              offset: const Offset(0, 20),
-            ),
-          ],
-        ),
-        child: InteractiveViewer(
-          minScale: 0.1,
-          maxScale: 4.0,
-          boundaryMargin: const EdgeInsets.all(100),
-          constrained: false,
-          child: _buildLongImageLayout(),
-        ),
+    // 🔥 整个区域都可以点击取消选中
+    // 只有点击图片本身时才会选中（由 PuzzleCell 的 GestureDetector 处理）
+    return GestureDetector(
+      behavior: HitTestBehavior.translucent,  // 🔥 允许点击穿透到下层
+      onTap: onBackgroundTap,  // 点击任何非图片区域都取消选中
+      child: Center(
+        child: _buildLongImageLayout(),
       ),
     );
   }
@@ -59,8 +46,9 @@ class PuzzleGridWidget extends StatelessWidget {
       );
     }
 
+    // 🔥 自由布局，设置固定宽度让图片可以被缩放
     return SizedBox(
-      width: 360,
+      width: 360,  // 固定宽度，作为缩放的基准
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: List.generate(
@@ -78,6 +66,7 @@ class PuzzleGridWidget extends StatelessWidget {
         imageData: cellImages[index],
         isSelected: selectedCellIndex == index,
         onTap: () => onCellTap(index),
+        onReorder: onReorder,  // 🔥 传递重排回调
       ),
     );
   }

@@ -394,14 +394,37 @@ public class LivePhotoBridgePlugin: NSObject, FlutterPlugin {
           throw NSError(domain: "LivePhotoBridge", code: -4, userInfo: [NSLocalizedDescriptionKey: "Failed to create image destination"])
         }
         
-        // 🔥 添加 Live Photo 标识元数据
-        let metadata: [String: Any] = [
-          kCGImagePropertyMakerAppleDictionary as String: [
-            "17": assetIdentifier  // Live Photo 配对标识符
-          ]
+        // 🔥 添加 Live Photo 标识元数据到 EXIF
+        // 获取现有的元数据
+        guard let imageProperties = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [String: Any] else {
+          throw NSError(domain: "LivePhotoBridge", code: -3, userInfo: [NSLocalizedDescriptionKey: "Failed to read image properties"])
+        }
+        
+        var mutableProperties = imageProperties
+        
+        // ⚠️ 关键：添加 Still Image Time 以支持实况定格功能
+        // Still Image Time 应该是视频的某个时间点（以秒为单位，字符串格式）
+        let stillImageTime = CMTime(value: 0, timescale: 1000) // 0ms = 视频开始
+        let stillImageTimeSeconds = CMTimeGetSeconds(stillImageTime)
+        
+        // 构建 MakerApple Dictionary
+        // 键必须是字符串，值也应该是字符串
+        let makerApple: [String: Any] = [
+          "17": assetIdentifier,  // Content Identifier - Live Photo 配对标识符
+          "8": String(format: "%.6f", stillImageTimeSeconds)  // Still Image Time - 关键帧时间（秒，字符串格式）
         ]
         
-        CGImageDestinationAddImageFromSource(destination, source, 0, metadata as CFDictionary)
+        // 添加到 EXIF
+        mutableProperties[kCGImagePropertyMakerAppleDictionary as String] = makerApple
+        
+        // 确保图片方向等基本信息保留
+        if let orientation = imageProperties[kCGImagePropertyOrientation as String] {
+          mutableProperties[kCGImagePropertyOrientation as String] = orientation
+        }
+        
+        print("📝 iOS原生: 添加元数据 - Identifier: \(assetIdentifier), StillTime: \(String(format: "%.6f", stillImageTimeSeconds))s")
+        
+        CGImageDestinationAddImageFromSource(destination, source, 0, mutableProperties as CFDictionary)
         
         guard CGImageDestinationFinalize(destination) else {
           throw NSError(domain: "LivePhotoBridge", code: -5, userInfo: [NSLocalizedDescriptionKey: "Failed to write image with metadata"])
@@ -523,12 +546,24 @@ public class LivePhotoBridgePlugin: NSObject, FlutterPlugin {
     let writer = try AVAssetWriter(outputURL: outputURL, fileType: .mov)
     
     // 🔥 添加 Live Photo 元数据
-    let metadataItem = AVMutableMetadataItem()
-    metadataItem.key = "com.apple.quicktime.content.identifier" as NSString
-    metadataItem.keySpace = AVMetadataKeySpace.quickTimeMetadata
-    metadataItem.value = assetIdentifier as NSString
-    metadataItem.dataType = "com.apple.metadata.datatype.UTF-8"
-    writer.metadata = [metadataItem]
+    // Content Identifier - 配对标识符
+    let contentIdItem = AVMutableMetadataItem()
+    contentIdItem.key = "com.apple.quicktime.content.identifier" as NSString
+    contentIdItem.keySpace = AVMetadataKeySpace.quickTimeMetadata
+    contentIdItem.value = assetIdentifier as NSString
+    contentIdItem.dataType = "com.apple.metadata.datatype.UTF-8"
+    
+    // Still Image Time - 关键帧时间标记（支持实况定格）
+    // 使用整数表示帧的时间（以时间刻度为单位）
+    let stillTimeItem = AVMutableMetadataItem()
+    stillTimeItem.key = "com.apple.quicktime.still-image-time" as NSString
+    stillTimeItem.keySpace = AVMetadataKeySpace.quickTimeMetadata
+    stillTimeItem.value = NSNumber(value: 0)  // 第0帧
+    stillTimeItem.dataType = kCMMetadataBaseDataType_SInt64 as String
+    
+    writer.metadata = [contentIdItem, stillTimeItem]
+    
+    print("📝 iOS原生: 视频元数据 - ContentID: \(assetIdentifier), StillTime: 0")
     
     let videoSettings: [String: Any] = [
       AVVideoCodecKey: AVVideoCodecType.h264,

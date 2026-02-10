@@ -147,11 +147,9 @@ class _VideoFrameSelectorWidgetState extends State<VideoFrameSelectorWidget> {
             child: ElevatedButton(
               onPressed: widget.onSetCover,
               style: ElevatedButton.styleFrom(
-                backgroundColor: widget.isCover 
-                    ? Colors.grey.shade400 
-                    : const Color(0xFFFF4D7D),
+                backgroundColor: const Color(0xFFFF4D7D),
                 foregroundColor: Colors.white,
-                elevation: widget.isCover ? 0 : 4,
+                elevation: 4,
                 shadowColor: const Color(0xFFFF4D7D).withOpacity(0.4),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(16),
@@ -161,12 +159,12 @@ class _VideoFrameSelectorWidgetState extends State<VideoFrameSelectorWidget> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Icon(
-                    widget.isCover ? Icons.check_circle : Icons.star,
+                    widget.isCover ? Icons.refresh : Icons.star,
                     size: 22,
                   ),
                   const SizedBox(width: 8),
                   Text(
-                    widget.isCover ? '已设为封面' : '设置为封面',
+                    widget.isCover ? '重新设置封面' : '设置为封面',
                     style: const TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,

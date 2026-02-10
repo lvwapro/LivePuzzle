@@ -4,11 +4,15 @@ import 'package:flutter/material.dart';
 class EditorHeaderWidget extends StatelessWidget {
   final VoidCallback onBack;
   final VoidCallback onDone;
+  final VoidCallback? onPlayLive;  // 🔥 播放 Live 的回调
+  final bool isPlayingLive;  // 🔥 是否正在播放
 
   const EditorHeaderWidget({
     super.key,
     required this.onBack,
     required this.onDone,
+    this.onPlayLive,
+    this.isPlayingLive = false,
   });
 
   @override
@@ -36,16 +40,41 @@ class EditorHeaderWidget extends StatelessWidget {
                 color: const Color(0xFF4A3F44).withOpacity(0.7),
                 onPressed: onBack,
               ),
-              // Title
-              const Text(
-                'LivePuzzle',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFFFF4D7D),
-                  letterSpacing: -0.5,
+              // Title / Live Play Button
+              if (onPlayLive != null)
+                GestureDetector(
+                  onTap: onPlayLive,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        isPlayingLive ? Icons.pause : Icons.play_arrow,
+                        size: 20,
+                        color: const Color(0xFFFF4D7D),
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        isPlayingLive ? '播放中...' : 'LIVE',
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFFFF4D7D),
+                          letterSpacing: -0.5,
+                        ),
+                      ),
+                    ],
+                  ),
+                )
+              else
+                const Text(
+                  'LivePuzzle',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFFFF4D7D),
+                    letterSpacing: -0.5,
+                  ),
                 ),
-              ),
               // Done Button
               GestureDetector(
                 onTap: onDone,

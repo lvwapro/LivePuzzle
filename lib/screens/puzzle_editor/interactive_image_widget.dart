@@ -52,6 +52,10 @@ class _InteractiveImageWidgetState extends State<InteractiveImageWidget> {
       return const SizedBox.shrink();
     }
 
+    // 🔥 根据宽高比计算实际尺寸
+    const baseWidth = 300.0;
+    final actualHeight = baseWidth / _currentTransform.aspectRatio;
+
     return Positioned(
       left: _currentTransform.position.dx,
       top: _currentTransform.position.dy,
@@ -67,7 +71,8 @@ class _InteractiveImageWidgetState extends State<InteractiveImageWidget> {
           child: Transform.scale(
             scale: _currentTransform.scale,
             child: Container(
-              width: 300,
+              width: baseWidth,
+              height: actualHeight, // 🔥 使用计算出的高度
               decoration: BoxDecoration(
                 border: widget.isSelected
                     ? Border.all(
@@ -93,7 +98,7 @@ class _InteractiveImageWidgetState extends State<InteractiveImageWidget> {
               ),
               child: Image.memory(
                 widget.imageData!,
-                fit: BoxFit.contain,
+                fit: BoxFit.cover, // 🔥 使用 cover 填充容器
                 gaplessPlayback: true,
                 filterQuality: FilterQuality.high,
               ),

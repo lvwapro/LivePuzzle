@@ -56,7 +56,7 @@ class LayoutEngine {
 
     // 计算单个块的宽高（相对值）
     final totalSpacingX = spacing * (maxCols - 1);
-    final totalSpacingY = spacing * (maxCols - 1); // 使用相同比例保持间距一致
+    final totalSpacingY = spacing * (maxRows - 1);
     final blockWidth = (1.0 - totalSpacingX) / maxCols;
     final blockHeight = (1.0 - totalSpacingY) / maxRows;
 

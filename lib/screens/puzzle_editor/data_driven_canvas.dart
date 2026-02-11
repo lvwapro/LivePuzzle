@@ -386,7 +386,7 @@ class _DataDrivenCanvasState extends State<DataDrivenCanvas> {
     }
 
     // 手动实现 BoxFit.cover + 平移：
-    // 将图片放大到恰好覆盖框，然后用 translate 偏移
+    // 用 Stack + Positioned 将图片居中放大覆盖框，ClipRect 裁切
     Widget imageContent;
     if (abs.imageData != null && abs.imageAspectRatio > 0) {
       final frameAR = abs.width / abs.height;
@@ -404,33 +404,35 @@ class _DataDrivenCanvasState extends State<DataDrivenCanvas> {
       coverW *= block.scale;
       coverH *= block.scale;
 
+      // 居中位置 + 用户偏移
+      final left = (abs.width - coverW) / 2 + previewOx;
+      final top = (abs.height - coverH) / 2 + previewOy;
+
       imageContent = SizedBox(
         width: abs.width,
         height: abs.height,
         child: ClipRect(
-          child: OverflowBox(
-            maxWidth: double.infinity,
-            maxHeight: double.infinity,
-            child: Transform.translate(
-              offset: Offset(previewOx, previewOy),
-              child: SizedBox(
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              Positioned(
+                left: left,
+                top: top,
                 width: coverW,
                 height: coverH,
                 child: Image.memory(
                   abs.imageData!,
-                  fit: BoxFit.fill, // 已计算好尺寸，直接填充
-                  width: coverW,
-                  height: coverH,
+                  fit: BoxFit.fill,
                   gaplessPlayback: true,
                   filterQuality: FilterQuality.high,
                 ),
               ),
-            ),
+            ],
           ),
         ),
       );
     } else {
-      // 没有宽高比信息或没有图片 → 回退旧逻辑
+      // 没有宽高比信息或没有图片 → 回退
       imageContent = SizedBox(
         width: abs.width,
         height: abs.height,

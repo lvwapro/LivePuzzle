@@ -55,17 +55,24 @@ class _LayoutSelectionPanelState extends State<LayoutSelectionPanel> {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 280, // 🔥 从400降到280
-      decoration: const BoxDecoration(
-        color: Color(0xFF1C1C1E),
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      height: 280,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.08),
+            blurRadius: 10,
+            offset: const Offset(0, -2),
+          ),
+        ],
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           // 标签栏
           Container(
-            padding: const EdgeInsets.symmetric(vertical: 8), // 🔥 从12降到8
+            padding: const EdgeInsets.symmetric(vertical: 8),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
@@ -76,29 +83,29 @@ class _LayoutSelectionPanelState extends State<LayoutSelectionPanel> {
             ),
           ),
 
-          const Divider(height: 1, color: Color(0xFF2C2C2E)),
+          Divider(height: 1, color: Colors.grey.shade200),
 
           // 内容区域
           Expanded(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.all(12), // 🔥 从16降到12
+              padding: const EdgeInsets.all(12),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // 🔥 长图拼接标签不显示画布比例（自动适应）
+                  // 长图拼接标签不显示画布比例
                   if (_selectedTab == LayoutTabType.puzzle) ...[
                     // 画布比例选择
-                    const Text(
+                    Text(
                       '画布比例',
                       style: TextStyle(
-                        color: Colors.white70,
-                        fontSize: 12, // 🔥 从13降到12
+                        color: Colors.grey.shade600,
+                        fontSize: 12,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
-                    const SizedBox(height: 8), // 🔥 从12降到8
+                    const SizedBox(height: 8),
                     SizedBox(
-                      height: 36, // 🔥 从40降到36
+                      height: 36,
                       child: ListView.builder(
                         scrollDirection: Axis.horizontal,
                         itemCount: _ratios.length,
@@ -115,16 +122,16 @@ class _LayoutSelectionPanelState extends State<LayoutSelectionPanel> {
                                 });
                               },
                               child: Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6), // 🔥 缩小内边距
+                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
                                 decoration: BoxDecoration(
                                   color: isSelected 
                                       ? const Color(0xFFFF85A2)
-                                      : const Color(0xFF2C2C2E),
+                                      : Colors.grey.shade100,
                                   borderRadius: BorderRadius.circular(20),
                                   border: Border.all(
                                     color: isSelected
                                         ? const Color(0xFFFF85A2)
-                                        : Colors.white.withOpacity(0.1),
+                                        : Colors.grey.shade300,
                                     width: isSelected ? 2 : 1,
                                   ),
                                 ),
@@ -132,8 +139,8 @@ class _LayoutSelectionPanelState extends State<LayoutSelectionPanel> {
                                   child: Text(
                                     ratio['label']!,
                                     style: TextStyle(
-                                      color: isSelected ? Colors.white : Colors.white.withOpacity(0.6),
-                                      fontSize: 13, // 🔥 从14降到13
+                                      color: isSelected ? Colors.white : Colors.grey.shade700,
+                                      fontSize: 13,
                                       fontWeight: FontWeight.w600,
                                     ),
                                   ),
@@ -144,19 +151,19 @@ class _LayoutSelectionPanelState extends State<LayoutSelectionPanel> {
                         },
                       ),
                     ),
-                    const SizedBox(height: 16), // 🔥 从24降到16
+                    const SizedBox(height: 16),
                   ],
 
                   // 布局模板选择
                   Text(
                     _selectedTab == LayoutTabType.longImage ? '拼接方向' : '布局样式',
-                    style: const TextStyle(
-                      color: Colors.white70,
-                      fontSize: 12, // 🔥 从13降到12
+                    style: TextStyle(
+                      color: Colors.grey.shade600,
+                      fontSize: 12,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
-                  const SizedBox(height: 8), // 🔥 从12降到8
+                  const SizedBox(height: 8),
 
                   // 布局网格
                   Builder(
@@ -164,13 +171,13 @@ class _LayoutSelectionPanelState extends State<LayoutSelectionPanel> {
                       final layouts = _getCurrentLayouts();
                       
                       if (layouts.isEmpty) {
-                        return const Center(
+                        return Center(
                           child: Padding(
-                            padding: EdgeInsets.all(32),
+                            padding: const EdgeInsets.all(32),
                             child: Text(
                               '暂无适配的布局',
                               style: TextStyle(
-                                color: Colors.white54,
+                                color: Colors.grey.shade400,
                                 fontSize: 14,
                               ),
                             ),
@@ -178,12 +185,12 @@ class _LayoutSelectionPanelState extends State<LayoutSelectionPanel> {
                         );
                       }
                       
-                      // 🔥 长图拼接使用列表展示，拼图使用网格
+                      // 长图拼接使用列表展示，拼图使用网格
                       if (_selectedTab == LayoutTabType.longImage) {
                         return Column(
                           children: layouts.map((layout) => 
                             Padding(
-                              padding: const EdgeInsets.only(bottom: 8), // 🔥 从12降到8
+                              padding: const EdgeInsets.only(bottom: 8),
                               child: _buildLongImageLayoutItem(layout),
                             )
                           ).toList(),
@@ -194,9 +201,9 @@ class _LayoutSelectionPanelState extends State<LayoutSelectionPanel> {
                         shrinkWrap: true,
                         physics: const NeverScrollableScrollPhysics(),
                         gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 4, // 🔥 从3增加到4，显示更多
-                          mainAxisSpacing: 12, // 🔥 从16降到12
-                          crossAxisSpacing: 12, // 🔥 从16降到12
+                          crossAxisCount: 4,
+                          mainAxisSpacing: 12,
+                          crossAxisSpacing: 12,
                           childAspectRatio: 1.0,
                         ),
                         itemCount: layouts.length,
@@ -233,7 +240,7 @@ class _LayoutSelectionPanelState extends State<LayoutSelectionPanel> {
           Text(
             label,
             style: TextStyle(
-              color: isSelected ? Colors.white : Colors.white.withOpacity(0.5),
+              color: isSelected ? Colors.black87 : Colors.grey.shade400,
               fontSize: 15,
               fontWeight: FontWeight.w600,
             ),
@@ -261,10 +268,10 @@ class _LayoutSelectionPanelState extends State<LayoutSelectionPanel> {
       },
       child: Container(
         decoration: BoxDecoration(
-          color: const Color(0xFF2C2C2E),
+          color: Colors.grey.shade100,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: Colors.white.withOpacity(0.1),
+            color: Colors.grey.shade200,
           ),
         ),
         child: Column(
@@ -274,7 +281,7 @@ class _LayoutSelectionPanelState extends State<LayoutSelectionPanel> {
               child: CustomPaint(
                 painter: LayoutTemplatePainter(
                   template: layout,
-                  color: Colors.white.withOpacity(0.6),
+                  color: Colors.grey.shade400,
                 ),
               ),
             ),
@@ -282,8 +289,8 @@ class _LayoutSelectionPanelState extends State<LayoutSelectionPanel> {
               padding: const EdgeInsets.only(bottom: 8),
               child: Text(
                 layout.name,
-                style: const TextStyle(
-                  color: Colors.white70,
+                style: TextStyle(
+                  color: Colors.grey.shade600,
                   fontSize: 11,
                 ),
               ),
@@ -294,43 +301,42 @@ class _LayoutSelectionPanelState extends State<LayoutSelectionPanel> {
     );
   }
 
-  /// 🔥 长图拼接布局项（横向显示）
+  /// 长图拼接布局项（横向显示）
   Widget _buildLongImageLayoutItem(LayoutTemplate layout) {
     final isHorizontal = layout.id == 'long_horizontal';
     
     return GestureDetector(
       onTap: () {
-        // 长图拼接自动使用1:1比例，由引擎自动计算实际画布尺寸
         final canvas = CanvasConfig.fromRatio('1:1');
         widget.onLayoutSelected(canvas, layout);
       },
       child: Container(
-        height: 60, // 🔥 从80降到60
-        padding: const EdgeInsets.all(12), // 🔥 从16降到12
+        height: 60,
+        padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: const Color(0xFF2C2C2E),
+          color: Colors.grey.shade100,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: Colors.white.withOpacity(0.1),
+            color: Colors.grey.shade200,
           ),
         ),
         child: Row(
           children: [
             // 图标
             Container(
-              width: 48, // 🔥 从60降到48
-              height: 36, // 🔥 从48降到36
+              width: 48,
+              height: 36,
               decoration: BoxDecoration(
-                color: const Color(0xFF3A3A3C),
+                color: const Color(0xFFFFE0E8),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Icon(
                 isHorizontal ? Icons.view_week : Icons.view_stream,
                 color: const Color(0xFFFF85A2),
-                size: 24, // 🔥 从32降到24
+                size: 24,
               ),
             ),
-            const SizedBox(width: 12), // 🔥 从16降到12
+            const SizedBox(width: 12),
             // 文字说明
             Expanded(
               child: Column(
@@ -340,21 +346,20 @@ class _LayoutSelectionPanelState extends State<LayoutSelectionPanel> {
                 children: [
                   Text(
                     layout.name,
-                    style: const TextStyle(
-                      color: Colors.white,
+                    style: TextStyle(
+                      color: Colors.grey.shade800,
                       fontSize: 13,
                       fontWeight: FontWeight.w600,
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
-                  // 🔥 去掉 SizedBox 避免溢出
                   Text(
                     isHorizontal 
                         ? '${widget.photoCount}张图片从左到右拼接'
                         : '${widget.photoCount}张图片从上到下拼接',
                     style: TextStyle(
-                      color: Colors.white.withOpacity(0.5),
+                      color: Colors.grey.shade500,
                       fontSize: 10,
                     ),
                     maxLines: 1,
@@ -365,7 +370,7 @@ class _LayoutSelectionPanelState extends State<LayoutSelectionPanel> {
             ),
             Icon(
               Icons.arrow_forward_ios,
-              color: Colors.white.withOpacity(0.3),
+              color: Colors.grey.shade300,
               size: 16,
             ),
           ],
@@ -403,7 +408,6 @@ class LayoutTemplatePainter extends CustomPainter {
   }
 
   void _drawGrid(Canvas canvas, Size drawArea, double padding) {
-    // 计算行列数
     int maxRows = 0;
     int maxCols = 0;
     for (final block in template.blocks) {
@@ -413,15 +417,14 @@ class LayoutTemplatePainter extends CustomPainter {
     maxRows += 1;
     maxCols += 1;
 
-    const cellWidth = 60.0;  // 固定单元格宽度
-    const cellHeight = 60.0; // 固定单元格高度
+    const cellWidth = 60.0;
+    const cellHeight = 60.0;
     const spacing = 4.0;
 
     final fillPaint = Paint()
       ..color = color
       ..style = PaintingStyle.fill;
 
-    // 绘制网格块
     for (final block in template.blocks) {
       final rect = Rect.fromLTWH(
         padding + block.col * (cellWidth + spacing),
@@ -441,7 +444,6 @@ class LayoutTemplatePainter extends CustomPainter {
       ..color = color
       ..style = PaintingStyle.fill;
 
-    // 简化绘制：主图占70%，小图占30%
     final mainRect = Rect.fromLTWH(
       padding + 4,
       padding + 4,
@@ -453,7 +455,6 @@ class LayoutTemplatePainter extends CustomPainter {
       fillPaint,
     );
 
-    // 小图
     final secondaryCount = template.blocks.length - 1;
     final secondaryWidth = (drawArea.width - 8 - (secondaryCount - 1) * 4) / secondaryCount;
     for (int i = 0; i < secondaryCount; i++) {

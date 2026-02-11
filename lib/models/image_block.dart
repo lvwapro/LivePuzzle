@@ -10,7 +10,9 @@ class ImageBlock {
   final double height;          // 块高度（相对值 0-1）
   final Uint8List? imageData;   // 图片数据
   final double rotate;          // 旋转角度（弧度）
-  final double scale;           // 缩放比例
+  final double scale;           // 缩放比例（1.0=原始，>1放大）
+  final double offsetX;         // 放大后图片在框内的水平偏移
+  final double offsetY;         // 放大后图片在框内的垂直偏移
   final int zIndex;             // 层级
 
   const ImageBlock({
@@ -23,6 +25,8 @@ class ImageBlock {
     this.imageData,
     this.rotate = 0.0,
     this.scale = 1.0,
+    this.offsetX = 0.0,
+    this.offsetY = 0.0,
     this.zIndex = 0,
   });
 
@@ -38,6 +42,8 @@ class ImageBlock {
       imageData: imageData,
       rotate: rotate,
       scale: scale,
+      offsetX: offsetX,
+      offsetY: offsetY,
       zIndex: zIndex,
     );
   }
@@ -52,6 +58,8 @@ class ImageBlock {
     Uint8List? imageData,
     double? rotate,
     double? scale,
+    double? offsetX,
+    double? offsetY,
     int? zIndex,
   }) {
     return ImageBlock(
@@ -64,6 +72,8 @@ class ImageBlock {
       imageData: imageData ?? this.imageData,
       rotate: rotate ?? this.rotate,
       scale: scale ?? this.scale,
+      offsetX: offsetX ?? this.offsetX,
+      offsetY: offsetY ?? this.offsetY,
       zIndex: zIndex ?? this.zIndex,
     );
   }
@@ -73,13 +83,15 @@ class ImageBlock {
 class ImageBlockAbsolute {
   final String id;
   final String layoutBlockId;
-  final double x;               // 绝对像素坐标
+  final double x;
   final double y;
-  final double width;           // 绝对像素宽度
+  final double width;
   final double height;
   final Uint8List? imageData;
   final double rotate;
   final double scale;
+  final double offsetX;
+  final double offsetY;
   final int zIndex;
 
   const ImageBlockAbsolute({
@@ -92,6 +104,8 @@ class ImageBlockAbsolute {
     this.imageData,
     this.rotate = 0.0,
     this.scale = 1.0,
+    this.offsetX = 0.0,
+    this.offsetY = 0.0,
     this.zIndex = 0,
   });
 }

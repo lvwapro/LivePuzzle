@@ -4,16 +4,19 @@ import '../../models/canvas_config.dart';
 import '../../models/image_block.dart';
 
 /// 数据驱动画布组件
-/// - Listener 处理平移/缩放（不参与手势竞技场，不拦截子组件的 tap）
-/// - GestureDetector 处理点击（在手势竞技场中正常工作）
-/// - OverflowBox 确保画布可以溢出视口但 hitTest 正确
-/// - LayoutBuilder 计算初始变换，避免闪跳
+/// 手势：
+///   未选中：单指=画布平移，双指=画布缩放，双击=重置
+///   选中图片：
+///     - 在自身范围内拖动 = 移动图片内容（裁切平移），无蒙层
+///     - 拖出自身范围 = 位置互换模式（拖到另一张图上松手互换）
+///     - 双指 = 缩放图片
 class DataDrivenCanvas extends StatefulWidget {
   final CanvasConfig canvasConfig;
   final List<ImageBlock> imageBlocks;
   final String? selectedBlockId;
   final Function(String blockId) onBlockTap;
   final Function(String blockId, ImageBlock updatedBlock) onBlockChanged;
+  final Function(String sourceId, String targetId) onBlockSwap;
   final VoidCallback onCanvasTap;
 
   const DataDrivenCanvas({
@@ -23,6 +26,7 @@ class DataDrivenCanvas extends StatefulWidget {
     this.selectedBlockId,
     required this.onBlockTap,
     required this.onBlockChanged,
+    required this.onBlockSwap,
     required this.onCanvasTap,
   });
 
@@ -31,16 +35,20 @@ class DataDrivenCanvas extends StatefulWidget {
 }
 
 class _DataDrivenCanvasState extends State<DataDrivenCanvas> {
-  // 画布变换
   Offset _translation = Offset.zero;
   double _scale = 1.0;
   bool _needsRecenter = true;
 
-  // 手指追踪（Listener 不参与手势竞技场）
   final Map<int, Offset> _pointers = {};
   Offset? _lastMidpoint;
   double? _lastPointerDistance;
   bool _hasMoved = false;
+
+  // 图片拖动
+  bool _isMovingImage = false;
+  String? _movingBlockId;
+  double _moveDeltaX = 0;
+  double _moveDeltaY = 0;
 
   @override
   void didUpdateWidget(DataDrivenCanvas oldWidget) {
@@ -51,35 +59,59 @@ class _DataDrivenCanvasState extends State<DataDrivenCanvas> {
     }
   }
 
-  /// 直接计算居中变换（不调用 setState，可在 build 中使用）
-  void _computeCenter(double viewportWidth, double viewportHeight) {
+  void _computeCenter(double vw, double vh) {
     final cw = widget.canvasConfig.width;
     final ch = widget.canvasConfig.height;
     if (cw <= 0 || ch <= 0) return;
-
-    final targetScale = math.min(viewportWidth / cw, viewportHeight / ch) * 0.9;
-    _scale = targetScale;
-    _translation = Offset(
-      (viewportWidth - cw * targetScale) / 2,
-      (viewportHeight - ch * targetScale) / 2,
-    );
+    final s = math.min(vw / cw, vh / ch) * 0.9;
+    _scale = s;
+    _translation = Offset((vw - cw * s) / 2, (vh - ch * s) / 2);
   }
 
-  /// 通过 setState 重新居中（用于双击重置）
   void _resetView() {
     if (!mounted) return;
     final rb = context.findRenderObject() as RenderBox?;
     if (rb == null || !rb.hasSize) return;
-    setState(() {
-      _computeCenter(rb.size.width, rb.size.height);
-    });
+    setState(() => _computeCenter(rb.size.width, rb.size.height));
   }
 
-  // ---- 指针事件（平移 & 缩放）----
+  /// 判断当前拖动偏移是否还在选中图片自身范围内
+  bool _isDeltaWithinBounds() {
+    if (_movingBlockId == null) return true;
+    final idx = widget.imageBlocks.indexWhere((b) => b.id == _movingBlockId);
+    if (idx < 0) return true;
+    final block = widget.imageBlocks[idx];
+    final cw = widget.canvasConfig.width;
+    final ch = widget.canvasConfig.height;
+    final abs = block.toAbsolute(cw, ch);
+    // 中心偏移超过自身一半 → 出界
+    return _moveDeltaX.abs() <= abs.width * 0.4 &&
+        _moveDeltaY.abs() <= abs.height * 0.4;
+  }
+
+  /// 找到画布坐标下的图片块
+  String? _findBlockAtCanvasPos(double cx, double cy, {String? excludeId}) {
+    final cw = widget.canvasConfig.width;
+    final ch = widget.canvasConfig.height;
+    for (final block in widget.imageBlocks) {
+      if (block.id == excludeId) continue;
+      final abs = block.toAbsolute(cw, ch);
+      if (cx >= abs.x &&
+          cx <= abs.x + abs.width &&
+          cy >= abs.y &&
+          cy <= abs.y + abs.height) {
+        return block.id;
+      }
+    }
+    return null;
+  }
+
+  // ---- 指针事件 ----
 
   Offset _getMidpoint() {
     if (_pointers.isEmpty) return Offset.zero;
-    return _pointers.values.reduce((a, b) => a + b) / _pointers.length.toDouble();
+    return _pointers.values.reduce((a, b) => a + b) /
+        _pointers.length.toDouble();
   }
 
   double _getPointerDistance() {
@@ -93,34 +125,105 @@ class _DataDrivenCanvasState extends State<DataDrivenCanvas> {
     _lastMidpoint = _getMidpoint();
     if (_pointers.length >= 2) _lastPointerDistance = _getPointerDistance();
     _hasMoved = false;
+
+    if (_pointers.length == 1 && widget.selectedBlockId != null) {
+      _movingBlockId = widget.selectedBlockId;
+      _moveDeltaX = 0;
+      _moveDeltaY = 0;
+    } else {
+      _movingBlockId = null;
+    }
+    _isMovingImage = false;
   }
 
   void _onPointerMove(PointerMoveEvent e) {
     _pointers[e.pointer] = e.position;
     final mid = _getMidpoint();
 
-    // 超过 8px 才算真正移动
     if (!_hasMoved && _lastMidpoint != null) {
-      if ((mid - _lastMidpoint!).distance > 8) _hasMoved = true;
+      if ((mid - _lastMidpoint!).distance > 8) {
+        _hasMoved = true;
+        if (_movingBlockId != null && _pointers.length == 1) {
+          _isMovingImage = true;
+        }
+      }
     }
     if (!_hasMoved) return;
 
     setState(() {
-      if (_lastMidpoint != null) _translation += (mid - _lastMidpoint!);
-      if (_pointers.length >= 2 && _lastPointerDistance != null && _lastPointerDistance! > 0) {
+      if (_pointers.length >= 2 &&
+          _lastPointerDistance != null &&
+          _lastPointerDistance! > 0) {
         final d = _getPointerDistance();
-        _scale = (_scale * d / _lastPointerDistance!).clamp(0.01, 20.0);
+        final factor = d / _lastPointerDistance!;
+        if (widget.selectedBlockId != null) {
+          _zoomSelectedImage(factor);
+        } else {
+          _scale = (_scale * factor).clamp(0.01, 20.0);
+          if (_lastMidpoint != null) _translation += (mid - _lastMidpoint!);
+        }
         _lastPointerDistance = d;
+      } else if (_pointers.length == 1 && _lastMidpoint != null) {
+        if (_isMovingImage) {
+          final screenDelta = mid - _lastMidpoint!;
+          _moveDeltaX += screenDelta.dx / _scale;
+          _moveDeltaY += screenDelta.dy / _scale;
+        } else {
+          _translation += (mid - _lastMidpoint!);
+        }
       }
     });
     _lastMidpoint = mid;
   }
 
   void _onPointerUp(PointerUpEvent e) {
+    final wasMoving = _isMovingImage;
+    final movingId = _movingBlockId;
+
     _pointers.remove(e.pointer);
     if (_pointers.isEmpty) {
       _lastMidpoint = null;
       _lastPointerDistance = null;
+
+      if (wasMoving && movingId != null) {
+        final idx = widget.imageBlocks.indexWhere((b) => b.id == movingId);
+        if (idx >= 0) {
+          final block = widget.imageBlocks[idx];
+          final cw = widget.canvasConfig.width;
+          final ch = widget.canvasConfig.height;
+          final abs = block.toAbsolute(cw, ch);
+
+          if (_isDeltaWithinBounds()) {
+            // ━━━ 在自身范围内 → 调整图片内容偏移（裁切平移）━━━
+            final maxOx = abs.width * (block.scale - 1) / 2;
+            final maxOy = abs.height * (block.scale - 1) / 2;
+            final newOx = (block.offsetX + _moveDeltaX).clamp(-maxOx, maxOx);
+            final newOy = (block.offsetY + _moveDeltaY).clamp(-maxOy, maxOy);
+            widget.onBlockChanged(
+                movingId,
+                block.copyWith(
+                  offsetX: newOx,
+                  offsetY: newOy,
+                ));
+          } else {
+            // ━━━ 超出自身范围 → 位置互换 ━━━
+            final centerX = abs.x + _moveDeltaX + abs.width / 2;
+            final centerY = abs.y + _moveDeltaY + abs.height / 2;
+            final targetId =
+                _findBlockAtCanvasPos(centerX, centerY, excludeId: movingId);
+            if (targetId != null) {
+              widget.onBlockSwap(movingId, targetId);
+            }
+            // 没有目标则回弹（不做任何位置变更）
+          }
+        }
+        setState(() {
+          _moveDeltaX = 0;
+          _moveDeltaY = 0;
+          _isMovingImage = false;
+          _movingBlockId = null;
+        });
+      }
     } else {
       _lastMidpoint = _getMidpoint();
       if (_pointers.length >= 2) _lastPointerDistance = _getPointerDistance();
@@ -129,7 +232,37 @@ class _DataDrivenCanvasState extends State<DataDrivenCanvas> {
 
   void _onPointerCancel(PointerCancelEvent e) {
     _pointers.remove(e.pointer);
-    if (_pointers.isEmpty) { _lastMidpoint = null; _lastPointerDistance = null; }
+    if (_pointers.isEmpty) {
+      _lastMidpoint = null;
+      _lastPointerDistance = null;
+      setState(() {
+        _moveDeltaX = 0;
+        _moveDeltaY = 0;
+        _isMovingImage = false;
+        _movingBlockId = null;
+      });
+    }
+  }
+
+  void _zoomSelectedImage(double factor) {
+    final idx =
+        widget.imageBlocks.indexWhere((b) => b.id == widget.selectedBlockId);
+    if (idx < 0) return;
+    final block = widget.imageBlocks[idx];
+    final newScale = (block.scale * factor).clamp(1.0, 5.0);
+    // 缩放时约束偏移
+    final cw = widget.canvasConfig.width;
+    final ch = widget.canvasConfig.height;
+    final abs = block.toAbsolute(cw, ch);
+    final maxOx = abs.width * (newScale - 1) / 2;
+    final maxOy = abs.height * (newScale - 1) / 2;
+    widget.onBlockChanged(
+        block.id,
+        block.copyWith(
+          scale: newScale,
+          offsetX: block.offsetX.clamp(-maxOx, maxOx),
+          offsetY: block.offsetY.clamp(-maxOy, maxOy),
+        ));
   }
 
   // ---- Build ----
@@ -138,19 +271,18 @@ class _DataDrivenCanvasState extends State<DataDrivenCanvas> {
   Widget build(BuildContext context) {
     final sortedBlocks = List<ImageBlock>.from(widget.imageBlocks)
       ..sort((a, b) => a.zIndex.compareTo(b.zIndex));
-
     final cw = widget.canvasConfig.width;
     final ch = widget.canvasConfig.height;
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        // 首次 / 布局变更时 → 同步计算居中（无闪跳）
-        if (_needsRecenter && constraints.maxWidth > 0 && constraints.maxHeight > 0) {
+        if (_needsRecenter &&
+            constraints.maxWidth > 0 &&
+            constraints.maxHeight > 0) {
           _computeCenter(constraints.maxWidth, constraints.maxHeight);
           _needsRecenter = false;
         }
 
-        // Listener 处理平移/缩放（不参与手势竞技场 → 不拦截子组件 tap）
         return Listener(
           onPointerDown: _onPointerDown,
           onPointerMove: _onPointerMove,
@@ -160,25 +292,16 @@ class _DataDrivenCanvasState extends State<DataDrivenCanvas> {
           child: ClipRect(
             child: Stack(
               children: [
-                // ━━━ 层 1：背景（捕获画布外的点击 & 双击重置）━━━
                 Positioned.fill(
                   child: GestureDetector(
                     onTap: () {
-                      if (!_hasMoved) {
-                        print('🎯 Background tapped → deselect');
-                        widget.onCanvasTap();
-                      }
+                      if (!_hasMoved) widget.onCanvasTap();
                     },
-                    onDoubleTap: () {
-                      print('🎯 Double tap → reset view');
-                      _resetView();
-                    },
+                    onDoubleTap: _resetView,
                     behavior: HitTestBehavior.opaque,
                     child: Container(color: const Color(0xFFF5F5F5)),
                   ),
                 ),
-
-                // ━━━ 层 2：画布（OverflowBox 允许溢出但 hitTest 正确）━━━
                 Positioned.fill(
                   child: OverflowBox(
                     maxWidth: double.infinity,
@@ -206,49 +329,10 @@ class _DataDrivenCanvasState extends State<DataDrivenCanvas> {
                           children: sortedBlocks.map((block) {
                             final selected = widget.selectedBlockId == block.id;
                             final abs = block.toAbsolute(cw, ch);
-
-                            return Positioned(
-                              left: abs.x,
-                              top: abs.y,
-                              child: GestureDetector(
-                                onTap: () {
-                                  if (!_hasMoved) {
-                                    print('🎯 Image tapped: ${block.id}');
-                                    widget.onBlockTap(block.id);
-                                  }
-                                },
-                                behavior: HitTestBehavior.opaque,
-                                child: Container(
-                                  width: abs.width,
-                                  height: abs.height,
-                                  decoration: selected
-                                      ? BoxDecoration(
-                                          border: Border.all(
-                                            color: const Color(0xFFFF85A2),
-                                            width: 3,
-                                          ),
-                                          boxShadow: [
-                                            BoxShadow(
-                                              color: const Color(0xFFFF85A2).withValues(alpha: 0.4),
-                                              blurRadius: 12,
-                                              spreadRadius: 2,
-                                            ),
-                                          ],
-                                        )
-                                      : null,
-                                  child: abs.imageData != null
-                                      ? Image.memory(
-                                          abs.imageData!,
-                                          fit: BoxFit.cover,
-                                          gaplessPlayback: true,
-                                          filterQuality: FilterQuality.high,
-                                        )
-                                      : const Center(
-                                          child: Icon(Icons.image, color: Colors.grey),
-                                        ),
-                                ),
-                              ),
-                            );
+                            final isMoving =
+                                _isMovingImage && _movingBlockId == block.id;
+                            return _buildImageBlock(
+                                block, abs, selected, isMoving);
                           }).toList(),
                         ),
                       ),
@@ -260,6 +344,106 @@ class _DataDrivenCanvasState extends State<DataDrivenCanvas> {
           ),
         );
       },
+    );
+  }
+
+  Widget _buildImageBlock(
+    ImageBlock block,
+    ImageBlockAbsolute abs,
+    bool selected,
+    bool isMoving,
+  ) {
+    // 判断当前是"范围内平移"还是"范围外互换"
+    final withinBounds = isMoving ? _isDeltaWithinBounds() : true;
+
+    // 图片内容：应用 offsetX/offsetY 和 scale
+    // 范围内拖动时，实时显示偏移预览
+    double previewOx = block.offsetX;
+    double previewOy = block.offsetY;
+    if (isMoving && withinBounds) {
+      final maxOx = abs.width * (block.scale - 1) / 2;
+      final maxOy = abs.height * (block.scale - 1) / 2;
+      previewOx = (block.offsetX + _moveDeltaX).clamp(-maxOx, maxOx);
+      previewOy = (block.offsetY + _moveDeltaY).clamp(-maxOy, maxOy);
+    }
+
+    Widget imageContent = SizedBox(
+      width: abs.width,
+      height: abs.height,
+      child: ClipRect(
+        child: Transform.translate(
+          offset: Offset(previewOx, previewOy),
+          child: Transform.scale(
+            scale: block.scale,
+            child: abs.imageData != null
+                ? Image.memory(
+                    abs.imageData!,
+                    fit: BoxFit.cover,
+                    width: abs.width,
+                    height: abs.height,
+                    gaplessPlayback: true,
+                    filterQuality: FilterQuality.high,
+                  )
+                : const Center(child: Icon(Icons.image, color: Colors.grey)),
+          ),
+        ),
+      ),
+    );
+
+    // 边框样式
+    BoxDecoration? deco;
+    if (isMoving && !withinBounds) {
+      // 超出范围 → 互换模式：蓝色边框
+      deco = BoxDecoration(
+        border: Border.all(color: const Color(0xFF4FC3F7), width: 4),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF4FC3F7).withValues(alpha: 0.5),
+            blurRadius: 16,
+            spreadRadius: 4,
+          ),
+        ],
+      );
+    } else if (selected) {
+      // 选中（含范围内拖动）：粉色边框，无蒙层
+      deco = BoxDecoration(
+        border: Border.all(color: const Color(0xFFFF85A2), width: 5),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFFFF85A2).withValues(alpha: 0.4),
+            blurRadius: 14,
+            spreadRadius: 3,
+          ),
+        ],
+      );
+    }
+
+    Widget content = Container(
+      width: abs.width,
+      height: abs.height,
+      decoration: deco,
+      child: imageContent,
+    );
+
+    // 位置：范围内不移动位置，超出范围才视觉跟手
+    final posX = abs.x + (isMoving && !withinBounds ? _moveDeltaX : 0);
+    final posY = abs.y + (isMoving && !withinBounds ? _moveDeltaY : 0);
+
+    return Positioned(
+      left: posX,
+      top: posY,
+      child: GestureDetector(
+        onTap: () {
+          if (!_hasMoved && !_isMovingImage) {
+            widget.onBlockTap(block.id);
+          }
+        },
+        behavior: HitTestBehavior.opaque,
+        child: Opacity(
+          opacity: isMoving && !withinBounds ? 0.8 : 1.0,
+          child: content,
+        ),
+      ),
     );
   }
 }

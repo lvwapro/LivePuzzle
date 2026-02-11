@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:typed_data';
 import 'dart:io';
 import 'dart:ui' as ui;
@@ -84,6 +85,11 @@ class _PuzzleEditorScreenState extends ConsumerState<PuzzleEditorScreen>
   
   // 🔥 当前显示的图片（用于网格显示）
   final Map<int, Uint8List?> _currentDisplayImages = {};
+  
+  // 🔥 帧编辑：进入帧选择时保存原始图片，取消时恢复
+  final Map<int, Uint8List?> _preEditImageData = {};
+  Timer? _frameExtractTimer; // 节流定时器
+  bool _isExtractingFrame = false; // 防止重入
 
   @override
   void initState() {
@@ -101,6 +107,9 @@ class _PuzzleEditorScreenState extends ConsumerState<PuzzleEditorScreen>
       curve: Curves.linear,
     );
     
+    // 🔥 监听动画帧更新 → 实时更新新画布中的图片
+    _animationController!.addListener(_onAnimationTick);
+
     // 🔥 监听动画完成
     _animationController!.addStatusListener((status) {
       if (status == AnimationStatus.completed) {
@@ -117,6 +126,8 @@ class _PuzzleEditorScreenState extends ConsumerState<PuzzleEditorScreen>
                 _currentDisplayImages[i] = _photoThumbnails[i];
               }
             }
+            // 🔥 同步恢复新画布 imageBlocks
+            _restoreImageBlocksToCovers();
           });
           _animationController?.reset();
         }
@@ -130,6 +141,7 @@ class _PuzzleEditorScreenState extends ConsumerState<PuzzleEditorScreen>
 
   @override
   void dispose() {
+    _frameExtractTimer?.cancel();
     _animationController?.dispose();
     // 🔥 释放所有视频播放器
     for (final controller in _videoControllers.values) {
@@ -217,6 +229,7 @@ class _PuzzleEditorScreenState extends ConsumerState<PuzzleEditorScreen>
           );
           
           // 重新添加监听器
+          _animationController!.addListener(_onAnimationTick);
           _animationController!.addStatusListener((status) {
             if (status == AnimationStatus.completed) {
               if (mounted) {
@@ -231,6 +244,7 @@ class _PuzzleEditorScreenState extends ConsumerState<PuzzleEditorScreen>
                       _currentDisplayImages[i] = _photoThumbnails[i];
                     }
                   }
+                  _restoreImageBlocksToCovers();
                 });
                 _animationController?.reset();
               }
@@ -458,11 +472,68 @@ class _PuzzleEditorScreenState extends ConsumerState<PuzzleEditorScreen>
   }
 
   void _handleCanvasTap() {
+    // 取消选中时恢复原始图片（如果有未确认的帧编辑）
+    _revertFrameEdit();
     setState(() {
       _selectedCellIndex = -1;
-      _editorState = EditorState.global; // 切换回全局编辑状态
-      _selectedGlobalTool = null; // 清空工具选择
+      _selectedBlockId = null;
+      _editorState = EditorState.global;
+      _selectedGlobalTool = null;
     });
+  }
+
+  /// 恢复帧编辑前的图片（取消时调用）
+  void _revertFrameEdit() {
+    _frameExtractTimer?.cancel();
+    if (_selectedCellIndex >= 0 && _preEditImageData.containsKey(_selectedCellIndex)) {
+      final originalData = _preEditImageData[_selectedCellIndex];
+      if (originalData != null && _selectedCellIndex < _imageBlocks.length) {
+        setState(() {
+          _imageBlocks[_selectedCellIndex] = _imageBlocks[_selectedCellIndex].copyWith(
+            imageData: originalData,
+          );
+        });
+      }
+      _preEditImageData.remove(_selectedCellIndex);
+    }
+  }
+
+  /// 真正的节流（throttle）：滑动过程中持续提取帧，不等松手
+  int? _pendingFrameTimeMs; // 排队等待的帧时间
+  
+  void _throttledExtractFrame(int cellIndex, int timeMs) {
+    if (_isExtractingFrame) {
+      // 正在提取中 → 记录最新请求，等当前完成后自动处理
+      _pendingFrameTimeMs = timeMs;
+      return;
+    }
+    // 立即开始提取
+    _doExtractFrame(cellIndex, timeMs);
+  }
+  
+  Future<void> _doExtractFrame(int cellIndex, int timeMs) async {
+    if (!mounted || cellIndex < 0 || cellIndex >= _imageBlocks.length) return;
+    _isExtractingFrame = true;
+    _pendingFrameTimeMs = null;
+    
+    try {
+      final frameData = await _captureVideoFrame(cellIndex);
+      if (frameData != null && mounted && cellIndex < _imageBlocks.length) {
+        setState(() {
+          _imageBlocks[cellIndex] = _imageBlocks[cellIndex].copyWith(
+            imageData: frameData,
+          );
+        });
+      }
+    } finally {
+      _isExtractingFrame = false;
+      // 如果有排队的请求，立即处理最新的那个
+      if (_pendingFrameTimeMs != null && mounted) {
+        final pending = _pendingFrameTimeMs!;
+        _pendingFrameTimeMs = null;
+        _doExtractFrame(cellIndex, pending);
+      }
+    }
   }
 
   // 🔥 全局工具处理
@@ -884,6 +955,53 @@ class _PuzzleEditorScreenState extends ConsumerState<PuzzleEditorScreen>
     }
   }
 
+  // 🔥 动画帧回调：实时更新新画布中 imageBlocks 的图片
+  void _onAnimationTick() {
+    if (!_isPlayingLivePuzzle || !_useNewCanvas) return;
+    if (_animation == null) return;
+
+    final progress = _animation!.value.clamp(0.0, 1.0);
+    final currentTimeMs = progress * _maxDurationMs;
+
+    bool changed = false;
+    for (int i = 0; i < _imageBlocks.length && i < _selectedPhotos.length; i++) {
+      final frames = _videoFrames[i];
+      Uint8List? newData;
+
+      if (frames != null && frames.isNotEmpty) {
+        final videoDurationMs = _videoDurations[i] ?? 2000;
+        if (currentTimeMs >= videoDurationMs) {
+          // 超过该视频时长 → 定格到封面
+          newData = _coverFrames[i] ?? _photoThumbnails[i];
+        } else {
+          // 正常播放
+          final videoProgress = (currentTimeMs / videoDurationMs).clamp(0.0, 1.0);
+          final frameIndex = (videoProgress * (frames.length - 1)).round().clamp(0, frames.length - 1);
+          newData = frames[frameIndex];
+        }
+      } else {
+        newData = _coverFrames[i] ?? _photoThumbnails[i];
+      }
+
+      if (newData != null && newData != _imageBlocks[i].imageData) {
+        _imageBlocks[i] = _imageBlocks[i].copyWith(imageData: newData);
+        changed = true;
+      }
+    }
+
+    if (changed && mounted) setState(() {});
+  }
+
+  // 🔥 恢复 imageBlocks 到封面帧
+  void _restoreImageBlocksToCovers() {
+    for (int i = 0; i < _imageBlocks.length && i < _selectedPhotos.length; i++) {
+      final coverData = _coverFrames[i] ?? _photoThumbnails[i];
+      if (coverData != null) {
+        _imageBlocks[i] = _imageBlocks[i].copyWith(imageData: coverData);
+      }
+    }
+  }
+
   Future<void> _playLivePuzzle() async {
     if (_animationController == null || _animation == null) return;
     
@@ -892,6 +1010,7 @@ class _PuzzleEditorScreenState extends ConsumerState<PuzzleEditorScreen>
       debugPrint('⏸️ 停止播放 Live Puzzle');
       setState(() {
         _isPlayingLivePuzzle = false;
+        _restoreImageBlocksToCovers();
       });
       _animationController?.stop();
       _animationController?.reset();
@@ -984,70 +1103,83 @@ class _PuzzleEditorScreenState extends ConsumerState<PuzzleEditorScreen>
         }
       }
       
-      // 2. 为每一帧创建拼接图片（直接拼接原始帧）
+      // 2. 为每一帧创建拼接图片
       final tempDir = await getTemporaryDirectory();
       final timestamp = DateTime.now().millisecondsSinceEpoch;
       final frameImagePaths = <String>[];
-      
-      // 🔥 第一帧特殊处理：作为静态封面，所有格子显示封面图
-      // 使用缩略图保证清晰度的同时尺寸一致
-      final coverCellFrames = <Uint8List>[];
-      for (int i = 0; i < _selectedPhotos.length; i++) {
-        final coverFrameData = _coverFrames[i];
-        if (coverFrameData != null) {
-          // 设置了自定义封面，使用截取的图片
-          coverCellFrames.add(coverFrameData);
-        } else if (_photoThumbnails[i] != null) {
-          // 没设置封面，使用缩略图（已经是1200x1200高质量）
-          coverCellFrames.add(_photoThumbnails[i]!);
-        }
+      final useLayout = _useNewCanvas && _imageBlocks.isNotEmpty;
+
+      // 🔥 预计算输出尺寸（布局模式）
+      int outW = 0, outH = 0;
+      if (useLayout) {
+        final cw = _canvasConfig.width;
+        final ch = _canvasConfig.height;
+        const int maxSide = 1200;
+        final sf = cw >= ch ? maxSide / cw : maxSide / ch;
+        outW = (cw * sf).round();
+        outH = (ch * sf).round();
       }
-      
-      // 保存封面帧
-      final coverFramePath = '${tempDir.path}/puzzle_frame_${timestamp}_cover.jpg';
-      await _stitchImages(coverCellFrames, coverFramePath);
-      frameImagePaths.add(coverFramePath);
-      
-      // 🔥 生成剩余的动画帧（从第1帧开始到第29帧）
-      for (int frameIdx = 1; frameIdx < kTotalFrames; frameIdx++) {
-        // 为每个 Live Photo 获取当前时间点的正确帧
+
+      // 🔥 预解码所有不变的图片（封面/缩略图），建立缓存
+      final imageCache = <String, ui.Image>{}; // key = bytes hashCode
+      Future<ui.Image> getCachedImage(Uint8List data) async {
+        final key = '${identityHashCode(data)}';
+        if (imageCache.containsKey(key)) return imageCache[key]!;
+        final img = await _decodeImage(data);
+        imageCache[key] = img;
+        return img;
+      }
+
+      // 🔥 获取某一帧的每个格子的图片数据
+      List<Uint8List> getFrameCellData(int frameIdx) {
         final cellFrames = <Uint8List>[];
-        
         for (int i = 0; i < _selectedPhotos.length; i++) {
-          final frames = _videoFrames[i];
-          if (frames != null && frames.isNotEmpty) {
-            // 根据时长决定帧索引（实现定格效果）
-            final progress = frameIdx / (kTotalFrames - 1);
-            final currentTimeMs = progress * _maxDurationMs;
-            final videoDurationMs = _videoDurations[i] ?? 2000;
-            
-            if (currentTimeMs >= videoDurationMs) {
-              // 超过时长，定格到封面
-              final coverFrameData = _coverFrames[i];
-              if (coverFrameData != null) {
-                // 使用自定义封面
-                cellFrames.add(coverFrameData);
-              } else if (_photoThumbnails[i] != null) {
-                // 使用缩略图（已经是1200x1200高质量）
-                cellFrames.add(_photoThumbnails[i]!);
+          if (frameIdx == 0) {
+            // 封面帧
+            final coverData = _coverFrames[i] ?? _photoThumbnails[i];
+            if (coverData != null) cellFrames.add(coverData);
+          } else {
+            final frames = _videoFrames[i];
+            if (frames != null && frames.isNotEmpty) {
+              final progress = frameIdx / (kTotalFrames - 1);
+              final currentTimeMs = progress * _maxDurationMs;
+              final videoDurationMs = _videoDurations[i] ?? 2000;
+              if (currentTimeMs >= videoDurationMs) {
+                final coverData = _coverFrames[i] ?? _photoThumbnails[i];
+                if (coverData != null) cellFrames.add(coverData);
+              } else {
+                final videoProgress = (currentTimeMs / videoDurationMs).clamp(0.0, 1.0);
+                final fi = (videoProgress * (frames.length - 1)).round().clamp(0, frames.length - 1);
+                cellFrames.add(frames[fi]);
               }
-            } else {
-              // 正常播放
-              final videoProgress = (currentTimeMs / videoDurationMs).clamp(0.0, 1.0);
-              final cellFrameIndex = (videoProgress * (frames.length - 1)).round().clamp(0, frames.length - 1);
-              cellFrames.add(frames[cellFrameIndex]);
+            } else if (_photoThumbnails[i] != null) {
+              cellFrames.add(_photoThumbnails[i]!);
             }
-          } else if (_photoThumbnails[i] != null) {
-            cellFrames.add(_photoThumbnails[i]!);
           }
         }
-        
-        // 拼接图片
+        return cellFrames;
+      }
+
+      final sw = Stopwatch()..start();
+
+      // 🔥 生成所有帧
+      for (int frameIdx = 0; frameIdx < kTotalFrames; frameIdx++) {
+        final cellData = getFrameCellData(frameIdx);
         final framePath = '${tempDir.path}/puzzle_frame_${timestamp}_$frameIdx.jpg';
-        await _stitchImages(cellFrames, framePath);
+
+        if (useLayout) {
+          // 解码当前帧图片（利用缓存避免重复解码）
+          final decoded = <ui.Image>[];
+          for (final data in cellData) {
+            decoded.add(await getCachedImage(data));
+          }
+          await _renderLayoutFrameFast(decoded, outW, outH, framePath);
+        } else {
+          await _stitchImages(cellData, framePath);
+        }
         frameImagePaths.add(framePath);
-        
-        if (mounted && frameIdx % 5 == 0) {
+
+        if (mounted && frameIdx % 10 == 0 && frameIdx > 0) {
           ScaffoldMessenger.of(context).clearSnackBars();
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -1059,6 +1191,14 @@ class _PuzzleEditorScreenState extends ConsumerState<PuzzleEditorScreen>
           );
         }
       }
+
+      debugPrint('⏱️ 全部 $kTotalFrames 帧渲染完成，耗时 ${sw.elapsedMilliseconds}ms');
+
+      // 清理图片缓存
+      for (final img in imageCache.values) {
+        img.dispose();
+      }
+      imageCache.clear();
       
       // 3. 调用原生方法创建 Live Photo
       // 🔥 封面帧始终是第0帧（包含所有格子的原始封面或设置的封面）
@@ -1195,6 +1335,88 @@ class _PuzzleEditorScreenState extends ConsumerState<PuzzleEditorScreen>
     finalImage.dispose();
   }
 
+  /// 🔥 按当前布局渲染一帧到文件（接受已解码的图片，避免重复解码）
+  Future<void> _renderLayoutFrameFast(List<ui.Image> decodedImages, int outW, int outH, String outputPath) async {
+    if (decodedImages.isEmpty || _imageBlocks.isEmpty) return;
+
+    final cw = _canvasConfig.width;
+    final ch = _canvasConfig.height;
+
+    final recorder = ui.PictureRecorder();
+    final canvas = Canvas(recorder);
+    final paint = Paint()..filterQuality = FilterQuality.medium;
+
+    // 白色背景
+    canvas.drawRect(
+      Rect.fromLTWH(0, 0, outW.toDouble(), outH.toDouble()),
+      Paint()..color = const Color(0xFFFFFFFF),
+    );
+
+    // 按 imageBlocks 的位置绘制每张图（BoxFit.cover 模式）
+    for (int i = 0; i < _imageBlocks.length && i < decodedImages.length; i++) {
+      final block = _imageBlocks[i];
+      final img = decodedImages[i];
+
+      final dx = block.x * outW;
+      final dy = block.y * outH;
+      final dw = block.width * outW;
+      final dh = block.height * outH;
+      final dstRect = Rect.fromLTWH(dx, dy, dw, dh);
+
+      canvas.save();
+      canvas.clipRect(dstRect);
+
+      // BoxFit.cover
+      final imgW = img.width.toDouble();
+      final imgH = img.height.toDouble();
+      final dstAspect = dw / dh;
+      final srcAspect = imgW / imgH;
+
+      double srcX, srcY, srcW, srcH;
+      if (srcAspect > dstAspect) {
+        srcH = imgH;
+        srcW = imgH * dstAspect;
+        srcX = (imgW - srcW) / 2;
+        srcY = 0;
+      } else {
+        srcW = imgW;
+        srcH = imgW / dstAspect;
+        srcX = 0;
+        srcY = (imgH - srcH) / 2;
+      }
+
+      // 应用用户的缩放和偏移
+      if (block.scale > 1.0 || block.offsetX != 0 || block.offsetY != 0) {
+        final zoomedW = srcW / block.scale;
+        final zoomedH = srcH / block.scale;
+        final oxRatio = block.offsetX / (cw * block.width);
+        final oyRatio = block.offsetY / (ch * block.height);
+        final cx = srcX + srcW / 2 - oxRatio * zoomedW;
+        final cy = srcY + srcH / 2 - oyRatio * zoomedH;
+        srcX = (cx - zoomedW / 2).clamp(0, imgW - zoomedW);
+        srcY = (cy - zoomedH / 2).clamp(0, imgH - zoomedH);
+        srcW = zoomedW;
+        srcH = zoomedH;
+      }
+
+      canvas.drawImageRect(img, Rect.fromLTWH(srcX, srcY, srcW, srcH), dstRect, paint);
+      canvas.restore();
+    }
+
+    final picture = recorder.endRecording();
+    final finalImage = await picture.toImage(outW, outH);
+    final byteData = await finalImage.toByteData(format: ui.ImageByteFormat.png);
+    await File(outputPath).writeAsBytes(byteData!.buffer.asUint8List());
+    finalImage.dispose();
+  }
+
+  /// 解码 Uint8List → ui.Image
+  Future<ui.Image> _decodeImage(Uint8List data) async {
+    final codec = await ui.instantiateImageCodec(data);
+    final frame = await codec.getNextFrame();
+    return frame.image;
+  }
+
   Uint8List? _getCurrentFrameImage() {
     if (_selectedCellIndex >= _selectedPhotos.length) return null;
     
@@ -1283,25 +1505,27 @@ class _PuzzleEditorScreenState extends ConsumerState<PuzzleEditorScreen>
       selectedBlockId: _selectedBlockId,
       onBlockTap: (blockId) {
         if (_isPlayingLivePuzzle) return;
-        print('🔍 Block tapped: $blockId');
         final blockIndex = _imageBlocks.indexWhere((b) => b.id == blockId);
-        print('🔍 Block index: $blockIndex, _selectedCellIndex before: $_selectedCellIndex');
-        
+
+        // 如果点击了已选中的同一张，不做处理
+        if (blockIndex == _selectedCellIndex && _selectedBlockId == blockId) return;
+
+        // 先恢复上一张的帧编辑（如果有）
+        _revertFrameEdit();
+
+        // 保存当前图片数据，用于取消时恢复
+        if (blockIndex >= 0 && blockIndex < _imageBlocks.length) {
+          _preEditImageData[blockIndex] = _imageBlocks[blockIndex].imageData;
+        }
+
         setState(() {
           _selectedBlockId = blockId;
           _editorState = EditorState.single;
-          
           if (blockIndex >= 0) {
             _selectedCellIndex = blockIndex;
-            print('🔍 Set _selectedCellIndex to: $blockIndex');
-            // 🔥 自动初始化视频播放器，用于帧选择
             _initVideoPlayer(blockIndex);
           }
         });
-        
-        print('🔍 _selectedCellIndex after setState: $_selectedCellIndex');
-        print('🔍 _useNewCanvas: $_useNewCanvas');
-        print('🔍 Video controller exists: ${_videoControllers[blockIndex] != null}');
       },
       onBlockChanged: (blockId, updatedBlock) {
         setState(() {
@@ -1309,6 +1533,31 @@ class _PuzzleEditorScreenState extends ConsumerState<PuzzleEditorScreen>
           if (index >= 0) {
             _imageBlocks[index] = updatedBlock;
           }
+        });
+      },
+      onBlockSwap: (sourceId, targetId) {
+        // 位置互换：两个图片块交换 x/y/width/height/layoutBlockId
+        final srcIdx = _imageBlocks.indexWhere((b) => b.id == sourceId);
+        final tgtIdx = _imageBlocks.indexWhere((b) => b.id == targetId);
+        if (srcIdx < 0 || tgtIdx < 0 || srcIdx == tgtIdx) return;
+
+        setState(() {
+          final src = _imageBlocks[srcIdx];
+          final tgt = _imageBlocks[tgtIdx];
+
+          // 互换位置属性，重置内部偏移
+          _imageBlocks[srcIdx] = src.copyWith(
+            x: tgt.x, y: tgt.y,
+            width: tgt.width, height: tgt.height,
+            layoutBlockId: tgt.layoutBlockId,
+            offsetX: 0, offsetY: 0,
+          );
+          _imageBlocks[tgtIdx] = tgt.copyWith(
+            x: src.x, y: src.y,
+            width: src.width, height: src.height,
+            layoutBlockId: src.layoutBlockId,
+            offsetX: 0, offsetY: 0,
+          );
         });
       },
       onCanvasTap: () {
@@ -1378,113 +1627,143 @@ class _PuzzleEditorScreenState extends ConsumerState<PuzzleEditorScreen>
 
   @override
   Widget build(BuildContext context) {
+    // 判断是否有可用的帧选择器
+    final hasVideoReady = _selectedCellIndex >= 0 &&
+        _selectedCellIndex < _selectedPhotos.length &&
+        !_isPlayingLivePuzzle &&
+        _videoControllers[_selectedCellIndex] != null &&
+        _videoControllers[_selectedCellIndex]!.value.isInitialized;
+
     return Scaffold(
       backgroundColor: const Color(0xFFFFF0F5),
-      body: Column(
+      body: Stack(
         children: [
-          // 头部
-          EditorHeaderWidget(
-            onBack: () => Navigator.pop(context),
-            onDone: _savePuzzleToGallery,
-          onPlayLive: _selectedPhotos.isNotEmpty ? _playLivePuzzle : null,
-          isPlayingLive: _isPlayingLivePuzzle,
-        ),
+          // ━━━ 主布局 ━━━
+          Column(
+            children: [
+              // 头部
+              EditorHeaderWidget(
+                onBack: () => Navigator.pop(context),
+                onDone: _savePuzzleToGallery,
+                onPlayLive: _selectedPhotos.isNotEmpty ? _playLivePuzzle : null,
+                isPlayingLive: _isPlayingLivePuzzle,
+              ),
 
-        // 🔥 拼图预览画布
-        Expanded(
-            child: Container(
-              color: const Color(0xFFF5F5F5),
-              child: _useNewCanvas ? _buildNewCanvas() : _buildOldCanvas(),
-            ),
-          ),
-
-          // 底部控制区域 - 帧选择器（保留定格帧选择功能）
-          if (_selectedCellIndex >= 0 && _selectedCellIndex < _selectedPhotos.length && !_isPlayingLivePuzzle)
-            Flexible(
-              child: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: _videoControllers[_selectedCellIndex] != null &&
-                            _videoControllers[_selectedCellIndex]!.value.isInitialized
-                          ? VideoFrameSelectorWidget(
-                              videoController: _videoControllers[_selectedCellIndex]!,
-                              isCover: _coverFrames[_selectedCellIndex] != null,
-                              onSetCover: () async {
-                                final frameData = await _captureVideoFrame(_selectedCellIndex);
-                                
-                                if (frameData != null) {
-                                  final controller = _videoControllers[_selectedCellIndex]!;
-                                  final timeMs = controller.value.position.inMilliseconds;
-                                  
-                                  setState(() {
-                                    _coverFrames[_selectedCellIndex] = frameData;
-                                    _coverFrameTime[_selectedCellIndex] = timeMs;
-                                    _currentDisplayImages[_selectedCellIndex] = frameData;
-                                  });
-                                  
-                                  if (mounted) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(
-                                        content: Text(
-                                          '已设置为封面 (格子 ${_selectedCellIndex + 1}, ${(timeMs / 1000).toStringAsFixed(2)}s)',
-                                        ),
-                                        duration: const Duration(seconds: 2),
-                                        behavior: SnackBarBehavior.floating,
-                                        backgroundColor: const Color(0xFFFF4D7D),
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(12),
-                                        ),
-                                      ),
-                                    );
-                                  }
-                                } else {
-                                  if (mounted) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
-                                        content: Text('截取帧失败，请重试'),
-                                        duration: Duration(seconds: 2),
-                                        backgroundColor: Colors.red,
-                                      ),
-                                    );
-                                  }
-                                }
-                              },
-                            )
-                          : Container(
-                              height: 200,
-                              alignment: Alignment.center,
-                              child: const Text('正在加载视频...'),
-                            ),
-                    ),
-                  ],
+              // 拼图预览画布
+              Expanded(
+                child: Container(
+                  color: const Color(0xFFF5F5F5),
+                  child: _useNewCanvas ? _buildNewCanvas() : _buildOldCanvas(),
                 ),
               ),
-            ),
 
-          // 🔥 动态工具栏/布局面板
-          if (!_isPlayingLivePuzzle)
-            _editorState == EditorState.global
-                ? SizedBox(
-                    height: 280, // 🔥 从400降到280
-                    child: LayoutSelectionPanel(
-                      photoCount: _selectedPhotos.length, // 🔥 传入图片数量
-                      onLayoutSelected: (canvas, template) {
-                        _applyLayout(canvas, template);
-                      },
-                    ),
-                  )
-                : DynamicToolbar(
-                    editorState: _editorState,
-                    selectedGlobalTool: _selectedGlobalTool,
-                    selectedSingleTool: _selectedSingleTool,
-                    onGlobalToolTap: _handleGlobalTool,
-                    onSingleToolTap: _handleSingleTool,
-                  ),
+              // 工具栏/布局面板（帧选择器弹出时隐藏）
+              if (!_isPlayingLivePuzzle && !hasVideoReady)
+                _editorState == EditorState.global
+                    ? SizedBox(
+                        height: 280,
+                        child: LayoutSelectionPanel(
+                          photoCount: _selectedPhotos.length,
+                          onLayoutSelected: (canvas, template) {
+                            _applyLayout(canvas, template);
+                          },
+                        ),
+                      )
+                    : DynamicToolbar(
+                        editorState: _editorState,
+                        selectedGlobalTool: _selectedGlobalTool,
+                        selectedSingleTool: _selectedSingleTool,
+                        onGlobalToolTap: _handleGlobalTool,
+                        onSingleToolTap: _handleSingleTool,
+                      ),
+            ],
+          ),
+
+          // ━━━ 帧选择器（底部弹出面板）━━━
+          if (hasVideoReady)
+            DraggableScrollableSheet(
+              key: ValueKey('frame_$_selectedCellIndex'),
+              initialChildSize: 0.22,
+              minChildSize: 0.14,
+              maxChildSize: 0.30,
+              snap: true,
+              snapSizes: const [0.22],
+              builder: (context, scrollController) {
+                return VideoFrameSelectorWidget(
+                  videoController: _videoControllers[_selectedCellIndex]!,
+                  isCover: _coverFrames[_selectedCellIndex] != null,
+                  scrollController: scrollController,
+                  onFrameTimeChanged: (timeMs) {
+                    // 节流提取帧并实时更新画布
+                    _throttledExtractFrame(_selectedCellIndex, timeMs);
+                  },
+                  onConfirm: () => _handleSetCover(_selectedCellIndex),
+                  onCancel: () {
+                    // 取消：恢复原图并取消选中
+                    _revertFrameEdit();
+                    setState(() {
+                      _selectedCellIndex = -1;
+                      _selectedBlockId = null;
+                      _editorState = EditorState.global;
+                    });
+                  },
+                );
+              },
+            ),
         ],
       ),
     );
+  }
+
+  /// 设置封面帧（确定时调用）
+  Future<void> _handleSetCover(int cellIndex) async {
+    _frameExtractTimer?.cancel();
+    final frameData = await _captureVideoFrame(cellIndex);
+
+    if (frameData != null) {
+      final controller = _videoControllers[cellIndex]!;
+      final timeMs = controller.value.position.inMilliseconds;
+
+      setState(() {
+        _coverFrames[cellIndex] = frameData;
+        _coverFrameTime[cellIndex] = timeMs;
+        _currentDisplayImages[cellIndex] = frameData;
+        // 更新画布图片为确认的封面帧
+        if (cellIndex < _imageBlocks.length) {
+          _imageBlocks[cellIndex] = _imageBlocks[cellIndex].copyWith(
+            imageData: frameData,
+          );
+        }
+      });
+
+      // 确认后清除预编辑数据（这样取消选中不会恢复）
+      _preEditImageData.remove(cellIndex);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              '已设置为封面 (${(timeMs / 1000).toStringAsFixed(2)}s)',
+            ),
+            duration: const Duration(seconds: 2),
+            behavior: SnackBarBehavior.floating,
+            backgroundColor: const Color(0xFFFF4D7D),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+        );
+      }
+    } else {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('截取帧失败，请重试'),
+            duration: Duration(seconds: 2),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 }

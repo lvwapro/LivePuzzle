@@ -206,7 +206,7 @@ class _LayoutSelectionPanelState extends State<LayoutSelectionPanel> {
                           crossAxisCount: 5,
                           mainAxisSpacing: 8,
                           crossAxisSpacing: 8,
-                          childAspectRatio: 0.85,
+                          childAspectRatio: 1.0,
                         ),
                         itemCount: layouts.length,
                         itemBuilder: (context, index) {
@@ -288,37 +288,18 @@ class _LayoutSelectionPanelState extends State<LayoutSelectionPanel> {
                 ]
               : null,
         ),
-        child: Column(
-          children: [
-            Expanded(
-              child: LayoutBuilder(
-                builder: (context, constraints) {
-                  return CustomPaint(
-                    size: Size(constraints.maxWidth, constraints.maxHeight),
-                    painter: LayoutTemplatePainter(
-                      template: layout,
-                      color: isSelected
-                          ? const Color(0xFFF9A0B5) // 选中：亮粉色块
-                          : const Color(0xFFFFB6C8), // 未选中：中粉色块
-                    ),
-                  );
-                },
-              ),
-            ),
-            const SizedBox(height: 2),
-            Text(
-              layout.name,
-              style: TextStyle(
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            return CustomPaint(
+              size: Size(constraints.maxWidth, constraints.maxHeight),
+              painter: LayoutTemplatePainter(
+                template: layout,
                 color: isSelected
-                    ? Colors.white
-                    : const Color(0xFFD4688A),
-                fontSize: 9,
-                fontWeight: FontWeight.w500,
+                    ? const Color(0xFFF9A0B5)
+                    : const Color(0xFFFFB6C8),
               ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ],
+            );
+          },
         ),
       ),
     );

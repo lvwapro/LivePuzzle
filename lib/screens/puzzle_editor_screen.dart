@@ -254,10 +254,10 @@ class _PuzzleEditorScreenState extends ConsumerState<PuzzleEditorScreen>
 
         for (int i = 0; i < _selectedPhotos.length; i++) {
           try {
-            // 🔥 提高缩略图质量，用于显示和保存
+            // 🔥 高分辨率缩略图，用于显示和保存
             final thumbnail = await _selectedPhotos[i].thumbnailDataWithSize(
-              const ThumbnailSize(1200, 1200), // 提高到 1200x1200
-              quality: 95, // 提高质量
+              const ThumbnailSize(2000, 2000), // 2000x2000 保证清晰度
+              quality: 95,
             );
             if (mounted && thumbnail != null) {
               setState(() {
@@ -592,31 +592,40 @@ class _PuzzleEditorScreenState extends ConsumerState<PuzzleEditorScreen>
       finalCanvas = await _calculateLongImageCanvas(template, images);
     }
     
+    // 🔥 预解码图片获取宽高比
+    final aspectRatios = <double>[];
+    for (final imgData in images) {
+      try {
+        final codec = await ui.instantiateImageCodec(imgData);
+        final frame = await codec.getNextFrame();
+        aspectRatios.add(frame.image.width / frame.image.height);
+        frame.image.dispose();
+      } catch (_) {
+        aspectRatios.add(1.0); // 默认正方形
+      }
+    }
+
     setState(() {
-      _useNewCanvas = true; // 使用新画布
-      _canvasConfig = finalCanvas; // 保存画布配置
-      _currentLayout = template; // 保存当前布局
+      _useNewCanvas = true;
+      _canvasConfig = finalCanvas;
+      _currentLayout = template;
       
-      // 使用布局引擎计算图片块位置（相对坐标 0-1）
       _imageBlocks = LayoutEngine.calculateLayout(
         canvas: finalCanvas,
         template: template,
         images: images,
-        spacing: 0.0, // 🔥 无间距
+        spacing: 0.0,
       );
       
-      // 重置选中状态
+      // 🔥 为每个 block 设置图片宽高比
+      for (int i = 0; i < _imageBlocks.length && i < aspectRatios.length; i++) {
+        _imageBlocks[i] = _imageBlocks[i].copyWith(imageAspectRatio: aspectRatios[i]);
+      }
+      
       _selectedBlockId = null;
       _editorState = EditorState.global;
     });
     
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('已应用 ${template.name} 布局 (${images.length}张)'),
-        duration: const Duration(seconds: 1),
-        backgroundColor: const Color(0xFFFF85A2),
-      ),
-    );
   }
   
   // 🔥 计算长图拼接的画布尺寸（基于实际图片）
@@ -1109,12 +1118,12 @@ class _PuzzleEditorScreenState extends ConsumerState<PuzzleEditorScreen>
       final frameImagePaths = <String>[];
       final useLayout = _useNewCanvas && _imageBlocks.isNotEmpty;
 
-      // 🔥 预计算输出尺寸（布局模式）
+      // 🔥 预计算输出尺寸（布局模式），提高到 2400px 保证清晰
       int outW = 0, outH = 0;
       if (useLayout) {
         final cw = _canvasConfig.width;
         final ch = _canvasConfig.height;
-        const int maxSide = 1200;
+        const int maxSide = 2400;
         final sf = cw >= ch ? maxSide / cw : maxSide / ch;
         outW = (cw * sf).round();
         outH = (ch * sf).round();
@@ -1282,7 +1291,7 @@ class _PuzzleEditorScreenState extends ConsumerState<PuzzleEditorScreen>
     }
     
     // 🔥 限制最大宽度，避免图片过大
-    const int MAX_WIDTH = 1200;
+    const int MAX_WIDTH = 2000;
     if (maxWidth > MAX_WIDTH) {
       debugPrint('⚠️ 图片宽度 $maxWidth 超过限制，缩放到 $MAX_WIDTH');
       maxWidth = MAX_WIDTH;
@@ -1344,7 +1353,7 @@ class _PuzzleEditorScreenState extends ConsumerState<PuzzleEditorScreen>
 
     final recorder = ui.PictureRecorder();
     final canvas = Canvas(recorder);
-    final paint = Paint()..filterQuality = FilterQuality.medium;
+    final paint = Paint()..filterQuality = FilterQuality.high;
 
     // 白色背景
     canvas.drawRect(

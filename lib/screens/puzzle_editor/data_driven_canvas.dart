@@ -195,8 +195,9 @@ class _DataDrivenCanvasState extends State<DataDrivenCanvas> {
 
           if (_isDeltaWithinBounds()) {
             // ━━━ 在自身范围内 → 调整图片内容偏移（裁切平移）━━━
-            final maxOx = abs.width * (block.scale - 1) / 2;
-            final maxOy = abs.height * (block.scale - 1) / 2;
+            final (overflowX, overflowY) = _calcCoverOverflow(abs);
+            final maxOx = overflowX * block.scale + abs.width * (block.scale - 1) / 2;
+            final maxOy = overflowY * block.scale + abs.height * (block.scale - 1) / 2;
             final newOx = (block.offsetX + _moveDeltaX).clamp(-maxOx, maxOx);
             final newOy = (block.offsetY + _moveDeltaY).clamp(-maxOy, maxOy);
             widget.onBlockChanged(
@@ -250,12 +251,12 @@ class _DataDrivenCanvasState extends State<DataDrivenCanvas> {
     if (idx < 0) return;
     final block = widget.imageBlocks[idx];
     final newScale = (block.scale * factor).clamp(1.0, 5.0);
-    // 缩放时约束偏移
     final cw = widget.canvasConfig.width;
     final ch = widget.canvasConfig.height;
     final abs = block.toAbsolute(cw, ch);
-    final maxOx = abs.width * (newScale - 1) / 2;
-    final maxOy = abs.height * (newScale - 1) / 2;
+    final (overflowX, overflowY) = _calcCoverOverflow(abs);
+    final maxOx = overflowX * newScale + abs.width * (newScale - 1) / 2;
+    final maxOy = overflowY * newScale + abs.height * (newScale - 1) / 2;
     widget.onBlockChanged(
         block.id,
         block.copyWith(
@@ -347,48 +348,104 @@ class _DataDrivenCanvasState extends State<DataDrivenCanvas> {
     );
   }
 
+  /// 计算 BoxFit.cover 后图片的溢出量（用于偏移上限）
+  /// 返回 (overflowX, overflowY)：图片比框大出多少像素（单侧）
+  (double, double) _calcCoverOverflow(ImageBlockAbsolute abs) {
+    final imgAR = abs.imageAspectRatio;
+    if (imgAR <= 0) return (0, 0);
+    final frameAR = abs.width / abs.height;
+    if (imgAR > frameAR) {
+      // 图片更宽 → 宽度溢出
+      final coverW = abs.height * imgAR; // cover后图片宽度
+      return ((coverW - abs.width) / 2, 0);
+    } else {
+      // 图片更高 → 高度溢出
+      final coverH = abs.width / imgAR;
+      return (0, (coverH - abs.height) / 2);
+    }
+  }
+
   Widget _buildImageBlock(
     ImageBlock block,
     ImageBlockAbsolute abs,
     bool selected,
     bool isMoving,
   ) {
-    // 判断当前是"范围内平移"还是"范围外互换"
     final withinBounds = isMoving ? _isDeltaWithinBounds() : true;
 
-    // 图片内容：应用 offsetX/offsetY 和 scale
-    // 范围内拖动时，实时显示偏移预览
+    // 计算 cover 溢出 + 用户缩放后的最大偏移
+    final (overflowX, overflowY) = _calcCoverOverflow(abs);
+    final maxOx = overflowX * block.scale + abs.width * (block.scale - 1) / 2;
+    final maxOy = overflowY * block.scale + abs.height * (block.scale - 1) / 2;
+
     double previewOx = block.offsetX;
     double previewOy = block.offsetY;
     if (isMoving && withinBounds) {
-      final maxOx = abs.width * (block.scale - 1) / 2;
-      final maxOy = abs.height * (block.scale - 1) / 2;
       previewOx = (block.offsetX + _moveDeltaX).clamp(-maxOx, maxOx);
       previewOy = (block.offsetY + _moveDeltaY).clamp(-maxOy, maxOy);
     }
 
-    Widget imageContent = SizedBox(
-      width: abs.width,
-      height: abs.height,
-      child: ClipRect(
-        child: Transform.translate(
-          offset: Offset(previewOx, previewOy),
-          child: Transform.scale(
-            scale: block.scale,
-            child: abs.imageData != null
-                ? Image.memory(
-                    abs.imageData!,
-                    fit: BoxFit.cover,
-                    width: abs.width,
-                    height: abs.height,
-                    gaplessPlayback: true,
-                    filterQuality: FilterQuality.high,
-                  )
-                : const Center(child: Icon(Icons.image, color: Colors.grey)),
+    // 手动实现 BoxFit.cover + 平移：
+    // 将图片放大到恰好覆盖框，然后用 translate 偏移
+    Widget imageContent;
+    if (abs.imageData != null && abs.imageAspectRatio > 0) {
+      final frameAR = abs.width / abs.height;
+      final imgAR = abs.imageAspectRatio;
+      // cover 尺寸（未额外缩放前）
+      double coverW, coverH;
+      if (imgAR > frameAR) {
+        coverH = abs.height;
+        coverW = abs.height * imgAR;
+      } else {
+        coverW = abs.width;
+        coverH = abs.width / imgAR;
+      }
+      // 加上用户缩放
+      coverW *= block.scale;
+      coverH *= block.scale;
+
+      imageContent = SizedBox(
+        width: abs.width,
+        height: abs.height,
+        child: ClipRect(
+          child: OverflowBox(
+            maxWidth: double.infinity,
+            maxHeight: double.infinity,
+            child: Transform.translate(
+              offset: Offset(previewOx, previewOy),
+              child: SizedBox(
+                width: coverW,
+                height: coverH,
+                child: Image.memory(
+                  abs.imageData!,
+                  fit: BoxFit.fill, // 已计算好尺寸，直接填充
+                  width: coverW,
+                  height: coverH,
+                  gaplessPlayback: true,
+                  filterQuality: FilterQuality.high,
+                ),
+              ),
+            ),
           ),
         ),
-      ),
-    );
+      );
+    } else {
+      // 没有宽高比信息或没有图片 → 回退旧逻辑
+      imageContent = SizedBox(
+        width: abs.width,
+        height: abs.height,
+        child: abs.imageData != null
+            ? Image.memory(
+                abs.imageData!,
+                fit: BoxFit.cover,
+                width: abs.width,
+                height: abs.height,
+                gaplessPlayback: true,
+                filterQuality: FilterQuality.high,
+              )
+            : const Center(child: Icon(Icons.image, color: Colors.grey)),
+      );
+    }
 
     // 边框样式
     BoxDecoration? deco;

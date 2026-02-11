@@ -24,8 +24,9 @@ class LayoutSelectionPanel extends StatefulWidget {
 }
 
 class _LayoutSelectionPanelState extends State<LayoutSelectionPanel> {
-  String _selectedRatio = '1:1'; // 默认选择 1:1
-  LayoutTabType _selectedTab = LayoutTabType.puzzle; // 默认拼图标签
+  String _selectedRatio = '1:1';
+  LayoutTabType _selectedTab = LayoutTabType.puzzle;
+  String? _selectedLayoutId; // 当前选中的布局ID
 
   // 画布比例选项
   final List<Map<String, String>> _ratios = const [
@@ -151,7 +152,7 @@ class _LayoutSelectionPanelState extends State<LayoutSelectionPanel> {
                         },
                       ),
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 10),
                   ],
 
                   // 布局模板选择
@@ -163,7 +164,7 @@ class _LayoutSelectionPanelState extends State<LayoutSelectionPanel> {
                       fontWeight: FontWeight.w600,
                     ),
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 6),
 
                   // 布局网格
                   Builder(
@@ -199,12 +200,13 @@ class _LayoutSelectionPanelState extends State<LayoutSelectionPanel> {
                       
                       return GridView.builder(
                         shrinkWrap: true,
+                        padding: EdgeInsets.zero,
                         physics: const NeverScrollableScrollPhysics(),
                         gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 4,
-                          mainAxisSpacing: 12,
-                          crossAxisSpacing: 12,
-                          childAspectRatio: 1.0,
+                          crossAxisCount: 5,
+                          mainAxisSpacing: 8,
+                          crossAxisSpacing: 8,
+                          childAspectRatio: 0.85,
                         ),
                         itemCount: layouts.length,
                         itemBuilder: (context, index) {
@@ -261,39 +263,60 @@ class _LayoutSelectionPanelState extends State<LayoutSelectionPanel> {
   }
 
   Widget _buildLayoutItem(LayoutTemplate layout) {
+    final isSelected = _selectedLayoutId == layout.id;
+
     return GestureDetector(
       onTap: () {
+        setState(() => _selectedLayoutId = layout.id);
         final canvas = _getCurrentCanvas();
         widget.onLayoutSelected(canvas, layout);
       },
       child: Container(
+        padding: const EdgeInsets.all(6),
         decoration: BoxDecoration(
-          color: Colors.grey.shade100,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: Colors.grey.shade200,
-          ),
+          color: isSelected
+              ? const Color(0xFFEF6B8A) // 选中：深粉背景
+              : const Color(0xFFFFF0F3), // 未选中：浅粉底色
+          borderRadius: BorderRadius.circular(14),
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: const Color(0xFFEF6B8A).withOpacity(0.3),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ]
+              : null,
         ),
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Expanded(
-              child: CustomPaint(
-                painter: LayoutTemplatePainter(
-                  template: layout,
-                  color: Colors.grey.shade400,
-                ),
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  return CustomPaint(
+                    size: Size(constraints.maxWidth, constraints.maxHeight),
+                    painter: LayoutTemplatePainter(
+                      template: layout,
+                      color: isSelected
+                          ? const Color(0xFFF9A0B5) // 选中：亮粉色块
+                          : const Color(0xFFFFB6C8), // 未选中：中粉色块
+                    ),
+                  );
+                },
               ),
             ),
-            Padding(
-              padding: const EdgeInsets.only(bottom: 8),
-              child: Text(
-                layout.name,
-                style: TextStyle(
-                  color: Colors.grey.shade600,
-                  fontSize: 11,
-                ),
+            const SizedBox(height: 2),
+            Text(
+              layout.name,
+              style: TextStyle(
+                color: isSelected
+                    ? Colors.white
+                    : const Color(0xFFD4688A),
+                fontSize: 9,
+                fontWeight: FontWeight.w500,
               ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
           ],
         ),
@@ -392,7 +415,7 @@ class LayoutTemplatePainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final padding = 8.0;
+    final padding = 4.0;
     final drawArea = Size(size.width - padding * 2, size.height - padding * 2);
 
     switch (template.type) {
@@ -417,9 +440,10 @@ class LayoutTemplatePainter extends CustomPainter {
     maxRows += 1;
     maxCols += 1;
 
-    const cellWidth = 60.0;
-    const cellHeight = 60.0;
-    const spacing = 4.0;
+    const spacing = 3.0;
+    // 根据实际可用区域动态计算格子大小
+    final cellWidth = (drawArea.width - spacing * (maxCols - 1)) / maxCols;
+    final cellHeight = (drawArea.height - spacing * (maxRows - 1)) / maxRows;
 
     final fillPaint = Paint()
       ..color = color
@@ -429,11 +453,11 @@ class LayoutTemplatePainter extends CustomPainter {
       final rect = Rect.fromLTWH(
         padding + block.col * (cellWidth + spacing),
         padding + block.row * (cellHeight + spacing),
-        cellWidth - spacing,
-        cellHeight - spacing,
+        cellWidth,
+        cellHeight,
       );
       canvas.drawRRect(
-        RRect.fromRectAndRadius(rect, const Radius.circular(4)),
+        RRect.fromRectAndRadius(rect, const Radius.circular(3)),
         fillPaint,
       );
     }
@@ -444,28 +468,35 @@ class LayoutTemplatePainter extends CustomPainter {
       ..color = color
       ..style = PaintingStyle.fill;
 
+    const spacing = 3.0;
+
+    // 主图占 60%
     final mainRect = Rect.fromLTWH(
-      padding + 4,
-      padding + 4,
-      drawArea.width - 8,
-      drawArea.height * 0.65 - 8,
+      padding,
+      padding,
+      drawArea.width,
+      drawArea.height * 0.6 - spacing / 2,
     );
     canvas.drawRRect(
-      RRect.fromRectAndRadius(mainRect, const Radius.circular(4)),
+      RRect.fromRectAndRadius(mainRect, const Radius.circular(3)),
       fillPaint,
     );
 
+    // 小图横排
     final secondaryCount = template.blocks.length - 1;
-    final secondaryWidth = (drawArea.width - 8 - (secondaryCount - 1) * 4) / secondaryCount;
+    if (secondaryCount <= 0) return;
+    final secondaryWidth = (drawArea.width - spacing * (secondaryCount - 1)) / secondaryCount;
+    final secondaryTop = padding + drawArea.height * 0.6 + spacing / 2;
+    final secondaryHeight = drawArea.height * 0.4 - spacing / 2;
     for (int i = 0; i < secondaryCount; i++) {
       final rect = Rect.fromLTWH(
-        padding + 4 + i * (secondaryWidth + 4),
-        padding + drawArea.height * 0.65 + 4,
+        padding + i * (secondaryWidth + spacing),
+        secondaryTop,
         secondaryWidth,
-        drawArea.height * 0.35 - 8,
+        secondaryHeight,
       );
       canvas.drawRRect(
-        RRect.fromRectAndRadius(rect, const Radius.circular(4)),
+        RRect.fromRectAndRadius(rect, const Radius.circular(3)),
         fillPaint,
       );
     }

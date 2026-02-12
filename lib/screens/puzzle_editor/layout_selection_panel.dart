@@ -11,11 +11,15 @@ enum LayoutTabType {
 /// 布局选择面板 - 新版本（数据驱动）
 class LayoutSelectionPanel extends StatefulWidget {
   final int photoCount;
+  final String? selectedLayoutId; // 当前选中的布局ID
+  final String? selectedRatio; // 当前画布比例
   final Function(CanvasConfig canvas, LayoutTemplate template) onLayoutSelected;
 
   const LayoutSelectionPanel({
     super.key,
     required this.photoCount,
+    this.selectedLayoutId,
+    this.selectedRatio,
     required this.onLayoutSelected,
   });
 
@@ -27,6 +31,48 @@ class _LayoutSelectionPanelState extends State<LayoutSelectionPanel> {
   String _selectedRatio = '1:1';
   LayoutTabType _selectedTab = LayoutTabType.puzzle;
   String? _selectedLayoutId; // 当前选中的布局ID
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedLayoutId = widget.selectedLayoutId;
+    // 🔥 同步画布比例
+    if (widget.selectedRatio != null) {
+      _selectedRatio = widget.selectedRatio!;
+    }
+    // 🔥 根据初始布局ID自动切换到对应标签
+    if (_selectedLayoutId != null) {
+      if (_selectedLayoutId!.startsWith('long_')) {
+        _selectedTab = LayoutTabType.longImage;
+      } else {
+        _selectedTab = LayoutTabType.puzzle;
+      }
+    }
+  }
+
+  @override
+  void didUpdateWidget(LayoutSelectionPanel oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.selectedLayoutId != oldWidget.selectedLayoutId) {
+      _selectedLayoutId = widget.selectedLayoutId;
+      // 🔥 根据新的布局ID自动切换标签
+      if (_selectedLayoutId != null) {
+        setState(() {
+          if (_selectedLayoutId!.startsWith('long_')) {
+            _selectedTab = LayoutTabType.longImage;
+          } else {
+            _selectedTab = LayoutTabType.puzzle;
+          }
+        });
+      }
+    }
+    // 🔥 同步画布比例更新
+    if (widget.selectedRatio != null && widget.selectedRatio != oldWidget.selectedRatio) {
+      setState(() {
+        _selectedRatio = widget.selectedRatio!;
+      });
+    }
+  }
 
   // 画布比例选项
   final List<Map<String, String>> _ratios = const [
@@ -308,9 +354,11 @@ class _LayoutSelectionPanelState extends State<LayoutSelectionPanel> {
   /// 长图拼接布局项（横向显示）
   Widget _buildLongImageLayoutItem(LayoutTemplate layout) {
     final isHorizontal = layout.id == 'long_horizontal';
+    final isSelected = _selectedLayoutId == layout.id;
     
     return GestureDetector(
       onTap: () {
+        setState(() => _selectedLayoutId = layout.id);
         final canvas = CanvasConfig.fromRatio('1:1');
         widget.onLayoutSelected(canvas, layout);
       },
@@ -318,11 +366,24 @@ class _LayoutSelectionPanelState extends State<LayoutSelectionPanel> {
         height: 60,
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: Colors.grey.shade100,
+          color: isSelected 
+              ? const Color(0xFFEF6B8A) // 选中：深粉背景
+              : Colors.grey.shade100,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: Colors.grey.shade200,
+            color: isSelected
+                ? const Color(0xFFEF6B8A)
+                : Colors.grey.shade200,
           ),
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: const Color(0xFFEF6B8A).withOpacity(0.3),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ]
+              : null,
         ),
         child: Row(
           children: [
@@ -331,12 +392,16 @@ class _LayoutSelectionPanelState extends State<LayoutSelectionPanel> {
               width: 48,
               height: 36,
               decoration: BoxDecoration(
-                color: const Color(0xFFFFE0E8),
+                color: isSelected
+                    ? const Color(0xFFF9A0B5) // 选中时浅一点
+                    : const Color(0xFFFFE0E8),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Icon(
                 isHorizontal ? Icons.view_week : Icons.view_stream,
-                color: const Color(0xFFFF85A2),
+                color: isSelected
+                    ? Colors.white
+                    : const Color(0xFFFF85A2),
                 size: 24,
               ),
             ),
@@ -351,7 +416,7 @@ class _LayoutSelectionPanelState extends State<LayoutSelectionPanel> {
                   Text(
                     layout.name,
                     style: TextStyle(
-                      color: Colors.grey.shade800,
+                      color: isSelected ? Colors.white : Colors.grey.shade800,
                       fontSize: 13,
                       fontWeight: FontWeight.w600,
                     ),
@@ -363,7 +428,9 @@ class _LayoutSelectionPanelState extends State<LayoutSelectionPanel> {
                         ? '${widget.photoCount}张图片从左到右拼接'
                         : '${widget.photoCount}张图片从上到下拼接',
                     style: TextStyle(
-                      color: Colors.grey.shade500,
+                      color: isSelected 
+                          ? Colors.white.withOpacity(0.9)
+                          : Colors.grey.shade500,
                       fontSize: 10,
                     ),
                     maxLines: 1,

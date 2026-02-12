@@ -24,8 +24,6 @@ import 'package:live_puzzle/models/image_transform.dart';
 import 'puzzle_editor/editor_header_widget.dart';
 import 'puzzle_editor/puzzle_grid_widget.dart';
 import 'puzzle_editor/video_frame_selector_widget.dart';
-import 'puzzle_editor/feature_buttons_widget.dart';
-import 'puzzle_editor/interactive_canvas_widget.dart';
 import 'puzzle_editor/image_action_menu.dart';
 import 'puzzle_editor/dynamic_toolbar.dart';
 import 'puzzle_editor/layout_selection_panel.dart';
@@ -59,10 +57,10 @@ class _PuzzleEditorScreenState extends ConsumerState<PuzzleEditorScreen>
   LayoutTemplate? _currentLayout; // 当前布局模板
   List<ImageBlock> _imageBlocks = []; // 图片块列表（使用相对坐标0-1）
   String? _selectedBlockId; // 选中的图片块ID
+  bool _useNewCanvas = true; // 切换开关，true 使用新画布
   
-  // 🔥 布局管理（旧系统，逐步废弃）
+  // 🔥 布局管理（旧系统，废弃）
   final Map<int, ImageTransform> _imageTransforms = {};
-  bool _useNewCanvas = false; // 切换开关，true 使用新画布，false 使用旧布局
   
   // 🔥 旧的frame-by-frame方式(保留用于播放和保存)
   final Map<int, int> _selectedFrames = {}; // 当前选中的帧索引
@@ -150,6 +148,32 @@ class _PuzzleEditorScreenState extends ConsumerState<PuzzleEditorScreen>
     super.dispose();
   }
 
+  /// 根据图片数量确定初始布局（1张=1:1, 2张=3:4上下, 3张=9:16上下, 4-9张=长图纵向）
+  (CanvasConfig, LayoutTemplate) _getInitialLayout(int photoCount) {
+    if (photoCount == 1) {
+      return (
+        CanvasConfig.fromRatio('1:1'),
+        LayoutTemplate.presetLayouts.firstWhere((t) => t.id == 'single')
+      );
+    } else if (photoCount == 2) {
+      return (
+        CanvasConfig.fromRatio('3:4'),
+        LayoutTemplate.presetLayouts.firstWhere((t) => t.id == 'grid_2x1') // 上下平分
+      );
+    } else if (photoCount == 3) {
+      return (
+        CanvasConfig.fromRatio('9:16'),
+        LayoutTemplate.presetLayouts.firstWhere((t) => t.id == 'grid_3x1') // 三行一列
+      );
+    } else {
+      // 4-9张：长图纵向拼接
+      return (
+        CanvasConfig.fromRatio('1:1'), // 占位，会被重新计算
+        LayoutTemplate.getLongImageLayouts(photoCount).firstWhere((t) => t.id == 'long_vertical')
+      );
+    }
+  }
+
   Future<void> _loadSelectedPhotos() async {
     final selectedAllIds = ref.read(selectedAllPhotoIdsProvider);
     final selectedLiveIds = ref.read(selectedLivePhotoIdsProvider);
@@ -172,25 +196,22 @@ class _PuzzleEditorScreenState extends ConsumerState<PuzzleEditorScreen>
         }
       }
       
-      if (mounted) {
+      if (mounted && selectedAssets.isNotEmpty) {
+        // 🔥 立即确定初始布局
+        final (canvas, template) = _getInitialLayout(selectedAssets.length);
+        
         setState(() {
           _selectedPhotos = selectedAssets;
-          // 🔥 初始化状态
+          _canvasConfig = canvas;
+          _currentLayout = template;
+          
+          // 初始化状态
           for (int i = 0; i < selectedAssets.length; i++) {
             if (!_selectedFrames.containsKey(i)) {
-              _selectedFrames[i] = 0; // 初始显示第一帧
+              _selectedFrames[i] = 0;
             }
             if (!_coverFrames.containsKey(i)) {
-              _coverFrames[i] = null; // null表示使用原始封面
-            }
-            // 🔥 初始化图片变换状态 - 自动垂直排列
-            if (!_imageTransforms.containsKey(i)) {
-              _imageTransforms[i] = ImageTransform(
-                position: Offset(100, 100.0 + i * 320.0), // 垂直排列，间距320
-                scale: 1.0,
-                rotation: 0.0,
-                zIndex: i,
-              );
+              _coverFrames[i] = null;
             }
           }
         });
@@ -252,38 +273,31 @@ class _PuzzleEditorScreenState extends ConsumerState<PuzzleEditorScreen>
           });
         }
 
+        // 🔥 加载缩略图并立即应用布局
+        final List<Uint8List> loadedThumbnails = [];
         for (int i = 0; i < _selectedPhotos.length; i++) {
           try {
-            // 🔥 高分辨率缩略图，用于显示和保存
             final thumbnail = await _selectedPhotos[i].thumbnailDataWithSize(
-              const ThumbnailSize(2000, 2000), // 2000x2000 保证清晰度
+              const ThumbnailSize(2000, 2000),
               quality: 95,
             );
-            if (mounted && thumbnail != null) {
-              setState(() {
-                _photoThumbnails[i] = thumbnail;
-              });
+            if (thumbnail != null) {
+              loadedThumbnails.add(thumbnail);
+              if (mounted) {
+                setState(() {
+                  _photoThumbnails[i] = thumbnail;
+                });
+              }
             }
           } catch (e) {
             debugPrint('Error loading thumbnail $i: $e');
           }
         }
         
-        // 🔥 自动应用长图纵向拼接布局
-        WidgetsBinding.instance.addPostFrameCallback((_) async {
-          if (mounted && _selectedPhotos.isNotEmpty) {
-            final template = LayoutTemplate.getLongImageLayouts(_selectedPhotos.length)
-                .firstWhere((t) => t.id == 'long_vertical');
-            
-            // 等待缩略图加载完成
-            await Future.delayed(const Duration(milliseconds: 800));
-            
-            if (mounted) {
-              final dummyCanvas = CanvasConfig.fromRatio('1:1'); // 占位，会被重新计算
-              _applyLayout(dummyCanvas, template);
-            }
-          }
-        });
+        // 🔥 应用初始布局（无延迟，立即执行）
+        if (mounted && loadedThumbnails.isNotEmpty && _currentLayout != null) {
+          _applyLayout(_canvasConfig, _currentLayout!);
+        }
       }
     });
   }
@@ -567,10 +581,14 @@ class _PuzzleEditorScreenState extends ConsumerState<PuzzleEditorScreen>
     }
   }
 
-  // 🔥 应用布局
   // 🔥 应用布局（使用新的数据驱动系统）
   void _applyLayout(CanvasConfig canvas, LayoutTemplate template) async {
     if (_selectedPhotos.isEmpty) return;
+    
+    setState(() {
+      _canvasConfig = canvas;
+      _currentLayout = template;
+    });
     
     // 收集图片数据
     final List<Uint8List> images = [];
@@ -1569,6 +1587,11 @@ class _PuzzleEditorScreenState extends ConsumerState<PuzzleEditorScreen>
           );
         });
       },
+      onBlocksResized: (updatedBlocks) {
+        setState(() {
+          _imageBlocks = updatedBlocks;
+        });
+      },
       onCanvasTap: () {
         if (!_isPlayingLivePuzzle) {
           _handleCanvasTap();
@@ -1673,6 +1696,8 @@ class _PuzzleEditorScreenState extends ConsumerState<PuzzleEditorScreen>
                         height: 280,
                         child: LayoutSelectionPanel(
                           photoCount: _selectedPhotos.length,
+                          selectedLayoutId: _currentLayout?.id,
+                          selectedRatio: _canvasConfig.ratio,
                           onLayoutSelected: (canvas, template) {
                             _applyLayout(canvas, template);
                           },

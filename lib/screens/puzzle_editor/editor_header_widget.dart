@@ -34,11 +34,30 @@ class EditorHeaderWidget extends StatelessWidget {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              // Back Button
-              IconButton(
-                icon: const Icon(Icons.arrow_back_ios_new, size: 20),
-                color: const Color(0xFF4A3F44).withOpacity(0.7),
-                onPressed: onBack,
+              // Back Button - 圆形白色背景样式（与选择页一致）
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.05),
+                      blurRadius: 10,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: IconButton(
+                  icon: const Icon(
+                    Icons.arrow_back_ios_new,
+                    size: 18,
+                    color: Color(0xFFFF4D80),
+                  ),
+                  onPressed: onBack,
+                  padding: EdgeInsets.zero,
+                ),
               ),
               // Title / Live Play Button
               if (onPlayLive != null)

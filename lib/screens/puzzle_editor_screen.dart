@@ -9,6 +9,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:live_puzzle/providers/photo_provider.dart';
 import 'package:live_puzzle/providers/puzzle_history_provider.dart';
 import 'package:live_puzzle/models/puzzle_history.dart';
+import 'package:live_puzzle/screens/completion_screen.dart';
 import 'package:live_puzzle/services/live_photo_manager.dart';
 import 'package:photo_manager/photo_manager.dart';
 import 'package:live_photo_bridge/live_photo_bridge.dart';
@@ -1250,12 +1251,13 @@ class _PuzzleEditorScreenState extends ConsumerState<PuzzleEditorScreen>
           );
           await ref.read(puzzleHistoryProvider.notifier).addHistory(history);
 
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Live Photo 保存成功！'),
-              duration: Duration(seconds: 2),
-              behavior: SnackBarBehavior.floating,
-              backgroundColor: Colors.green,
+          // 🔥 跳转到完成页面
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(
+              builder: (context) => CompletionScreen(
+                thumbnail: thumbnail,
+                photoCount: _selectedPhotos.length,
+              ),
             ),
           );
         } else {

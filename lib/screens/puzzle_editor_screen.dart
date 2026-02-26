@@ -1239,14 +1239,25 @@ class _PuzzleEditorScreenState extends ConsumerState<PuzzleEditorScreen>
       if (mounted) {
         ScaffoldMessenger.of(context).clearSnackBars();
         if (success) {
+          // 🔥 读取第一帧图片作为拼接效果缩略图
+          Uint8List? puzzleThumbnail;
+          try {
+            final firstFrameFile = File(frameImagePaths[0]);
+            if (await firstFrameFile.exists()) {
+              puzzleThumbnail = await firstFrameFile.readAsBytes();
+            }
+          } catch (e) {
+            debugPrint('读取缩略图失败: $e');
+            puzzleThumbnail = _coverFrames[0] ?? _photoThumbnails[0];
+          }
+
           // 🔥 保存成功后添加历史记录
           final photoIds = _selectedPhotos.map((p) => p.id).toList();
-          final thumbnail = _coverFrames[0] ?? _photoThumbnails[0];
           final history = PuzzleHistory(
             id: DateTime.now().millisecondsSinceEpoch.toString(),
             photoIds: photoIds,
             createdAt: DateTime.now(),
-            thumbnail: thumbnail,
+            thumbnail: puzzleThumbnail,
             photoCount: _selectedPhotos.length,
           );
           await ref.read(puzzleHistoryProvider.notifier).addHistory(history);
@@ -1255,7 +1266,7 @@ class _PuzzleEditorScreenState extends ConsumerState<PuzzleEditorScreen>
           Navigator.of(context).pushReplacement(
             MaterialPageRoute(
               builder: (context) => CompletionScreen(
-                thumbnail: thumbnail,
+                thumbnail: puzzleThumbnail,
                 photoCount: _selectedPhotos.length,
               ),
             ),

@@ -402,7 +402,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                   crossAxisCount: 2,
                                   mainAxisSpacing: 20,
                                   crossAxisSpacing: 20,
-                                  childAspectRatio: 0.85,
+                                  childAspectRatio: 1.0, // 正方形卡片
                                 ),
                                 shrinkWrap: true,
                                 physics: const NeverScrollableScrollPhysics(),
@@ -478,9 +478,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     return GestureDetector(
       onTap: () => _openHistoryEditor(history),
       child: Container(
-        padding: const EdgeInsets.all(10),
         decoration: BoxDecoration(
-          color: Colors.white,
           borderRadius: BorderRadius.circular(32),
           boxShadow: [
             BoxShadow(
@@ -491,13 +489,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             ),
           ],
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
-              child: Container(
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(32),
+          child: Stack(
+            children: [
+              // 背景图片或渐变
+              Container(
                 decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(24),
                   gradient: history.thumbnail == null
                       ? LinearGradient(
                           begin: Alignment.topLeft,
@@ -525,46 +523,30 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       )
                     : null,
               ),
-            ),
-            const SizedBox(height: 8),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 4),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    '${history.photoCount} 张照片',
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w700,
-                      color: Color(0xFF1F2937),
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 2),
-                  Row(
-                    children: [
-                      const Icon(
-                        Icons.schedule,
-                        size: 10,
-                        color: Color(0xFFFF85A2),
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        history.getTimeAgo(),
-                        style: const TextStyle(
-                          fontSize: 9,
-                          fontWeight: FontWeight.w700,
-                          color: Color(0xFF9CA3AF),
-                        ),
+              
+              // 左下角时间标签
+              Positioned(
+                left: 12,
+                bottom: 12,
+                child: Text(
+                  history.getTimeAgo(),
+                  style: const TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w900,
+                    color: Colors.white,
+                    letterSpacing: 0.5,
+                    shadows: [
+                      Shadow(
+                        color: Colors.black,
+                        blurRadius: 4,
+                        offset: Offset(0, 1),
                       ),
                     ],
                   ),
-                ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

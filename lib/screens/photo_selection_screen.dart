@@ -48,8 +48,30 @@ class _PhotoSelectionScreenState extends ConsumerState<PhotoSelectionScreen> {
         type: photo_manager.RequestType.common,
         hasAll: true,
       );
+      // 🔥 只保留有照片的相册（根据当前 tab 过滤）
+      final nonEmptyAlbums = <photo_manager.AssetPathEntity>[];
+      for (final album in albums) {
+        // 获取相册中的资源列表
+        final assetList = await album.getAssetListRange(start: 0, end: 1);
+        if (assetList.isNotEmpty) {
+          // 如果是"实况"标签，额外检查是否有实况照片
+          if (_selectedTabIndex == 1) {
+            // 检查相册中是否有实况照片（使用 photo_manager 的 isLivePhoto 属性）
+            final assets = await album.getAssetListRange(start: 0, end: 100);
+            final hasLivePhoto = assets.any((asset) => 
+              asset.type == photo_manager.AssetType.image && asset.isLivePhoto
+            );
+            if (hasLivePhoto) {
+              nonEmptyAlbums.add(album);
+            }
+          } else {
+            // "全部"标签，只要有照片就添加
+            nonEmptyAlbums.add(album);
+          }
+        }
+      }
       setState(() {
-        _albums = albums;
+        _albums = nonEmptyAlbums;
       });
     } catch (e) {
       debugPrint('❌ 加载相册列表失败: $e');
@@ -481,7 +503,9 @@ class _PhotoSelectionScreenState extends ConsumerState<PhotoSelectionScreen> {
           _selectedTabIndex = tabIndex;
         });
 
-        // 根据标签切换，调用不同的加载方法（保持当前选中的相册）
+        // 根据标签切换，重新加载相册列表和照片
+        _loadAlbums(); // 🔥 重新加载相册列表以过滤没有照片的相册
+        
         if (tabIndex == 0) {
           // 全部照片
           ref.read(livePhotoListProvider.notifier).loadPhotos(

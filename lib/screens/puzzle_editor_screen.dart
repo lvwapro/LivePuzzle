@@ -1682,16 +1682,28 @@ class _PuzzleEditorScreenState extends ConsumerState<PuzzleEditorScreen>
         _videoControllers[_selectedCellIndex] != null &&
         _videoControllers[_selectedCellIndex]!.value.isInitialized;
 
-    return Scaffold(
-      backgroundColor: const Color(0xFFFFF0F5),
-      body: Stack(
+    return WillPopScope(
+      onWillPop: () async {
+        // 🔥 返回时清空所有选中状态
+        ref.read(selectedAllPhotoIdsProvider.notifier).clear();
+        ref.read(selectedLivePhotoIdsProvider.notifier).clear();
+        return true;
+      },
+      child: Scaffold(
+        backgroundColor: const Color(0xFFFFF0F5),
+        body: Stack(
         children: [
           // ━━━ 主布局 ━━━
           Column(
             children: [
               // 头部
               EditorHeaderWidget(
-                onBack: () => Navigator.pop(context),
+                onBack: () {
+                  // 🔥 返回时清空所有选中状态
+                  ref.read(selectedAllPhotoIdsProvider.notifier).clear();
+                  ref.read(selectedLivePhotoIdsProvider.notifier).clear();
+                  Navigator.pop(context);
+                },
                 onDone: _savePuzzleToGallery,
                 onPlayLive: _selectedPhotos.isNotEmpty ? _playLivePuzzle : null,
                 isPlayingLive: _isPlayingLivePuzzle,
@@ -1762,7 +1774,8 @@ class _PuzzleEditorScreenState extends ConsumerState<PuzzleEditorScreen>
             ),
         ],
       ),
-    );
+    ),
+    ); // WillPopScope
   }
 
   /// 设置封面帧（确定时调用）

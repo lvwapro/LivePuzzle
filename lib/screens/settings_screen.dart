@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:live_puzzle/providers/puzzle_history_provider.dart';
+import 'package:live_puzzle/providers/locale_provider.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:live_puzzle/l10n/app_localizations.dart';
 
 /// 设置页面
 class SettingsScreen extends ConsumerWidget {
@@ -11,6 +13,19 @@ class SettingsScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
+    final currentLocale = ref.watch(localeProvider);
+    
+    // 确定当前语言显示文本
+    String languageText;
+    if (currentLocale == null) {
+      languageText = '${l10n.languageChinese} / ${l10n.languageEnglish}';
+    } else if (currentLocale.languageCode == 'zh') {
+      languageText = l10n.languageChinese;
+    } else {
+      languageText = l10n.languageEnglish;
+    }
+    
     return Scaffold(
       backgroundColor: const Color(0xFFFFF0F3),
       body: SafeArea(
@@ -49,9 +64,9 @@ class SettingsScreen extends ConsumerWidget {
                     ),
                   if (showBackButton) const SizedBox(width: 16),
                   // Title
-                  const Text(
-                    '设置',
-                    style: TextStyle(
+                  Text(
+                    l10n.settingsTitle,
+                    style: const TextStyle(
                       fontFamily: 'Fredoka',
                       fontSize: 24,
                       fontWeight: FontWeight.w700,
@@ -70,80 +85,75 @@ class SettingsScreen extends ConsumerWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     // 通用设置
-                    _buildSectionTitle('通用'),
+                    _buildSectionTitle(l10n.general),
                     const SizedBox(height: 12),
                     _buildSettingCard(
                       context,
                       icon: Icons.photo_library,
-                      title: '照片质量',
-                      subtitle: '高质量 (2000x2000)',
+                      title: l10n.photoQuality,
+                      subtitle: l10n.photoQualityHigh,
                       onTap: () {
-                        // TODO: 显示质量选择对话框
-                        _showQualityDialog(context);
+                        _showQualityDialog(context, l10n);
                       },
                     ),
                     const SizedBox(height: 12),
                     _buildSettingCard(
                       context,
                       icon: Icons.language,
-                      title: '语言',
-                      subtitle: '简体中文',
+                      title: l10n.language,
+                      subtitle: languageText,
                       onTap: () {
-                        // TODO: 显示语言选择对话框
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('语言设置功能开发中')),
-                        );
+                        _showLanguageDialog(context, ref, l10n);
                       },
                     ),
 
                     const SizedBox(height: 32),
 
                     // 存储管理
-                    _buildSectionTitle('存储'),
+                    _buildSectionTitle(l10n.storage),
                     const SizedBox(height: 12),
                     _buildSettingCard(
                       context,
                       icon: Icons.history,
-                      title: '清除历史记录',
-                      subtitle: '删除所有历史记录',
+                      title: l10n.clearHistory,
+                      subtitle: l10n.clearHistoryDesc,
                       trailing: const Icon(Icons.delete_outline, color: Colors.red, size: 24),
-                      onTap: () => _showClearHistoryDialog(context, ref),
+                      onTap: () => _showClearHistoryDialog(context, ref, l10n),
                     ),
 
                     const SizedBox(height: 32),
 
                     // 关于
-                    _buildSectionTitle('关于'),
+                    _buildSectionTitle(l10n.about),
                     const SizedBox(height: 12),
                     _buildSettingCard(
                       context,
                       icon: Icons.info_outline,
-                      title: '版本信息',
-                      subtitle: 'v1.0.0',
+                      title: l10n.versionInfo,
+                      subtitle: l10n.versionNumber,
                       onTap: () {
-                        _showAboutDialog(context);
+                        _showAboutDialog(context, l10n);
                       },
                     ),
                     const SizedBox(height: 12),
                     _buildSettingCard(
                       context,
                       icon: Icons.share,
-                      title: '分享应用',
-                      subtitle: '推荐给朋友',
+                      title: l10n.shareApp,
+                      subtitle: l10n.shareAppDesc,
                       onTap: () {
-                        Share.share('我发现了一个超棒的 Live Photo 拼图应用！快来试试 LivePuzzle 吧！');
+                        Share.share(l10n.shareAppMessage);
                       },
                     ),
                     const SizedBox(height: 12),
                     _buildSettingCard(
                       context,
                       icon: Icons.favorite,
-                      title: '给我们评分',
-                      subtitle: '在 App Store 评分',
+                      title: l10n.rateUs,
+                      subtitle: l10n.rateUsDesc,
                       onTap: () {
-                        // TODO: 打开 App Store 评分页面
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('感谢您的支持！')),
+                          SnackBar(content: Text(l10n.thanksForSupport)),
                         );
                       },
                     ),
@@ -246,14 +256,14 @@ class SettingsScreen extends ConsumerWidget {
     );
   }
 
-  void _showQualityDialog(BuildContext context) {
+  void _showQualityDialog(BuildContext context, AppLocalizations l10n) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        title: const Text(
-          '照片质量',
-          style: TextStyle(
+        title: Text(
+          l10n.photoQualityDialogTitle,
+          style: const TextStyle(
             fontWeight: FontWeight.w700,
             color: Color(0xFF1F2937),
           ),
@@ -261,24 +271,24 @@ class SettingsScreen extends ConsumerWidget {
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            _buildQualityOption('高质量 (2000x2000)', true),
-            _buildQualityOption('中等质量 (1200x1200)', false),
-            _buildQualityOption('节省空间 (800x800)', false),
+            _buildQualityOption(l10n.photoQualityHigh, true),
+            _buildQualityOption(l10n.photoQualityMedium, false),
+            _buildQualityOption(l10n.photoQualitySaving, false),
           ],
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text(
-              '取消',
-              style: TextStyle(color: Color(0xFFFF85A2)),
+            child: Text(
+              l10n.cancel,
+              style: const TextStyle(color: Color(0xFFFF85A2)),
             ),
           ),
           ElevatedButton(
             onPressed: () {
               Navigator.pop(context);
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('设置已保存')),
+                SnackBar(content: Text(l10n.settingsSaved)),
               );
             },
             style: ElevatedButton.styleFrom(
@@ -287,7 +297,7 @@ class SettingsScreen extends ConsumerWidget {
                 borderRadius: BorderRadius.circular(12),
               ),
             ),
-            child: const Text('确定'),
+            child: Text(l10n.confirm),
           ),
         ],
       ),
@@ -307,25 +317,91 @@ class SettingsScreen extends ConsumerWidget {
     );
   }
 
-  void _showClearHistoryDialog(BuildContext context, WidgetRef ref) {
+  void _showLanguageDialog(BuildContext context, WidgetRef ref, AppLocalizations l10n) {
+    final currentLocale = ref.read(localeProvider);
+    
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        title: const Text(
-          '清除历史记录',
-          style: TextStyle(
+        title: Text(
+          l10n.language,
+          style: const TextStyle(
             fontWeight: FontWeight.w700,
             color: Color(0xFF1F2937),
           ),
         ),
-        content: const Text('确定要删除所有历史记录吗？此操作无法撤销。'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              title: Text(l10n.languageChinese),
+              leading: Radio<String>(
+                value: 'zh',
+                groupValue: currentLocale?.languageCode ?? 'zh',
+                onChanged: (value) {
+                  ref.read(localeProvider.notifier).setLocale(const Locale('zh'));
+                  Navigator.pop(context);
+                },
+                activeColor: const Color(0xFFFF85A2),
+              ),
+              contentPadding: EdgeInsets.zero,
+              onTap: () {
+                ref.read(localeProvider.notifier).setLocale(const Locale('zh'));
+                Navigator.pop(context);
+              },
+            ),
+            ListTile(
+              title: Text(l10n.languageEnglish),
+              leading: Radio<String>(
+                value: 'en',
+                groupValue: currentLocale?.languageCode ?? 'zh',
+                onChanged: (value) {
+                  ref.read(localeProvider.notifier).setLocale(const Locale('en'));
+                  Navigator.pop(context);
+                },
+                activeColor: const Color(0xFFFF85A2),
+              ),
+              contentPadding: EdgeInsets.zero,
+              onTap: () {
+                ref.read(localeProvider.notifier).setLocale(const Locale('en'));
+                Navigator.pop(context);
+              },
+            ),
+          ],
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text(
-              '取消',
-              style: TextStyle(color: Color(0xFF9CA3AF)),
+            child: Text(
+              l10n.close,
+              style: const TextStyle(color: Color(0xFFFF85A2)),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showClearHistoryDialog(BuildContext context, WidgetRef ref, AppLocalizations l10n) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        title: Text(
+          l10n.clearHistoryDialogTitle,
+          style: const TextStyle(
+            fontWeight: FontWeight.w700,
+            color: Color(0xFF1F2937),
+          ),
+        ),
+        content: Text(l10n.clearHistoryDialogContent),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(
+              l10n.cancel,
+              style: const TextStyle(color: Color(0xFF9CA3AF)),
             ),
           ),
           ElevatedButton(
@@ -334,8 +410,8 @@ class SettingsScreen extends ConsumerWidget {
               if (context.mounted) {
                 Navigator.pop(context);
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('历史记录已清除'),
+                  SnackBar(
+                    content: Text(l10n.historyCleared),
                     backgroundColor: Colors.green,
                   ),
                 );
@@ -347,21 +423,21 @@ class SettingsScreen extends ConsumerWidget {
                 borderRadius: BorderRadius.circular(12),
               ),
             ),
-            child: const Text('确定删除'),
+            child: Text(l10n.confirmDelete),
           ),
         ],
       ),
     );
   }
 
-  void _showAboutDialog(BuildContext context) {
+  void _showAboutDialog(BuildContext context, AppLocalizations l10n) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        title: const Text(
-          'LivePuzzle',
-          style: TextStyle(
+        title: Text(
+          l10n.aboutDialogTitle,
+          style: const TextStyle(
             fontFamily: 'Fredoka',
             fontWeight: FontWeight.w700,
             color: Color(0xFFFF85A2),
@@ -371,13 +447,13 @@ class SettingsScreen extends ConsumerWidget {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              '版本：v1.0.0',
-              style: TextStyle(fontSize: 14),
+            Text(
+              l10n.aboutDialogVersion,
+              style: const TextStyle(fontSize: 14),
             ),
             const SizedBox(height: 8),
             Text(
-              '一个简单而有趣的 Live Photo 拼图应用',
+              l10n.aboutDialogDesc,
               style: TextStyle(
                 fontSize: 13,
                 color: Colors.grey.shade600,
@@ -385,7 +461,7 @@ class SettingsScreen extends ConsumerWidget {
             ),
             const SizedBox(height: 16),
             Text(
-              '© 2024 LivePuzzle\n保留所有权利',
+              l10n.aboutDialogCopyright,
               style: TextStyle(
                 fontSize: 12,
                 color: Colors.grey.shade400,
@@ -396,9 +472,9 @@ class SettingsScreen extends ConsumerWidget {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text(
-              '关闭',
-              style: TextStyle(color: Color(0xFFFF85A2)),
+            child: Text(
+              l10n.close,
+              style: const TextStyle(color: Color(0xFFFF85A2)),
             ),
           ),
         ],

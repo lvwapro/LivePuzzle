@@ -171,7 +171,7 @@ class AllHistoryScreen extends ConsumerWidget {
                 left: 12,
                 bottom: 12,
                 child: Text(
-                  history.getTimeAgo(),
+                  history.getTimeAgo(context),
                   style: const TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.w900,

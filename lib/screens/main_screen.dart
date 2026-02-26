@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:live_puzzle/screens/home_screen.dart';
 import 'package:live_puzzle/screens/settings_screen.dart';
+import 'package:live_puzzle/l10n/app_localizations.dart';
 
 /// 主页面容器 - 包含底部导航栏
 class MainScreen extends StatefulWidget {
@@ -21,6 +22,8 @@ class _MainScreenState extends State<MainScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    
     return Scaffold(
       body: IndexedStack(
         index: _currentIndex,
@@ -43,9 +46,9 @@ class _MainScreenState extends State<MainScreen> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
-                _buildNavItem(Icons.home, 'Home', 0),
-                _buildNavItem(Icons.explore, 'Discover', 1),
-                _buildNavItem(Icons.settings, 'Settings', 2),
+                _buildNavItem(Icons.home, l10n.home, 0),
+                _buildNavItem(Icons.explore, l10n.discover, 1),
+                _buildNavItem(Icons.settings, l10n.settings, 2),
               ],
             ),
           ),
@@ -94,6 +97,8 @@ class DiscoverScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    
     return Scaffold(
       backgroundColor: const Color(0xFFFFF0F3),
       body: SafeArea(
@@ -122,9 +127,9 @@ class DiscoverScreen extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 32),
-              const Text(
-                'Discover',
-                style: TextStyle(
+              Text(
+                l10n.discoverTitle,
+                style: const TextStyle(
                   fontFamily: 'Fredoka',
                   fontSize: 32,
                   fontWeight: FontWeight.w700,
@@ -133,7 +138,7 @@ class DiscoverScreen extends StatelessWidget {
               ),
               const SizedBox(height: 8),
               Text(
-                '发现更多精彩内容',
+                l10n.discoverSubtitle,
                 style: TextStyle(
                   fontSize: 16,
                   color: Colors.grey.shade600,
@@ -142,7 +147,7 @@ class DiscoverScreen extends StatelessWidget {
               ),
               const SizedBox(height: 16),
               Text(
-                '功能开发中...',
+                l10n.featureInDevelopment,
                 style: TextStyle(
                   fontSize: 14,
                   color: Colors.grey.shade400,

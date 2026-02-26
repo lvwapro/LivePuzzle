@@ -1,4 +1,6 @@
 import 'dart:typed_data';
+import 'package:flutter/material.dart';
+import 'package:live_puzzle/l10n/app_localizations.dart';
 
 /// 拼图历史记录
 class PuzzleHistory {
@@ -41,20 +43,24 @@ class PuzzleHistory {
   }
 
   /// 获取时间差描述
-  String getTimeAgo() {
+  String getTimeAgo(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final now = DateTime.now();
     final difference = now.difference(createdAt);
 
     if (difference.inMinutes < 1) {
-      return 'JUST NOW';
+      return l10n.justNow;
     } else if (difference.inMinutes < 60) {
-      return '${difference.inMinutes} MIN AGO';
+      return l10n.minAgo(difference.inMinutes);
     } else if (difference.inHours < 24) {
-      return '${difference.inHours} HOUR${difference.inHours > 1 ? 'S' : ''} AGO';
+      final hours = difference.inHours;
+      return hours > 1 ? l10n.hoursAgo(hours) : l10n.hourAgo(hours);
     } else if (difference.inDays < 7) {
-      return '${difference.inDays} DAY${difference.inDays > 1 ? 'S' : ''} AGO';
+      final days = difference.inDays;
+      return days > 1 ? l10n.daysAgo(days) : l10n.dayAgo(days);
     } else {
-      return '${difference.inDays ~/ 7} WEEK${difference.inDays ~/ 7 > 1 ? 'S' : ''} AGO';
+      final weeks = difference.inDays ~/ 7;
+      return weeks > 1 ? l10n.weeksAgo(weeks) : l10n.weekAgo(weeks);
     }
   }
 }

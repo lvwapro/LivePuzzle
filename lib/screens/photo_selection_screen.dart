@@ -6,6 +6,7 @@ import 'package:live_puzzle/providers/photo_provider.dart';
 import 'package:live_puzzle/screens/puzzle_editor_screen.dart';
 import 'package:live_puzzle/services/live_photo_manager.dart';
 import 'package:video_player/video_player.dart';
+import 'package:live_puzzle/l10n/app_localizations.dart';
 
 /// Live Photo选择页面 - Pick Moments风格
 /// 支持iOS Live Photo和Android Motion Photo
@@ -63,6 +64,7 @@ class _PhotoSelectionScreenState extends ConsumerState<PhotoSelectionScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final livePhotosAsync = ref.watch(livePhotoListProvider);
     // 🔥 根据当前tab使用对应的选中状态
     final selectedIds = _selectedTabIndex == 0
@@ -140,9 +142,9 @@ class _PhotoSelectionScreenState extends ConsumerState<PhotoSelectionScreen> {
                         // Title
                         Column(
                           children: [
-                            const Text(
-                              'Pick Moments',
-                              style: TextStyle(
+                            Text(
+                              l10n.pickMoments,
+                              style: const TextStyle(
                                 fontSize: 18,
                                 fontWeight: FontWeight.bold,
                                 color: Color(0xFF1F1F1F),
@@ -160,7 +162,7 @@ class _PhotoSelectionScreenState extends ConsumerState<PhotoSelectionScreen> {
                                 borderRadius: BorderRadius.circular(12),
                               ),
                               child: Text(
-                                '${selectedIds.length} SELECTED',
+                                l10n.selected(selectedIds.length),
                                 style: const TextStyle(
                                   fontSize: 11,
                                   fontWeight: FontWeight.bold,
@@ -445,12 +447,12 @@ class _PhotoSelectionScreenState extends ConsumerState<PhotoSelectionScreen> {
                           borderRadius: BorderRadius.circular(14),
                         ),
                       ),
-                      child: const Row(
+                      child: Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Text(
-                            'Continue',
-                            style: TextStyle(
+                            l10n.continueButton,
+                            style: const TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.bold,
                               letterSpacing: 0.5,
@@ -554,7 +556,7 @@ class _PhotoSelectionScreenState extends ConsumerState<PhotoSelectionScreen> {
               : null,
         ),
         child: Text(
-          album.name,
+          _translateAlbumName(album.name),
           style: TextStyle(
             fontSize: 12,
             fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
@@ -564,6 +566,59 @@ class _PhotoSelectionScreenState extends ConsumerState<PhotoSelectionScreen> {
         ),
       ),
     );
+  }
+  
+  /// 翻译系统相册名称
+  String _translateAlbumName(String name) {
+    final l10n = AppLocalizations.of(context)!;
+    switch (name.toLowerCase()) {
+      case 'recents':
+      case '最近项目':
+      case '最近':
+        return l10n.recents;
+      case 'favorites':
+      case '个人收藏':
+      case '收藏':
+        return l10n.favorites;
+      case 'videos':
+      case '视频':
+        return l10n.videos;
+      case 'selfies':
+      case '自拍':
+        return l10n.selfies;
+      case 'live photos':
+      case '实况照片':
+        return l10n.livePhotos;
+      case 'portrait':
+      case 'portraits':
+      case '人像':
+        return l10n.portrait;
+      case 'long exposure':
+      case '长曝光':
+        return l10n.longExposure;
+      case 'panoramas':
+      case '全景':
+        return l10n.panoramas;
+      case 'time-lapse':
+      case 'timelapses':
+      case '延时摄影':
+        return l10n.timelapses;
+      case 'slo-mo':
+      case 'slomo':
+      case '慢动作':
+        return l10n.sloMo;
+      case 'bursts':
+      case '连拍快照':
+        return l10n.bursts;
+      case 'screenshots':
+      case '屏幕快照':
+        return l10n.screenshots;
+      case 'all photos':
+      case '所有照片':
+        return l10n.allPhotos;
+      default:
+        return name; // 保留原名称
+    }
   }
 
   /// 全屏查看图片，支持左右滑动
@@ -855,6 +910,7 @@ class _FullScreenGalleryState extends State<_FullScreenGallery> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final isCurrentLive = _isLivePhoto[_currentIndex] ?? false;
 
     return Scaffold(
@@ -896,9 +952,9 @@ class _FullScreenGalleryState extends State<_FullScreenGallery> {
                         height: 18,
                       ),
                       const SizedBox(width: 4),
-                      const Text(
-                        'LIVE',
-                        style: TextStyle(
+                      Text(
+                        l10n.live,
+                        style: const TextStyle(
                           color: Colors.white,
                           fontSize: 11,
                           fontWeight: FontWeight.bold,

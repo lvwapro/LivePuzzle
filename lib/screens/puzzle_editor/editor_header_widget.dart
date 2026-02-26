@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:live_puzzle/l10n/app_localizations.dart';
 
 /// 编辑器头部组件
 class EditorHeaderWidget extends StatelessWidget {
@@ -17,6 +18,8 @@ class EditorHeaderWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -73,7 +76,7 @@ class EditorHeaderWidget extends StatelessWidget {
                       ),
                       const SizedBox(width: 6),
                       Text(
-                        isPlayingLive ? '播放中...' : 'LIVE',
+                        isPlayingLive ? l10n.playing : l10n.liveFormat,
                         style: const TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
@@ -85,9 +88,9 @@ class EditorHeaderWidget extends StatelessWidget {
                   ),
                 )
               else
-                const Text(
-                  'LivePuzzle',
-                  style: TextStyle(
+                Text(
+                  l10n.livePuzzleTitle,
+                  style: const TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
                     color: Color(0xFFFF4D7D),
@@ -113,9 +116,9 @@ class EditorHeaderWidget extends StatelessWidget {
                       ),
                     ],
                   ),
-                  child: const Text(
-                    'Done',
-                    style: TextStyle(
+                  child: Text(
+                    l10n.done,
+                    style: const TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
                       color: Colors.white,

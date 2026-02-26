@@ -7,6 +7,7 @@ import 'package:live_puzzle/utils/permissions.dart';
 import 'package:live_puzzle/providers/puzzle_history_provider.dart';
 import 'package:live_puzzle/providers/photo_provider.dart';
 import 'package:photo_manager/photo_manager.dart';
+import 'package:live_puzzle/l10n/app_localizations.dart';
 
 /// 主页面 - 可爱粉色风格
 class HomeScreen extends ConsumerStatefulWidget {
@@ -21,6 +22,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    
     return Scaffold(
       backgroundColor: const Color(0xFFFFF0F3), // soft-pink
       extendBody: true,
@@ -41,7 +44,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       Row(
                         children: [
                           Text(
-                            'Hello, Maker!',
+                            l10n.helloMaker,
                             style: TextStyle(
                               fontFamily: 'Fredoka',
                               fontSize: 24,
@@ -50,17 +53,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                               height: 1.2,
                             ),
                           ),
-                          const SizedBox(width: 6),
-                          const Icon(
-                            Icons.auto_awesome,
-                            color: Color(0xFFFFD700), // sparkle
-                            size: 20,
-                          ),
                         ],
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        'Ready to create magic today?',
+                        l10n.readyToCreate,
                         style: TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.w600,
@@ -176,7 +173,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                                 ),
                                                 const SizedBox(width: 8),
                                                 Text(
-                                                  'New Puzzle',
+                                                  l10n.newPuzzle,
                                                   style: TextStyle(
                                                     fontFamily: 'Fredoka',
                                                     fontSize: 20,
@@ -237,7 +234,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Text(
-                            'Inspiration',
+                            l10n.inspiration,
                             style: TextStyle(
                               fontFamily: 'Fredoka',
                               fontSize: 20,
@@ -331,7 +328,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                 children: [
                                   Text(
-                                    'My Studio',
+                                    l10n.myStudio,
                                     style: TextStyle(
                                       fontFamily: 'Fredoka',
                                       fontSize: 20,
@@ -358,7 +355,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                         borderRadius: BorderRadius.circular(20),
                                       ),
                                       child: Text(
-                                        'VIEW ALL',
+                                        l10n.viewAll,
                                         style: TextStyle(
                                           fontSize: 10,
                                           fontWeight: FontWeight.w700,
@@ -460,7 +457,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 left: 12,
                 bottom: 12,
                 child: Text(
-                  history.getTimeAgo(),
+                  history.getTimeAgo(context),
                   style: const TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.w900,

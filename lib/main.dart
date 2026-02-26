@@ -1,19 +1,35 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:live_puzzle/screens/main_screen.dart';
+import 'package:live_puzzle/providers/locale_provider.dart';
+import 'package:live_puzzle/l10n/app_localizations.dart';
 
 void main() {
   runApp(const ProviderScope(child: LivePuzzleApp()));
 }
 
-class LivePuzzleApp extends StatelessWidget {
+class LivePuzzleApp extends ConsumerWidget {
   const LivePuzzleApp({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final locale = ref.watch(localeProvider);
+    
     return MaterialApp(
       title: 'LivePuzzle',
       debugShowCheckedModeBanner: false,
+      locale: locale,
+      localizationsDelegates: const [
+        AppLocalizations.delegate,
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: const [
+        Locale('en', ''),
+        Locale('zh', ''),
+      ],
       theme: ThemeData(
         // 颜色主题
         primaryColor: const Color(0xFFFF4D8D), // vibrant-pink

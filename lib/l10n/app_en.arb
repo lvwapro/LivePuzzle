@@ -1,0 +1,512 @@
+{
+  "@@locale": "en",
+  
+  "appName": "LivePuzzle",
+  "@appName": {
+    "description": "应用名称 - The application name"
+  },
+
+  "home": "Home",
+  "@home": {
+    "description": "主页"
+  },
+  "discover": "Discover",
+  "@discover": {
+    "description": "发现"
+  },
+  "settings": "Settings",
+  "@settings": {
+    "description": "设置"
+  },
+  
+  "welcomeBack": "Welcome Back,",
+  "@welcomeBack": {
+    "description": "欢迎回来"
+  },
+  "readyToCreate": "Ready to create magic today?",
+  "@readyToCreate": {
+    "description": "准备创作"
+  },
+  "createNew": "CREATE NEW",
+  "@createNew": {
+    "description": "开始创作"
+  },
+  "myStudio": "My Studio",
+  "@myStudio": {
+    "description": "我的工作室"
+  },
+  "viewAll": "VIEW ALL",
+  "@viewAll": {
+    "description": "查看全部"
+  },
+  
+  "justNow": "JUST NOW",
+  "@justNow": {
+    "description": "刚刚"
+  },
+  "minAgo": "{count} MIN AGO",
+  "@minAgo": {
+    "description": "分钟前",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "hourAgo": "{count} HOUR AGO",
+  "@hourAgo": {
+    "description": "小时前",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "hoursAgo": "{count} HOURS AGO",
+  "@hoursAgo": {
+    "description": "多小时前",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "dayAgo": "{count} DAY AGO",
+  "@dayAgo": {
+    "description": "天前",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "daysAgo": "{count} DAYS AGO",
+  "@daysAgo": {
+    "description": "多天前",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "weekAgo": "{count} WEEK AGO",
+  "@weekAgo": {
+    "description": "周前",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "weeksAgo": "{count} WEEKS AGO",
+  "@weeksAgo": {
+    "description": "多周前",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+
+  "discoverTitle": "Discover",
+  "@discoverTitle": {
+    "description": "发现标题"
+  },
+  "discoverSubtitle": "Discover more exciting content",
+  "@discoverSubtitle": {
+    "description": "发现副标题"
+  },
+  "featureInDevelopment": "Feature in development...",
+  "@featureInDevelopment": {
+    "description": "功能开发中"
+  },
+  
+  "settingsTitle": "Settings",
+  "@settingsTitle": {
+    "description": "设置标题"
+  },
+  "general": "GENERAL",
+  "@general": {
+    "description": "通用"
+  },
+  "photoQuality": "Photo Quality",
+  "@photoQuality": {
+    "description": "照片质量"
+  },
+  "photoQualityHigh": "High Quality (2000x2000)",
+  "@photoQualityHigh": {
+    "description": "高质量"
+  },
+  "photoQualityMedium": "Medium Quality (1200x1200)",
+  "@photoQualityMedium": {
+    "description": "中等质量"
+  },
+  "photoQualitySaving": "Save Space (800x800)",
+  "@photoQualitySaving": {
+    "description": "节省空间"
+  },
+  "language": "Language",
+  "@language": {
+    "description": "语言"
+  },
+  "languageChinese": "Chinese",
+  "@languageChinese": {
+    "description": "简体中文"
+  },
+  "languageEnglish": "English",
+  "@languageEnglish": {
+    "description": "英语"
+  },
+  
+  "storage": "STORAGE",
+  "@storage": {
+    "description": "存储"
+  },
+  "clearHistory": "Clear History",
+  "@clearHistory": {
+    "description": "清除历史记录"
+  },
+  "clearHistoryDesc": "Delete all history records",
+  "@clearHistoryDesc": {
+    "description": "清除历史记录描述"
+  },
+  
+  "about": "ABOUT",
+  "@about": {
+    "description": "关于"
+  },
+  "versionInfo": "Version Info",
+  "@versionInfo": {
+    "description": "版本信息"
+  },
+  "versionNumber": "v1.0.0",
+  "@versionNumber": {
+    "description": "版本号"
+  },
+  "shareApp": "Share App",
+  "@shareApp": {
+    "description": "分享应用"
+  },
+  "shareAppDesc": "Recommend to friends",
+  "@shareAppDesc": {
+    "description": "分享应用描述"
+  },
+  "rateUs": "Rate Us",
+  "@rateUs": {
+    "description": "给我们评分"
+  },
+  "rateUsDesc": "Rate on App Store",
+  "@rateUsDesc": {
+    "description": "评分描述"
+  },
+  
+  "cancel": "Cancel",
+  "@cancel": {
+    "description": "取消"
+  },
+  "confirm": "Confirm",
+  "@confirm": {
+    "description": "确定"
+  },
+  "delete": "Delete",
+  "@delete": {
+    "description": "删除"
+  },
+  "save": "Save",
+  "@save": {
+    "description": "保存"
+  },
+  "done": "Done",
+  "@done": {
+    "description": "完成"
+  },
+  
+  "photoQualityDialogTitle": "Photo Quality",
+  "@photoQualityDialogTitle": {
+    "description": "照片质量对话框标题"
+  },
+  "settingsSaved": "Settings saved",
+  "@settingsSaved": {
+    "description": "设置已保存"
+  },
+  "languageFeatureInDev": "Language settings feature in development",
+  "@languageFeatureInDev": {
+    "description": "语言功能开发中"
+  },
+  "thanksForSupport": "Thanks for your support!",
+  "@thanksForSupport": {
+    "description": "感谢支持"
+  },
+  
+  "clearHistoryDialogTitle": "Clear History",
+  "@clearHistoryDialogTitle": {
+    "description": "清除历史对话框标题"
+  },
+  "clearHistoryDialogContent": "Are you sure you want to delete all history records? This action cannot be undone.",
+  "@clearHistoryDialogContent": {
+    "description": "清除历史对话框内容"
+  },
+  "confirmDelete": "Confirm Delete",
+  "@confirmDelete": {
+    "description": "确定删除"
+  },
+  "historyCleared": "History cleared",
+  "@historyCleared": {
+    "description": "历史已清除"
+  },
+  
+  "aboutDialogTitle": "LivePuzzle",
+  "@aboutDialogTitle": {
+    "description": "关于对话框标题"
+  },
+  "aboutDialogVersion": "Version: v1.0.0",
+  "@aboutDialogVersion": {
+    "description": "关于对话框版本"
+  },
+  "aboutDialogDesc": "A simple and fun Live Photo puzzle app",
+  "@aboutDialogDesc": {
+    "description": "关于对话框描述"
+  },
+  "aboutDialogCopyright": "© 2024 LivePuzzle\\nAll rights reserved",
+  "@aboutDialogCopyright": {
+    "description": "关于对话框版权"
+  },
+  "close": "Close",
+  "@close": {
+    "description": "关闭"
+  },
+  
+  "shareAppMessage": "I found an amazing Live Photo puzzle app! Try LivePuzzle!",
+  "@shareAppMessage": {
+    "description": "分享应用消息"
+  },
+  
+  "noHistoryTitle": "No history records",
+  "@noHistoryTitle": {
+    "description": "暂无历史"
+  },
+  "noHistorySubtitle": "Create your first puzzle!",
+  "@noHistorySubtitle": {
+    "description": "暂无历史副标题"
+  },
+  "photosDeletedOrUnavailable": "Photos have been deleted or are unavailable",
+  "@photosDeletedOrUnavailable": {
+    "description": "照片不可用"
+  },
+  
+  "completionTitle": "Creation Complete!",
+  "@completionTitle": {
+    "description": "创作完成"
+  },
+  "completionMessage": "Live Photo saved to album",
+  "@completionMessage": {
+    "description": "保存成功"
+  },
+  "photoCount": "{count} Photos",
+  "@photoCount": {
+    "description": "照片数量",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "liveFormat": "LIVE",
+  "@liveFormat": {
+    "description": "实况格式"
+  },
+  "formatLabel": "Format",
+  "@formatLabel": {
+    "description": "格式"
+  },
+  "share": "Share",
+  "@share": {
+    "description": "分享"
+  },
+  "createNewPuzzle": "Create New Puzzle",
+  "@createNewPuzzle": {
+    "description": "创建新拼图"
+  },
+  "shareImageMessage": "I created a Live Photo puzzle with LivePuzzle!",
+  "@shareImageMessage": {
+    "description": "分享图片消息"
+  },
+  "shareFailedNoThumbnail": "Unable to share: thumbnail unavailable",
+  "@shareFailedNoThumbnail": {
+    "description": "无法分享缩略图"
+  },
+  "shareFailed": "Share failed: {error}",
+  "@shareFailed": {
+    "description": "分享失败",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  
+  "editorTitle": "Editor",
+  "@editorTitle": {
+    "description": "编辑器"
+  },
+  "play": "Play",
+  "@play": {
+    "description": "播放"
+  },
+  "selectLayout": "Select Layout",
+  "@selectLayout": {
+    "description": "选择布局"
+  },
+  "aspectRatio": "Aspect Ratio",
+  "@aspectRatio": {
+    "description": "宽高比"
+  },
+  "puzzleLayouts": "Puzzle",
+  "@puzzleLayouts": {
+    "description": "拼图布局"
+  },
+  "longImageLayouts": "Long Image",
+  "@longImageLayouts": {
+    "description": "长图布局"
+  },
+  "horizontalStitch": "Horizontal Stitch",
+  "@horizontalStitch": {
+    "description": "横向拼接"
+  },
+  "verticalStitch": "Vertical Stitch",
+  "@verticalStitch": {
+    "description": "纵向拼接"
+  },
+  
+  "permissionRequired": "Permission Required",
+  "@permissionRequired": {
+    "description": "需要权限"
+  },
+  "photoPermissionMessage": "Please allow access to photos",
+  "@photoPermissionMessage": {
+    "description": "照片权限"
+  },
+  "grantPermission": "Grant Permission",
+  "@grantPermission": {
+    "description": "授予权限"
+  },
+  
+  "helloMaker": "Hello, Maker!",
+  "@helloMaker": {
+    "description": "你好，创作者"
+  },
+  "newPuzzle": "New Puzzle",
+  "@newPuzzle": {
+    "description": "新拼图"
+  },
+  "inspiration": "Inspiration",
+  "@inspiration": {
+    "description": "灵感"
+  },
+  "pickMoments": "Pick Moments",
+  "@pickMoments": {
+    "description": "选择时刻"
+  },
+  "continueButton": "Continue",
+  "@continueButton": {
+    "description": "继续"
+  },
+  "playing": "Playing...",
+  "@playing": {
+    "description": "播放中"
+  },
+  "livePuzzleTitle": "LivePuzzle",
+  "@livePuzzleTitle": {
+    "description": "LivePuzzle标题"
+  },
+  "filters": "Filters",
+  "@filters": {
+    "description": "滤镜"
+  },
+  "stickers": "Stickers",
+  "@stickers": {
+    "description": "贴纸"
+  },
+  "background": "BG",
+  "@background": {
+    "description": "背景"
+  },
+  
+  "selected": "{count} SELECTED",
+  "@selected": {
+    "description": "已选数量",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "loadingMore": "Loading more in background...",
+  "@loadingMore": {
+    "description": "正在后台加载更多"
+  },
+  "all": "All",
+  "@all": {
+    "description": "全部"
+  },
+  "livePhotos": "Live",
+  "@livePhotos": {
+    "description": "实况照片"
+  },
+  "recents": "Recents",
+  "@recents": {
+    "description": "最近"
+  },
+  "favorites": "Favorites",
+  "@favorites": {
+    "description": "收藏"
+  },
+  "videos": "Videos",
+  "@videos": {
+    "description": "视频"
+  },
+  "selfies": "Selfies",
+  "@selfies": {
+    "description": "自拍"
+  },
+  "live": "LIVE",
+  "@live": {
+    "description": "实况/LIVE"
+  },
+  "livePhotos": "Live Photos",
+  "@livePhotos": {
+    "description": "实况照片"
+  },
+  "portrait": "Portrait",
+  "@portrait": {
+    "description": "人像"
+  },
+  "longExposure": "Long Exposure",
+  "@longExposure": {
+    "description": "长曝光"
+  },
+  "panoramas": "Panoramas",
+  "@panoramas": {
+    "description": "全景"
+  },
+  "timelapses": "Time-Lapse",
+  "@timelapses": {
+    "description": "延时摄影"
+  },
+  "sloMo": "Slo-Mo",
+  "@sloMo": {
+    "description": "慢动作"
+  },
+  "bursts": "Bursts",
+  "@bursts": {
+    "description": "连拍快照"
+  },
+  "screenshots": "Screenshots",
+  "@screenshots": {
+    "description": "屏幕快照"
+  },
+  "allPhotos": "All Photos",
+  "@allPhotos": {
+    "description": "所有照片"
+  }
+}

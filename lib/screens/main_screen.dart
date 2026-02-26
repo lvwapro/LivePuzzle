@@ -26,47 +26,27 @@ class _MainScreenState extends State<MainScreen> {
         index: _currentIndex,
         children: _pages,
       ),
-      bottomNavigationBar: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              Colors.transparent,
-              Colors.white.withOpacity(0.9),
-            ],
-          ),
-        ),
-        child: SafeArea(
-          top: false,
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(32, 16, 32, 40),
-            child: Container(
-              height: 80,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(40),
-                border: Border.all(
-                  color: Colors.white.withOpacity(0.8),
-                  width: 1,
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: const Color(0xFFFF85A2).withOpacity(0.4),
-                    blurRadius: 30,
-                    offset: const Offset(0, 12),
-                    spreadRadius: -10,
-                  ),
-                ],
+      bottomNavigationBar: SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(40, 8, 40, 20),
+          child: Container(
+            height: 64,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(32),
+              border: Border.all(
+                color: Colors.white.withOpacity(0.8),
+                width: 1,
               ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
-                children: [
-                  _buildNavItem(Icons.home, 'Home', 0),
-                  _buildNavItem(Icons.explore, 'Discover', 1),
-                  _buildNavItem(Icons.settings, 'Settings', 2),
-                ],
-              ),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                _buildNavItem(Icons.home, 'Home', 0),
+                _buildNavItem(Icons.explore, 'Discover', 1),
+                _buildNavItem(Icons.settings, 'Settings', 2),
+              ],
             ),
           ),
         ),
@@ -88,7 +68,7 @@ class _MainScreenState extends State<MainScreen> {
         children: [
           Icon(
             icon,
-            size: isActive ? 36 : 32,
+            size: isActive ? 28 : 24,
             weight: 700,
             color: isActive ? const Color(0xFFFF85A2) : const Color(0xFFFFC1CC),
           ),
@@ -96,9 +76,9 @@ class _MainScreenState extends State<MainScreen> {
           Text(
             label.toUpperCase(),
             style: TextStyle(
-              fontSize: 9,
+              fontSize: 8,
               fontWeight: FontWeight.w900,
-              letterSpacing: 1.5,
+              letterSpacing: 1.0,
               color: isActive ? const Color(0xFFFF85A2) : const Color(0xFFFFC1CC),
             ),
           ),

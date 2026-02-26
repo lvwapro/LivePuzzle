@@ -70,40 +70,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       ),
                     ],
                   ),
-                  // Profile Avatar with 3D effect
-                  Container(
-                    width: 48,
-                    height: 48,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      border: Border.all(color: Colors.white, width: 3),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.1),
-                          blurRadius: 8,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                    child: Container(
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        gradient: LinearGradient(
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                          colors: [
-                            const Color(0xFFFFD1DC),
-                            const Color(0xFFFF85A2),
-                          ],
-                        ),
-                      ),
-                      child: const Icon(
-                        Icons.person,
-                        color: Colors.white,
-                        size: 24,
-                      ),
-                    ),
-                  ),
                 ],
               ),
             ),
@@ -436,52 +402,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           ],
         ),
       ),
-      // Bottom Navigation with blur effect
-      bottomNavigationBar: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              Colors.transparent,
-              Colors.white.withOpacity(0.9),
-            ],
-          ),
-        ),
-        child: SafeArea(
-          top: false,
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(32, 16, 32, 40),
-            child: Container(
-              height: 80,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(40),
-                border: Border.all(
-                  color: Colors.white.withOpacity(0.8),
-                  width: 1,
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: const Color(0xFFFF85A2).withOpacity(0.4),
-                    blurRadius: 30,
-                    offset: const Offset(0, 12),
-                    spreadRadius: -10,
-                  ),
-                ],
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
-                children: [
-                  _buildNavItem(Icons.home, 'Home', true),
-                  _buildNavItem(Icons.explore, 'Discover', false),
-                  _buildNavItem(Icons.person, 'Profile', false),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
     );
   }
 
@@ -688,30 +608,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           ),
         ],
       ),
-    );
-  }
-
-  Widget _buildNavItem(IconData icon, String label, bool isActive) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(
-          icon,
-          size: isActive ? 36 : 32,
-          weight: 700,
-          color: isActive ? const Color(0xFFFF85A2) : const Color(0xFFFFC1CC),
-        ),
-        const SizedBox(height: 2),
-        Text(
-          label.toUpperCase(),
-          style: TextStyle(
-            fontSize: 9,
-            fontWeight: FontWeight.w900,
-            letterSpacing: 1.5,
-            color: isActive ? const Color(0xFFFF85A2) : const Color(0xFFFFC1CC),
-          ),
-        ),
-      ],
     );
   }
 

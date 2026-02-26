@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:live_puzzle/screens/home_screen.dart';
+import 'package:live_puzzle/screens/main_screen.dart';
 
 void main() {
   runApp(const ProviderScope(child: LivePuzzleApp()));
@@ -161,7 +161,7 @@ class LivePuzzleApp extends StatelessWidget {
 
         useMaterial3: true,
       ),
-      home: const HomeScreen(),
+      home: const MainScreen(),
     );
   }
 }

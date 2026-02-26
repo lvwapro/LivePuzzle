@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:live_puzzle/screens/photo_selection_screen.dart';
+import 'package:live_puzzle/screens/puzzle_editor_screen.dart';
 import 'package:live_puzzle/utils/permissions.dart';
+import 'package:live_puzzle/providers/puzzle_history_provider.dart';
+import 'package:live_puzzle/providers/photo_provider.dart';
+import 'package:photo_manager/photo_manager.dart';
 
 /// 主页面 - 可爱粉色风格
 class HomeScreen extends ConsumerStatefulWidget {
@@ -340,59 +344,78 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
                     const SizedBox(height: 40),
 
-                    // My Studio Section
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 24),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            'My Studio',
-                            style: TextStyle(
-                              fontFamily: 'Fredoka',
-                              fontSize: 20,
-                              fontWeight: FontWeight.w700,
-                              color: const Color(0xFF1F2937),
-                            ),
-                          ),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 4,
-                            ),
-                            decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.5),
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                            child: Text(
-                              'VIEW ALL',
-                              style: TextStyle(
-                                fontSize: 10,
-                                fontWeight: FontWeight.w700,
-                                color: const Color(0xFFFF85A2),
-                                letterSpacing: 1.2,
+                    // My Studio Section - 只在有历史记录时显示
+                    Consumer(
+                      builder: (context, ref, child) {
+                        final histories = ref.watch(puzzleHistoryProvider);
+                        
+                        if (histories.isEmpty) {
+                          return const SizedBox.shrink();
+                        }
+
+                        final recentHistories = histories.take(4).toList();
+
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 24),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    'My Studio',
+                                    style: TextStyle(
+                                      fontFamily: 'Fredoka',
+                                      fontSize: 20,
+                                      fontWeight: FontWeight.w700,
+                                      color: const Color(0xFF1F2937),
+                                    ),
+                                  ),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 12,
+                                      vertical: 4,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white.withOpacity(0.5),
+                                      borderRadius: BorderRadius.circular(20),
+                                    ),
+                                    child: Text(
+                                      'VIEW ALL',
+                                      style: TextStyle(
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w700,
+                                        color: const Color(0xFFFF85A2),
+                                        letterSpacing: 1.2,
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-
-                    // Studio Cards Grid
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 24),
-                      child: GridView.count(
-                        crossAxisCount: 2,
-                        mainAxisSpacing: 20,
-                        crossAxisSpacing: 20,
-                        shrinkWrap: true,
-                        physics: const NeverScrollableScrollPhysics(),
-                        children: [
-                          _buildRecentCard('Sweet Picnic', '12 MIN AGO'),
-                          _buildRecentCard('Summer Skies', '2 HOURS AGO'),
-                        ],
-                      ),
+                            const SizedBox(height: 16),
+                            Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 24),
+                              child: GridView.builder(
+                                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                                  crossAxisCount: 2,
+                                  mainAxisSpacing: 20,
+                                  crossAxisSpacing: 20,
+                                  childAspectRatio: 0.85,
+                                ),
+                                shrinkWrap: true,
+                                physics: const NeverScrollableScrollPhysics(),
+                                itemCount: recentHistories.length,
+                                itemBuilder: (context, index) {
+                                  final history = recentHistories[index];
+                                  return _buildHistoryCard(history);
+                                },
+                              ),
+                            ),
+                          ],
+                        );
+                      },
                     ),
                     const SizedBox(height: 140),
                   ],
@@ -449,6 +472,147 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         ),
       ),
     );
+  }
+
+  Widget _buildHistoryCard(history) {
+    return GestureDetector(
+      onTap: () => _openHistoryEditor(history),
+      child: Container(
+        padding: const EdgeInsets.all(10),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(32),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFFFF85A2).withOpacity(0.4),
+              blurRadius: 30,
+              offset: const Offset(0, 12),
+              spreadRadius: -10,
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(24),
+                  gradient: history.thumbnail == null
+                      ? LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [
+                            const Color(0xFFFFD1DC).withOpacity(0.3),
+                            const Color(0xFFFF85A2).withOpacity(0.2),
+                          ],
+                        )
+                      : null,
+                  image: history.thumbnail != null
+                      ? DecorationImage(
+                          image: MemoryImage(history.thumbnail!),
+                          fit: BoxFit.cover,
+                        )
+                      : null,
+                ),
+                child: history.thumbnail == null
+                    ? const Center(
+                        child: Icon(
+                          Icons.image,
+                          size: 48,
+                          color: Color(0xFFFF85A2),
+                        ),
+                      )
+                    : null,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '${history.photoCount} 张照片',
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFF1F2937),
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 2),
+                  Row(
+                    children: [
+                      const Icon(
+                        Icons.schedule,
+                        size: 10,
+                        color: Color(0xFFFF85A2),
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        history.getTimeAgo(),
+                        style: const TextStyle(
+                          fontSize: 9,
+                          fontWeight: FontWeight.w700,
+                          color: Color(0xFF9CA3AF),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// 打开历史记录进入编辑器
+  Future<void> _openHistoryEditor(history) async {
+    // 加载这些照片的 AssetEntity
+    final selectedAssets = <AssetEntity>[];
+    
+    for (final photoId in history.photoIds) {
+      try {
+        final asset = await AssetEntity.fromId(photoId);
+        if (asset != null) {
+          selectedAssets.add(asset);
+        }
+      } catch (e) {
+        print('无法加载照片 $photoId: $e');
+      }
+    }
+
+    if (selectedAssets.isEmpty) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('照片已被删除或无法访问'),
+            duration: Duration(seconds: 2),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+      return;
+    }
+
+    // 更新选中的照片ID到provider
+    if (mounted) {
+      ref.read(selectedLivePhotoIdsProvider.notifier).setIds(
+            selectedAssets.map((a) => a.id).toList(),
+          );
+
+      // 导航到编辑器
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => const PuzzleEditorScreen(),
+        ),
+      );
+    }
   }
 
   Widget _buildRecentCard(String title, String timeAgo) {

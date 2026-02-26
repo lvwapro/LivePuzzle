@@ -7,6 +7,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:live_puzzle/providers/photo_provider.dart';
+import 'package:live_puzzle/providers/puzzle_history_provider.dart';
+import 'package:live_puzzle/models/puzzle_history.dart';
 import 'package:live_puzzle/services/live_photo_manager.dart';
 import 'package:photo_manager/photo_manager.dart';
 import 'package:live_photo_bridge/live_photo_bridge.dart';
@@ -1236,6 +1238,18 @@ class _PuzzleEditorScreenState extends ConsumerState<PuzzleEditorScreen>
       if (mounted) {
         ScaffoldMessenger.of(context).clearSnackBars();
         if (success) {
+          // 🔥 保存成功后添加历史记录
+          final photoIds = _selectedPhotos.map((p) => p.id).toList();
+          final thumbnail = _coverFrames[0] ?? _photoThumbnails[0];
+          final history = PuzzleHistory(
+            id: DateTime.now().millisecondsSinceEpoch.toString(),
+            photoIds: photoIds,
+            createdAt: DateTime.now(),
+            thumbnail: thumbnail,
+            photoCount: _selectedPhotos.length,
+          );
+          await ref.read(puzzleHistoryProvider.notifier).addHistory(history);
+
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text('Live Photo 保存成功！'),

@@ -200,6 +200,11 @@ class SelectedPhotoIdsNotifier extends StateNotifier<List<String>> {
     state = [];
   }
 
+  /// 设置整个ID列表（用于历史记录恢复）
+  void setIds(List<String> ids) {
+    state = [...ids];
+  }
+
   bool contains(String id) {
     return state.contains(id);
   }

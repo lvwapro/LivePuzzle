@@ -38,6 +38,7 @@ dependencies:
   # Utils
   uuid: ^4.2.1
   collection: ^1.18.0
+  shared_preferences: ^2.2.2
 
   live_photo_bridge:
     path: ./plugins/live_photo_bridge

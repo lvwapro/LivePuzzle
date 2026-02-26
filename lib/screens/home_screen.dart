@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:live_puzzle/screens/photo_selection_screen.dart';
 import 'package:live_puzzle/screens/puzzle_editor_screen.dart';
+import 'package:live_puzzle/screens/all_history_screen.dart';
 import 'package:live_puzzle/utils/permissions.dart';
 import 'package:live_puzzle/providers/puzzle_history_provider.dart';
 import 'package:live_puzzle/providers/photo_provider.dart';
@@ -372,22 +373,32 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                       color: const Color(0xFF1F2937),
                                     ),
                                   ),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 12,
-                                      vertical: 4,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: Colors.white.withOpacity(0.5),
-                                      borderRadius: BorderRadius.circular(20),
-                                    ),
-                                    child: Text(
-                                      'VIEW ALL',
-                                      style: TextStyle(
-                                        fontSize: 10,
-                                        fontWeight: FontWeight.w700,
-                                        color: const Color(0xFFFF85A2),
-                                        letterSpacing: 1.2,
+                                  GestureDetector(
+                                    onTap: () {
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (context) => const AllHistoryScreen(),
+                                        ),
+                                      );
+                                    },
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 12,
+                                        vertical: 4,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: Colors.white.withOpacity(0.5),
+                                        borderRadius: BorderRadius.circular(20),
+                                      ),
+                                      child: Text(
+                                        'VIEW ALL',
+                                        style: TextStyle(
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.w700,
+                                          color: const Color(0xFFFF85A2),
+                                          letterSpacing: 1.2,
+                                        ),
                                       ),
                                     ),
                                   ),

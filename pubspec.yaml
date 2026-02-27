@@ -43,6 +43,8 @@ dependencies:
   collection: ^1.18.0
   shared_preferences: ^2.2.2
   share_plus: ^7.2.1
+  url_launcher: ^6.2.2
+  image_gallery_saver: ^2.0.3
 
   live_photo_bridge:
     path: ./plugins/live_photo_bridge

@@ -31,7 +31,6 @@ import 'puzzle_editor/image_action_menu.dart';
 import 'puzzle_editor/dynamic_toolbar.dart';
 import 'puzzle_editor/layout_selection_panel.dart';
 import 'puzzle_editor/data_driven_canvas.dart';
-import 'package:live_puzzle/widgets/export_progress_dialog.dart';
 import 'package:live_puzzle/l10n/app_localizations.dart';
 
 /// 拼图编辑器页面 - Seamless Puzzle风格
@@ -79,9 +78,6 @@ class _PuzzleEditorScreenState extends ConsumerState<PuzzleEditorScreen>
   
   // 🔥 封面帧：存储截取的封面图片
   final Map<int, Uint8List?> _coverFrames = {}; // null 表示使用原始封面
-  
-  // 🔥 导出进度控制器
-  ExportProgressController? _exportProgressController;
   final Map<int, int?> _coverFrameTime = {}; // 存储封面帧的时间点（毫秒）
   
   // 🔥 Live 拼图播放
@@ -149,7 +145,6 @@ class _PuzzleEditorScreenState extends ConsumerState<PuzzleEditorScreen>
   void dispose() {
     _frameExtractTimer?.cancel();
     _animationController?.dispose();
-    _exportProgressController?.dispose();
     // 🔥 释放所有视频播放器
     for (final controller in _videoControllers.values) {
       controller?.dispose();
@@ -1119,32 +1114,11 @@ class _PuzzleEditorScreenState extends ConsumerState<PuzzleEditorScreen>
   Future<void> _savePuzzleToGallery() async {
     if (_selectedPhotos.isEmpty) return;
     
-    final l10n = AppLocalizations.of(context)!;
-    
     try {
-      // 显示初始进度对话框
-      if (mounted) {
-        _exportProgressController = ExportProgressDialog.show(context);
-        _exportProgressController!.update(
-          progress: 0.0,
-          message: l10n.exportingLivePhoto,
-          subMessage: l10n.preparingFrames,
-        );
-      }
-      
       // 1. 确保所有帧都已加载
       for (int i = 0; i < _selectedPhotos.length; i++) {
         if (!_videoFrames.containsKey(i)) {
           await _extractVideoFrames(i);
-        }
-        // 更新准备进度
-        if (mounted && _exportProgressController != null) {
-          final prepareProgress = (i + 1) / _selectedPhotos.length * 0.1; // 占10%
-          _exportProgressController!.update(
-            progress: prepareProgress,
-            message: l10n.exportingLivePhoto,
-            subMessage: '${l10n.loadingFrames} ${i + 1}/${_selectedPhotos.length}',
-          );
         }
       }
       
@@ -1207,7 +1181,7 @@ class _PuzzleEditorScreenState extends ConsumerState<PuzzleEditorScreen>
 
       final sw = Stopwatch()..start();
 
-      // 🔥 生成所有帧（占80%进度，10%-90%）
+      // 🔥 生成所有帧
       for (int frameIdx = 0; frameIdx < kTotalFrames; frameIdx++) {
         final cellData = getFrameCellData(frameIdx);
         final framePath = '${tempDir.path}/puzzle_frame_${timestamp}_$frameIdx.jpg';
@@ -1223,16 +1197,6 @@ class _PuzzleEditorScreenState extends ConsumerState<PuzzleEditorScreen>
           await _stitchImages(cellData, framePath);
         }
         frameImagePaths.add(framePath);
-
-        // 更新进度（每帧更新）
-        if (mounted && _exportProgressController != null) {
-          final frameProgress = 0.1 + (frameIdx + 1) / kTotalFrames * 0.8; // 10%-90%
-          _exportProgressController!.update(
-            progress: frameProgress,
-            message: l10n.exportingLivePhoto,
-            subMessage: '${l10n.renderingFrames} ${frameIdx + 1}/$kTotalFrames',
-          );
-        }
       }
 
       debugPrint('⏱️ 全部 $kTotalFrames 帧渲染完成，耗时 ${sw.elapsedMilliseconds}ms');
@@ -1243,26 +1207,13 @@ class _PuzzleEditorScreenState extends ConsumerState<PuzzleEditorScreen>
       }
       imageCache.clear();
       
-      // 3. 调用原生方法创建 Live Photo（占最后10%，90%-100%）
-      if (mounted && _exportProgressController != null) {
-        _exportProgressController!.update(
-          progress: 0.9,
-          message: l10n.exportingLivePhoto,
-          subMessage: l10n.savingToAlbum,
-        );
-      }
-      
+      // 3. 调用原生方法创建 Live Photo
       // 🔥 封面帧始终是第0帧（包含所有格子的原始封面或设置的封面）
       final coverIndex = 0;
       debugPrint('📸 整个拼图的封面帧索引: $coverIndex');
       final success = await LivePhotoBridge.createLivePhoto(frameImagePaths, coverIndex);
       
       if (mounted) {
-        // 关闭进度对话框
-        Navigator.of(context, rootNavigator: true).pop();
-        _exportProgressController?.dispose();
-        _exportProgressController = null;
-        
         if (success) {
           // 🔥 读取第一帧图片作为拼接效果缩略图
           Uint8List? puzzleThumbnail;

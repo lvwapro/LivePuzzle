@@ -1,8 +1,9 @@
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
-import 'package:share_plus/share_plus.dart';
 import 'dart:io';
 import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
+import 'package:image_gallery_saver/image_gallery_saver.dart';
 
 /// 完成页面 - Live Photo 保存成功
 class CompletionScreen extends StatelessWidget {
@@ -28,7 +29,7 @@ class CompletionScreen extends StatelessWidget {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  // Close Button
+                  // Back Button
                   Container(
                     width: 40,
                     height: 40,
@@ -45,13 +46,13 @@ class CompletionScreen extends StatelessWidget {
                     ),
                     child: IconButton(
                       icon: const Icon(
-                        Icons.close,
+                        Icons.arrow_back_ios_new,
                         size: 18,
                         color: Color(0xFFFF4D80),
                       ),
                       onPressed: () {
-                        // 返回首页，清空所有页面栈
-                        Navigator.of(context).popUntil((route) => route.isFirst);
+                        // 返回编辑页
+                        Navigator.pop(context);
                       },
                       padding: EdgeInsets.zero,
                     ),
@@ -65,31 +66,36 @@ class CompletionScreen extends StatelessWidget {
               child: SingleChildScrollView(
                 child: Column(
                   children: [
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 30),
 
-                    // Success Animation / Icon
-                    Container(
-                      width: 120,
-                      height: 120,
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(
-                            color: const Color(0xFFFF85A2).withOpacity(0.3),
-                            blurRadius: 30,
-                            offset: const Offset(0, 10),
+                    // Preview - 固定高度
+                    if (thumbnail != null)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 60),
+                        child: Container(
+                          height: 400,
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(16),
+                            boxShadow: [
+                              BoxShadow(
+                                color: const Color(0xFFFF85A2).withOpacity(0.4),
+                                blurRadius: 30,
+                                offset: const Offset(0, 15),
+                                spreadRadius: -5,
+                              ),
+                            ],
                           ),
-                        ],
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(16),
+                            child: Image.memory(
+                              thumbnail!,
+                              fit: BoxFit.cover,
+                            ),
+                          ),
+                        ),
                       ),
-                      child: const Icon(
-                        Icons.check_circle,
-                        size: 60,
-                        color: Color(0xFF4CAF50),
-                      ),
-                    ),
 
-                    const SizedBox(height: 32),
+                    const SizedBox(height: 40),
 
                     // Success Title
                     const Text(
@@ -114,68 +120,6 @@ class CompletionScreen extends StatelessWidget {
                     ),
 
                     const SizedBox(height: 40),
-
-                    // Preview
-                    if (thumbnail != null)
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 40),
-                        child: Container(
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(32),
-                            boxShadow: [
-                              BoxShadow(
-                                color: const Color(0xFFFF85A2).withOpacity(0.4),
-                                blurRadius: 30,
-                                offset: const Offset(0, 15),
-                                spreadRadius: -5,
-                              ),
-                            ],
-                          ),
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(32),
-                            child: AspectRatio(
-                              aspectRatio: 3 / 4,
-                              child: Image.memory(
-                                thumbnail!,
-                                fit: BoxFit.cover,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-
-                    const SizedBox(height: 32),
-
-                    // Stats
-                    Container(
-                      margin: const EdgeInsets.symmetric(horizontal: 40),
-                      padding: const EdgeInsets.all(20),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(24),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.05),
-                            blurRadius: 20,
-                            offset: const Offset(0, 4),
-                          ),
-                        ],
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceAround,
-                        children: [
-                          _buildStat(Icons.photo_library, '$photoCount', '照片'),
-                          Container(
-                            width: 1,
-                            height: 40,
-                            color: Colors.grey.shade200,
-                          ),
-                          _buildStat(Icons.play_circle, 'LIVE', '格式'),
-                        ],
-                      ),
-                    ),
-
-                    const SizedBox(height: 40),
                   ],
                 ),
               ),
@@ -187,24 +131,70 @@ class CompletionScreen extends StatelessWidget {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  // Share Button
-                  _buildActionButton(
-                    icon: Icons.share,
-                    label: '分享',
-                    color: const Color(0xFFFF85A2),
-                    onTap: () => _shareImage(context),
-                  ),
-                  const SizedBox(height: 12),
-
                   // Create New Button
                   _buildActionButton(
-                    icon: Icons.add_circle_outline,
                     label: '创建新拼图',
-                    color: Colors.white,
-                    textColor: const Color(0xFFFF85A2),
+                    color: const Color(0xFFFF85A2),
                     onTap: () {
                       Navigator.of(context).popUntil((route) => route.isFirst);
                     },
+                  ),
+                  
+                  const SizedBox(height: 24),
+
+                  // 分享平台选项
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '分享到',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.grey.shade600,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceAround,
+                        children: [
+                          _buildSharePlatform(
+                            context,
+                            icon: Icons.photo_album,
+                            label: '闪传相册',
+                            onTap: () => _saveToAlbum(context),
+                          ),
+                          _buildSharePlatform(
+                            context,
+                            icon: Icons.wechat,
+                            label: '微信好友',
+                            color: const Color(0xFF1AAD19),
+                            onTap: () => _shareToWeChat(context),
+                          ),
+                          _buildSharePlatform(
+                            context,
+                            icon: Icons.circle,
+                            label: '朋友圈',
+                            color: const Color(0xFF1AAD19),
+                            onTap: () => _shareToMoments(context),
+                          ),
+                          _buildSharePlatform(
+                            context,
+                            icon: Icons.music_note,
+                            label: '抖音',
+                            color: Colors.black,
+                            onTap: () => _shareToDouyin(context),
+                          ),
+                          _buildSharePlatform(
+                            context,
+                            icon: Icons.book,
+                            label: '小红书',
+                            color: const Color(0xFFFF2442),
+                            onTap: () => _shareToXiaohongshu(context),
+                          ),
+                        ],
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -215,37 +205,120 @@ class CompletionScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildStat(IconData icon, String value, String label) {
-    return Column(
-      children: [
-        Icon(
-          icon,
-          color: const Color(0xFFFF85A2),
-          size: 32,
-        ),
-        const SizedBox(height: 8),
-        Text(
-          value,
-          style: const TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.w700,
-            color: Color(0xFF1F2937),
+  Widget _buildSharePlatform(
+    BuildContext context, {
+    required IconData icon,
+    required String label,
+    Color? color,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(
+              color: (color ?? Colors.grey.shade400).withOpacity(0.15),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(
+              icon,
+              color: color ?? Colors.grey.shade600,
+              size: 24,
+            ),
           ),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 12,
-            color: Colors.grey.shade600,
+          const SizedBox(height: 6),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 11,
+              color: Colors.grey.shade600,
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
+  // 保存到相册
+  Future<void> _saveToAlbum(BuildContext context) async {
+    try {
+      if (thumbnail != null) {
+        await ImageGallerySaver.saveImage(thumbnail!);
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('已保存到相册'),
+              duration: Duration(seconds: 2),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('保存失败：$e')),
+        );
+      }
+    }
+  }
+
+  // 通用分享方法 - 调起系统分享面板
+  Future<void> _shareImage(BuildContext context, {String? text}) async {
+    try {
+      if (thumbnail != null) {
+        // 保存图片到临时文件
+        final tempDir = await getTemporaryDirectory();
+        final file = File('${tempDir.path}/live_puzzle_${DateTime.now().millisecondsSinceEpoch}.png');
+        await file.writeAsBytes(thumbnail!);
+        
+        // 调起系统分享面板
+        final result = await Share.shareXFiles(
+          [XFile(file.path)],
+          text: text ?? '我用 LivePuzzle 创建了精美的 Live Photo 拼图！',
+        );
+        
+        // 分享完成后删除临时文件
+        if (result.status == ShareResultStatus.success || 
+            result.status == ShareResultStatus.dismissed) {
+          try {
+            await file.delete();
+          } catch (_) {}
+        }
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('分享失败：$e')),
+        );
+      }
+    }
+  }
+
+  // 分享到微信
+  Future<void> _shareToWeChat(BuildContext context) async {
+    await _shareImage(context, text: '分享我的 Live Photo 拼图到微信');
+  }
+
+  // 分享到朋友圈
+  Future<void> _shareToMoments(BuildContext context) async {
+    await _shareImage(context, text: '分享我的 Live Photo 拼图到朋友圈');
+  }
+
+  // 分享到抖音
+  Future<void> _shareToDouyin(BuildContext context) async {
+    await _shareImage(context, text: '分享我的 Live Photo 拼图到抖音');
+  }
+
+  // 分享到小红书
+  Future<void> _shareToXiaohongshu(BuildContext context) async {
+    await _shareImage(context, text: '分享我的 Live Photo 拼图到小红书');
+  }
+
   Widget _buildActionButton({
-    required IconData icon,
     required String label,
     required Color color,
     Color? textColor,
@@ -273,54 +346,17 @@ class CompletionScreen extends StatelessWidget {
               ),
           ],
         ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              icon,
+        child: Center(
+          child: Text(
+            label,
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w700,
               color: textColor ?? Colors.white,
-              size: 24,
             ),
-            const SizedBox(width: 12),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w700,
-                color: textColor ?? Colors.white,
-              ),
-            ),
-          ],
+          ),
         ),
       ),
     );
-  }
-
-  Future<void> _shareImage(BuildContext context) async {
-    try {
-      if (thumbnail == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('无法分享：缩略图不可用')),
-        );
-        return;
-      }
-
-      // 保存临时文件
-      final tempDir = await getTemporaryDirectory();
-      final file = File('${tempDir.path}/live_puzzle_share.jpg');
-      await file.writeAsBytes(thumbnail!);
-
-      // 分享
-      await Share.shareXFiles(
-        [XFile(file.path)],
-        text: '我用 LivePuzzle 创建了一个 Live Photo 拼图！',
-      );
-    } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('分享失败：$e')),
-        );
-      }
-    }
   }
 }

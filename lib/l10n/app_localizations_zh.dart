@@ -354,4 +354,82 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get allPhotos => '所有照片';
+
+  @override
+  String get exportingLivePhoto => '正在导出 Live Photo';
+
+  @override
+  String get preparingFrames => '准备帧数据...';
+
+  @override
+  String get loadingFrames => '加载视频帧';
+
+  @override
+  String get renderingFrames => '渲染帧';
+
+  @override
+  String get savingToAlbum => '正在保存到相册...';
+
+  @override
+  String get templateQuickGrid4 => '四宫格';
+
+  @override
+  String get templateQuickGrid4Desc => '经典2x2网格，记录美好瞬间';
+
+  @override
+  String get templateQuickGrid9 => '九宫格';
+
+  @override
+  String get templateQuickGrid9Desc => '最受欢迎的朋友圈展示';
+
+  @override
+  String get templateQuickDouble => '左右对比';
+
+  @override
+  String get templateQuickDoubleDesc => '展示前后对比，记录变化';
+
+  @override
+  String get templateCreativeStory => '故事三连';
+
+  @override
+  String get templateCreativeStoryDesc => '三张图讲述完整故事';
+
+  @override
+  String get templateCreativeFocus => '焦点展示';
+
+  @override
+  String get templateCreativeFocusDesc => '主次分明，突出重点';
+
+  @override
+  String get templateCreative6Grid => '六格回忆';
+
+  @override
+  String get templateCreative6GridDesc => '完美平衡的视觉体验';
+
+  @override
+  String get templateClassicSingle => '单图精选';
+
+  @override
+  String get templateClassicSingleDesc => '让一张照片成为焦点';
+
+  @override
+  String get templateClassicDualVertical => '上下对话';
+
+  @override
+  String get templateClassicDualVerticalDesc => '纵向展示，移动端完美';
+
+  @override
+  String get startCreating => '开始创作';
+
+  @override
+  String get categoryPopular => '热门';
+
+  @override
+  String get categoryQuick => '快速';
+
+  @override
+  String get categoryCreative => '创意';
+
+  @override
+  String get categoryClassic => '经典';
 }

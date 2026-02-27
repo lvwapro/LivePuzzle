@@ -751,6 +751,162 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'All Photos'**
   String get allPhotos;
+
+  /// 导出进度 - 主标题
+  ///
+  /// In en, this message translates to:
+  /// **'Exporting Live Photo'**
+  String get exportingLivePhoto;
+
+  /// 导出进度 - 准备阶段
+  ///
+  /// In en, this message translates to:
+  /// **'Preparing frames...'**
+  String get preparingFrames;
+
+  /// 导出进度 - 加载帧
+  ///
+  /// In en, this message translates to:
+  /// **'Loading video frames'**
+  String get loadingFrames;
+
+  /// 导出进度 - 渲染帧
+  ///
+  /// In en, this message translates to:
+  /// **'Rendering frames'**
+  String get renderingFrames;
+
+  /// 导出进度 - 保存阶段
+  ///
+  /// In en, this message translates to:
+  /// **'Saving to album...'**
+  String get savingToAlbum;
+
+  /// 快速创建 - 四宫格模板名称
+  ///
+  /// In en, this message translates to:
+  /// **'Grid 4'**
+  String get templateQuickGrid4;
+
+  /// 四宫格模板描述
+  ///
+  /// In en, this message translates to:
+  /// **'Classic 2x2 grid for beautiful moments'**
+  String get templateQuickGrid4Desc;
+
+  /// 快速创建 - 九宫格模板名称
+  ///
+  /// In en, this message translates to:
+  /// **'Grid 9'**
+  String get templateQuickGrid9;
+
+  /// 九宫格模板描述
+  ///
+  /// In en, this message translates to:
+  /// **'Most popular social media display'**
+  String get templateQuickGrid9Desc;
+
+  /// 快速创建 - 左右对比模板名称
+  ///
+  /// In en, this message translates to:
+  /// **'Side by Side'**
+  String get templateQuickDouble;
+
+  /// 左右对比模板描述
+  ///
+  /// In en, this message translates to:
+  /// **'Compare before & after'**
+  String get templateQuickDoubleDesc;
+
+  /// 创意布局 - 故事三连模板名称
+  ///
+  /// In en, this message translates to:
+  /// **'Story Triple'**
+  String get templateCreativeStory;
+
+  /// 故事三连模板描述
+  ///
+  /// In en, this message translates to:
+  /// **'Tell a complete story with 3 photos'**
+  String get templateCreativeStoryDesc;
+
+  /// 创意布局 - 焦点展示模板名称
+  ///
+  /// In en, this message translates to:
+  /// **'Focus View'**
+  String get templateCreativeFocus;
+
+  /// 焦点展示模板描述
+  ///
+  /// In en, this message translates to:
+  /// **'Highlight the main subject'**
+  String get templateCreativeFocusDesc;
+
+  /// 创意布局 - 六格回忆模板名称
+  ///
+  /// In en, this message translates to:
+  /// **'Memory Six'**
+  String get templateCreative6Grid;
+
+  /// 六格回忆模板描述
+  ///
+  /// In en, this message translates to:
+  /// **'Perfectly balanced visual experience'**
+  String get templateCreative6GridDesc;
+
+  /// 经典布局 - 单图精选模板名称
+  ///
+  /// In en, this message translates to:
+  /// **'Single Focus'**
+  String get templateClassicSingle;
+
+  /// 单图精选模板描述
+  ///
+  /// In en, this message translates to:
+  /// **'Make one photo the star'**
+  String get templateClassicSingleDesc;
+
+  /// 经典布局 - 上下对话模板名称
+  ///
+  /// In en, this message translates to:
+  /// **'Top & Bottom'**
+  String get templateClassicDualVertical;
+
+  /// 上下对话模板描述
+  ///
+  /// In en, this message translates to:
+  /// **'Perfect for mobile viewing'**
+  String get templateClassicDualVerticalDesc;
+
+  /// 开始创作按钮文本
+  ///
+  /// In en, this message translates to:
+  /// **'Start Creating'**
+  String get startCreating;
+
+  /// 分类 - 热门
+  ///
+  /// In en, this message translates to:
+  /// **'Popular'**
+  String get categoryPopular;
+
+  /// 分类 - 快速
+  ///
+  /// In en, this message translates to:
+  /// **'Quick'**
+  String get categoryQuick;
+
+  /// 分类 - 创意
+  ///
+  /// In en, this message translates to:
+  /// **'Creative'**
+  String get categoryCreative;
+
+  /// 分类 - 经典
+  ///
+  /// In en, this message translates to:
+  /// **'Classic'**
+  String get categoryClassic;
 }
 
 class _AppLocalizationsDelegate

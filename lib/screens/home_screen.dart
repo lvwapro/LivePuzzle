@@ -23,7 +23,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    
+
     return Scaffold(
       backgroundColor: const Color(0xFFFFF0F3), // soft-pink
       extendBody: true,
@@ -79,7 +79,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const SizedBox(height: 20), // 增加顶部间距
-                    
+
                     // Start New Puzzle - 3D Button with decorations
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -120,7 +120,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                           height: 96,
                                           decoration: BoxDecoration(
                                             shape: BoxShape.circle,
-                                            color: Colors.white.withOpacity(0.2),
+                                            color:
+                                                Colors.white.withOpacity(0.2),
                                           ),
                                         ),
                                       ),
@@ -132,14 +133,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                           height: 128,
                                           decoration: BoxDecoration(
                                             shape: BoxShape.circle,
-                                            color: Colors.white.withOpacity(0.1),
+                                            color:
+                                                Colors.white.withOpacity(0.1),
                                           ),
                                         ),
                                       ),
                                       // Main content
                                       Center(
                                         child: Column(
-                                          mainAxisAlignment: MainAxisAlignment.center,
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.center,
                                           children: [
                                             // Camera icon in white circle
                                             Container(
@@ -150,7 +153,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                                 shape: BoxShape.circle,
                                                 boxShadow: [
                                                   BoxShadow(
-                                                    color: Colors.black.withOpacity(0.15),
+                                                    color: Colors.black
+                                                        .withOpacity(0.15),
                                                     blurRadius: 12,
                                                     offset: const Offset(0, 4),
                                                   ),
@@ -271,7 +275,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                 borderRadius: BorderRadius.circular(32),
                                 boxShadow: [
                                   BoxShadow(
-                                    color: const Color(0xFFFF85A2).withOpacity(0.4),
+                                    color: const Color(0xFFFF85A2)
+                                        .withOpacity(0.4),
                                     blurRadius: 30,
                                     offset: const Offset(0, 12),
                                     spreadRadius: -10,
@@ -286,8 +291,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                       begin: Alignment.topLeft,
                                       end: Alignment.bottomRight,
                                       colors: [
-                                        const Color(0xFFFFD1DC).withOpacity(0.3),
-                                        const Color(0xFFFF85A2).withOpacity(0.2),
+                                        const Color(0xFFFFD1DC)
+                                            .withOpacity(0.3),
+                                        const Color(0xFFFF85A2)
+                                            .withOpacity(0.2),
                                       ],
                                     ),
                                   ),
@@ -312,7 +319,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     Consumer(
                       builder: (context, ref, child) {
                         final histories = ref.watch(puzzleHistoryProvider);
-                        
+
                         if (histories.isEmpty) {
                           return const SizedBox.shrink();
                         }
@@ -323,9 +330,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 24),
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 24),
                               child: Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
                                 children: [
                                   Text(
                                     l10n.myStudio,
@@ -341,7 +350,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                       Navigator.push(
                                         context,
                                         MaterialPageRoute(
-                                          builder: (context) => const AllHistoryScreen(),
+                                          builder: (context) =>
+                                              const AllHistoryScreen(),
                                         ),
                                       );
                                     },
@@ -370,9 +380,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                             ),
                             const SizedBox(height: 16),
                             Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 24),
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 24),
                               child: GridView.builder(
-                                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                                gridDelegate:
+                                    const SliverGridDelegateWithFixedCrossAxisCount(
                                   crossAxisCount: 2,
                                   mainAxisSpacing: 20,
                                   crossAxisSpacing: 20,
@@ -451,7 +463,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       )
                     : null,
               ),
-              
+
               // 左下角时间标签
               Positioned(
                 left: 12,
@@ -484,7 +496,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   Future<void> _openHistoryEditor(history) async {
     // 加载这些照片的 AssetEntity
     final selectedAssets = <AssetEntity>[];
-    
+
     for (final photoId in history.photoIds) {
       try {
         final asset = await AssetEntity.fromId(photoId);

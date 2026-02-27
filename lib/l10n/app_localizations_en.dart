@@ -358,4 +358,83 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get allPhotos => 'All Photos';
+
+  @override
+  String get exportingLivePhoto => 'Exporting Live Photo';
+
+  @override
+  String get preparingFrames => 'Preparing frames...';
+
+  @override
+  String get loadingFrames => 'Loading video frames';
+
+  @override
+  String get renderingFrames => 'Rendering frames';
+
+  @override
+  String get savingToAlbum => 'Saving to album...';
+
+  @override
+  String get templateQuickGrid4 => 'Grid 4';
+
+  @override
+  String get templateQuickGrid4Desc => 'Classic 2x2 grid for beautiful moments';
+
+  @override
+  String get templateQuickGrid9 => 'Grid 9';
+
+  @override
+  String get templateQuickGrid9Desc => 'Most popular social media display';
+
+  @override
+  String get templateQuickDouble => 'Side by Side';
+
+  @override
+  String get templateQuickDoubleDesc => 'Compare before & after';
+
+  @override
+  String get templateCreativeStory => 'Story Triple';
+
+  @override
+  String get templateCreativeStoryDesc => 'Tell a complete story with 3 photos';
+
+  @override
+  String get templateCreativeFocus => 'Focus View';
+
+  @override
+  String get templateCreativeFocusDesc => 'Highlight the main subject';
+
+  @override
+  String get templateCreative6Grid => 'Memory Six';
+
+  @override
+  String get templateCreative6GridDesc =>
+      'Perfectly balanced visual experience';
+
+  @override
+  String get templateClassicSingle => 'Single Focus';
+
+  @override
+  String get templateClassicSingleDesc => 'Make one photo the star';
+
+  @override
+  String get templateClassicDualVertical => 'Top & Bottom';
+
+  @override
+  String get templateClassicDualVerticalDesc => 'Perfect for mobile viewing';
+
+  @override
+  String get startCreating => 'Start Creating';
+
+  @override
+  String get categoryPopular => 'Popular';
+
+  @override
+  String get categoryQuick => 'Quick';
+
+  @override
+  String get categoryCreative => 'Creative';
+
+  @override
+  String get categoryClassic => 'Classic';
 }

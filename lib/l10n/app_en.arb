@@ -508,5 +508,109 @@
   "allPhotos": "All Photos",
   "@allPhotos": {
     "description": "所有照片"
+  },
+  "exportingLivePhoto": "Exporting Live Photo",
+  "@exportingLivePhoto": {
+    "description": "导出进度 - 主标题"
+  },
+  "preparingFrames": "Preparing frames...",
+  "@preparingFrames": {
+    "description": "导出进度 - 准备阶段"
+  },
+  "loadingFrames": "Loading video frames",
+  "@loadingFrames": {
+    "description": "导出进度 - 加载帧"
+  },
+  "renderingFrames": "Rendering frames",
+  "@renderingFrames": {
+    "description": "导出进度 - 渲染帧"
+  },
+  "savingToAlbum": "Saving to album...",
+  "@savingToAlbum": {
+    "description": "导出进度 - 保存阶段"
+  },
+  "templateQuickGrid4": "Grid 4",
+  "@templateQuickGrid4": {
+    "description": "快速创建 - 四宫格模板名称"
+  },
+  "templateQuickGrid4Desc": "Classic 2x2 grid for beautiful moments",
+  "@templateQuickGrid4Desc": {
+    "description": "四宫格模板描述"
+  },
+  "templateQuickGrid9": "Grid 9",
+  "@templateQuickGrid9": {
+    "description": "快速创建 - 九宫格模板名称"
+  },
+  "templateQuickGrid9Desc": "Most popular social media display",
+  "@templateQuickGrid9Desc": {
+    "description": "九宫格模板描述"
+  },
+  "templateQuickDouble": "Side by Side",
+  "@templateQuickDouble": {
+    "description": "快速创建 - 左右对比模板名称"
+  },
+  "templateQuickDoubleDesc": "Compare before & after",
+  "@templateQuickDoubleDesc": {
+    "description": "左右对比模板描述"
+  },
+  "templateCreativeStory": "Story Triple",
+  "@templateCreativeStory": {
+    "description": "创意布局 - 故事三连模板名称"
+  },
+  "templateCreativeStoryDesc": "Tell a complete story with 3 photos",
+  "@templateCreativeStoryDesc": {
+    "description": "故事三连模板描述"
+  },
+  "templateCreativeFocus": "Focus View",
+  "@templateCreativeFocus": {
+    "description": "创意布局 - 焦点展示模板名称"
+  },
+  "templateCreativeFocusDesc": "Highlight the main subject",
+  "@templateCreativeFocusDesc": {
+    "description": "焦点展示模板描述"
+  },
+  "templateCreative6Grid": "Memory Six",
+  "@templateCreative6Grid": {
+    "description": "创意布局 - 六格回忆模板名称"
+  },
+  "templateCreative6GridDesc": "Perfectly balanced visual experience",
+  "@templateCreative6GridDesc": {
+    "description": "六格回忆模板描述"
+  },
+  "templateClassicSingle": "Single Focus",
+  "@templateClassicSingle": {
+    "description": "经典布局 - 单图精选模板名称"
+  },
+  "templateClassicSingleDesc": "Make one photo the star",
+  "@templateClassicSingleDesc": {
+    "description": "单图精选模板描述"
+  },
+  "templateClassicDualVertical": "Top & Bottom",
+  "@templateClassicDualVertical": {
+    "description": "经典布局 - 上下对话模板名称"
+  },
+  "templateClassicDualVerticalDesc": "Perfect for mobile viewing",
+  "@templateClassicDualVerticalDesc": {
+    "description": "上下对话模板描述"
+  },
+  "startCreating": "Start Creating",
+  "@startCreating": {
+    "description": "开始创作按钮文本"
+  },
+  "categoryPopular": "Popular",
+  "@categoryPopular": {
+    "description": "分类 - 热门"
+  },
+  "categoryQuick": "Quick",
+  "@categoryQuick": {
+    "description": "分类 - 快速"
+  },
+  "categoryCreative": "Creative",
+  "@categoryCreative": {
+    "description": "分类 - 创意"
+  },
+  "categoryClassic": "Classic",
+  "@categoryClassic": {
+    "description": "分类 - 经典"
   }
 }

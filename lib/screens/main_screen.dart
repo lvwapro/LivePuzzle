@@ -16,7 +16,6 @@ class _MainScreenState extends State<MainScreen> {
 
   final List<Widget> _pages = [
     const HomeScreen(),
-    const DiscoverScreen(),
     const SettingsScreen(showBackButton: false),
   ];
 
@@ -47,8 +46,7 @@ class _MainScreenState extends State<MainScreen> {
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
                 _buildNavItem(Icons.home, l10n.home, 0),
-                _buildNavItem(Icons.explore, l10n.discover, 1),
-                _buildNavItem(Icons.settings, l10n.settings, 2),
+                _buildNavItem(Icons.settings, l10n.settings, 1),
               ],
             ),
           ),
@@ -86,76 +84,6 @@ class _MainScreenState extends State<MainScreen> {
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-/// 发现页面（占位）
-class DiscoverScreen extends StatelessWidget {
-  const DiscoverScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
-    
-    return Scaffold(
-      backgroundColor: const Color(0xFFFFF0F3),
-      body: SafeArea(
-        child: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                width: 120,
-                height: 120,
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(
-                      color: const Color(0xFFFF85A2).withOpacity(0.3),
-                      blurRadius: 30,
-                      offset: const Offset(0, 10),
-                    ),
-                  ],
-                ),
-                child: const Icon(
-                  Icons.explore,
-                  size: 60,
-                  color: Color(0xFFFF85A2),
-                ),
-              ),
-              const SizedBox(height: 32),
-              Text(
-                l10n.discoverTitle,
-                style: const TextStyle(
-                  fontFamily: 'Fredoka',
-                  fontSize: 32,
-                  fontWeight: FontWeight.w700,
-                  color: Color(0xFFFF85A2),
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                l10n.discoverSubtitle,
-                style: TextStyle(
-                  fontSize: 16,
-                  color: Colors.grey.shade600,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-              const SizedBox(height: 16),
-              Text(
-                l10n.featureInDevelopment,
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Colors.grey.shade400,
-                ),
-              ),
-            ],
-          ),
-        ),
       ),
     );
   }

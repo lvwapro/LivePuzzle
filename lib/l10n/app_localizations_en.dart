@@ -15,9 +15,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get home => 'Home';
 
   @override
-  String get discover => 'Discover';
-
-  @override
   String get settings => 'Settings';
 
   @override
@@ -72,15 +69,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String weeksAgo(int count) {
     return '$count WEEKS AGO';
   }
-
-  @override
-  String get discoverTitle => 'Discover';
-
-  @override
-  String get discoverSubtitle => 'Discover more exciting content';
-
-  @override
-  String get featureInDevelopment => 'Feature in development...';
 
   @override
   String get settingsTitle => 'Settings';

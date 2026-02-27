@@ -110,12 +110,6 @@ abstract class AppLocalizations {
   /// **'Home'**
   String get home;
 
-  /// 发现
-  ///
-  /// In en, this message translates to:
-  /// **'Discover'**
-  String get discover;
-
   /// 设置
   ///
   /// In en, this message translates to:
@@ -199,24 +193,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{count} WEEKS AGO'**
   String weeksAgo(int count);
-
-  /// 发现标题
-  ///
-  /// In en, this message translates to:
-  /// **'Discover'**
-  String get discoverTitle;
-
-  /// 发现副标题
-  ///
-  /// In en, this message translates to:
-  /// **'Discover more exciting content'**
-  String get discoverSubtitle;
-
-  /// 功能开发中
-  ///
-  /// In en, this message translates to:
-  /// **'Feature in development...'**
-  String get featureInDevelopment;
 
   /// 设置标题
   ///

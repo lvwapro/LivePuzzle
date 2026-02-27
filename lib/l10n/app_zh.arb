@@ -4,7 +4,6 @@
   "appName": "LivePuzzle",
   
   "home": "首页",
-  "discover": "发现",
   "settings": "设置",
   
   "welcomeBack": "欢迎回来，",
@@ -21,10 +20,6 @@
   "daysAgo": "{count} 天前",
   "weekAgo": "{count} 周前",
   "weeksAgo": "{count} 周前",
-
-  "discoverTitle": "发现",
-  "discoverSubtitle": "发现更多精彩内容",
-  "featureInDevelopment": "功能开发中...",
   
   "settingsTitle": "设置",
   "general": "通用",

@@ -10,10 +10,6 @@
   "@home": {
     "description": "主页"
   },
-  "discover": "Discover",
-  "@discover": {
-    "description": "发现"
-  },
   "settings": "Settings",
   "@settings": {
     "description": "设置"
@@ -106,19 +102,6 @@
         "type": "int"
       }
     }
-  },
-
-  "discoverTitle": "Discover",
-  "@discoverTitle": {
-    "description": "发现标题"
-  },
-  "discoverSubtitle": "Discover more exciting content",
-  "@discoverSubtitle": {
-    "description": "发现副标题"
-  },
-  "featureInDevelopment": "Feature in development...",
-  "@featureInDevelopment": {
-    "description": "功能开发中"
   },
   
   "settingsTitle": "Settings",

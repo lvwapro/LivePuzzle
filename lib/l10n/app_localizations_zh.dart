@@ -15,9 +15,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get home => '首页';
 
   @override
-  String get discover => '发现';
-
-  @override
   String get settings => '设置';
 
   @override
@@ -72,15 +69,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String weeksAgo(int count) {
     return '$count 周前';
   }
-
-  @override
-  String get discoverTitle => '发现';
-
-  @override
-  String get discoverSubtitle => '发现更多精彩内容';
-
-  @override
-  String get featureInDevelopment => '功能开发中...';
 
   @override
   String get settingsTitle => '设置';

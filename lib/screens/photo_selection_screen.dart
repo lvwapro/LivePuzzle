@@ -196,29 +196,20 @@ class _PhotoSelectionScreenState extends ConsumerState<PhotoSelectionScreen> {
                           ],
                         ),
                         // Refresh Button
-                        Container(
-                          width: 40,
-                          height: 40,
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(20),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.05),
-                                blurRadius: 10,
-                                offset: const Offset(0, 2),
-                              ),
-                            ],
+                        IconButton(
+                          icon: const Icon(
+                            Icons.refresh,
+                            size: 24,
+                            color: Color(0xFFFF4D80),
                           ),
-                          child: IconButton(
-                            icon: const Icon(
-                              Icons.refresh,
-                              size: 20,
-                              color: Color(0xFFFF4D80),
-                            ),
-                            onPressed: _loadPhotos,
-                            padding: EdgeInsets.zero,
-                          ),
+                          onPressed: () {
+                            // 取消全部选中
+                            ref.read(selectedAllPhotoIdsProvider.notifier).clear();
+                            ref.read(selectedLivePhotoIdsProvider.notifier).clear();
+                            // 刷新照片列表
+                            _loadPhotos();
+                          },
+                          padding: EdgeInsets.zero,
                         ),
                       ],
                     ),
@@ -446,11 +437,12 @@ class _PhotoSelectionScreenState extends ConsumerState<PhotoSelectionScreen> {
                 ),
               ),
               child: SafeArea(
+                top: false,
                 child: Padding(
-                  padding: const EdgeInsets.all(24),
+                  padding: const EdgeInsets.fromLTRB(24, 8, 24, 12),
                   child: SizedBox(
                     width: double.infinity,
-                    height: 56,
+                    height: 52,
                     child: ElevatedButton(
                       onPressed: () {
                         Navigator.push(

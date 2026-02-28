@@ -1182,6 +1182,7 @@ class _PuzzleEditorScreenState extends ConsumerState<PuzzleEditorScreen>
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
                               color: Color(0xFFFF4D80),
+                              decoration: TextDecoration.none,
                             ),
                           ),
                         ],

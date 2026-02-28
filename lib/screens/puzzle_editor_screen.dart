@@ -8,6 +8,7 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:live_puzzle/providers/photo_provider.dart';
 import 'package:live_puzzle/providers/puzzle_history_provider.dart';
+import 'package:flutter/foundation.dart';
 import 'package:live_puzzle/models/puzzle_history.dart';
 import 'package:live_puzzle/screens/completion_screen.dart';
 import 'package:live_puzzle/services/live_photo_manager.dart';
@@ -91,6 +92,9 @@ class _PuzzleEditorScreenState extends ConsumerState<PuzzleEditorScreen>
   Timer? _frameExtractTimer; // 节流定时器
   bool _isExtractingFrame = false; // 防止重入
 
+  /// 从首页历史进入时传入，用于恢复上次布局与封面帧（用后即清）
+  PuzzleHistory? _restoreHistory;
+
   @override
   void initState() {
     super.initState();
@@ -140,6 +144,15 @@ class _PuzzleEditorScreenState extends ConsumerState<PuzzleEditorScreen>
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // 在 didChangeDependencies 中读取 route arguments，避免在 initState 中调用 ModalRoute.of(context)
+    if (_restoreHistory == null) {
+      _restoreHistory = ModalRoute.of(context)?.settings.arguments as PuzzleHistory?;
+    }
+  }
+
+  @override
   void dispose() {
     _frameExtractTimer?.cancel();
     _animationController?.dispose();
@@ -179,7 +192,28 @@ class _PuzzleEditorScreenState extends ConsumerState<PuzzleEditorScreen>
     }
   }
 
+  /// 根据 id 和图片数量查找布局模板（预设或长图）
+  LayoutTemplate? _findTemplateById(String id, int photoCount) {
+    try {
+      return LayoutTemplate.presetLayouts
+          .where((t) => t.imageCount == photoCount)
+          .firstWhere((t) => t.id == id);
+    } catch (_) {
+      try {
+        return LayoutTemplate.getLongImageLayouts(photoCount)
+            .firstWhere((t) => t.id == id);
+      } catch (_) {
+        return null;
+      }
+    }
+  }
+
   Future<void> _loadSelectedPhotos() async {
+    // 若尚未从 didChangeDependencies 取得，在此处再取一次（确保 route 已挂载）
+    if (_restoreHistory == null && mounted) {
+      _restoreHistory = ModalRoute.of(context)?.settings.arguments as PuzzleHistory?;
+    }
+
     final selectedAllIds = ref.read(selectedAllPhotoIdsProvider);
     final selectedLiveIds = ref.read(selectedLivePhotoIdsProvider);
 
@@ -203,21 +237,52 @@ class _PuzzleEditorScreenState extends ConsumerState<PuzzleEditorScreen>
       }
 
       if (mounted && selectedAssets.isNotEmpty) {
-        // 🔥 立即确定初始布局
-        final (canvas, template) = _getInitialLayout(selectedAssets.length);
+        final restore = _restoreHistory;
+        _restoreHistory = null;
+
+        // 用实际加载的 asset id 列表与历史一致则恢复（顺序一致）
+        final loadedIds = selectedAssets.map((a) => a.id).toList();
+        CanvasConfig canvas;
+        LayoutTemplate template;
+        final useRestore = restore != null &&
+            listEquals(restore.photoIds, loadedIds) &&
+            restore.lastLayoutId != null &&
+            restore.lastRatio != null;
+        if (useRestore) {
+          final t = _findTemplateById(restore.lastLayoutId!, selectedAssets.length);
+          if (t != null) {
+            template = t;
+            canvas = CanvasConfig.fromRatio(restore.lastRatio!);
+          } else {
+            final initial = _getInitialLayout(selectedAssets.length);
+            canvas = initial.$1;
+            template = initial.$2;
+          }
+        } else {
+          final initial = _getInitialLayout(selectedAssets.length);
+          canvas = initial.$1;
+          template = initial.$2;
+        }
 
         setState(() {
           _selectedPhotos = selectedAssets;
           _canvasConfig = canvas;
           _currentLayout = template;
 
-          // 初始化状态
           for (int i = 0; i < selectedAssets.length; i++) {
             if (!_selectedFrames.containsKey(i)) {
               _selectedFrames[i] = 0;
             }
             if (!_coverFrames.containsKey(i)) {
               _coverFrames[i] = null;
+            }
+            if (useRestore &&
+                restore.lastCoverFrameTimeMs != null &&
+                i < restore.lastCoverFrameTimeMs!.length &&
+                restore.lastCoverFrameTimeMs![i] >= 0) {
+              _coverFrameTime[i] = restore.lastCoverFrameTimeMs![i];
+            } else {
+              _coverFrameTime[i] = null;
             }
           }
         });
@@ -303,9 +368,39 @@ class _PuzzleEditorScreenState extends ConsumerState<PuzzleEditorScreen>
         // 🔥 应用初始布局（无延迟，立即执行）
         if (mounted && loadedThumbnails.isNotEmpty && _currentLayout != null) {
           _applyLayout(_canvasConfig, _currentLayout!);
+          // 若恢复了封面帧时间，异步拉取对应帧并设为封面
+          final hasCoverTimes = List.generate(_selectedPhotos.length, (i) => i)
+              .any((i) => _coverFrameTime[i] != null && _coverFrameTime[i]! >= 0);
+          if (mounted && hasCoverTimes) {
+            _restoreCoverFramesFromSavedTimes();
+          }
         }
       }
     });
+  }
+
+  /// 根据已保存的 _coverFrameTime 拉取视频帧并设为封面（从历史恢复时调用）
+  Future<void> _restoreCoverFramesFromSavedTimes() async {
+    for (int i = 0; i < _selectedPhotos.length; i++) {
+      final timeMs = _coverFrameTime[i];
+      if (timeMs == null || timeMs < 0) continue;
+      await _extractVideoFrames(i);
+      if (!mounted) return;
+      final frames = _videoFrames[i];
+      if (frames == null || frames.isEmpty) continue;
+      final durationMs = _videoDurations[i] ?? 2000;
+      final progress = (timeMs / durationMs).clamp(0.0, 1.0);
+      final frameIndex =
+          (progress * (frames.length - 1)).round().clamp(0, frames.length - 1);
+      final frameData = frames[frameIndex];
+      if (mounted && frameData != null && i < _imageBlocks.length) {
+        setState(() {
+          _coverFrames[i] = frameData;
+          _currentDisplayImages[i] = frameData;
+          _imageBlocks[i] = _imageBlocks[i].copyWith(imageData: frameData);
+        });
+      }
+    }
   }
 
   // 🔥 初始化视频播放器用于帧选择
@@ -594,11 +689,6 @@ class _PuzzleEditorScreenState extends ConsumerState<PuzzleEditorScreen>
   void _applyLayout(CanvasConfig canvas, LayoutTemplate template) async {
     if (_selectedPhotos.isEmpty) return;
 
-    setState(() {
-      _canvasConfig = canvas;
-      _currentLayout = template;
-    });
-
     // 收集图片数据
     final List<Uint8List> images = [];
     for (int i = 0; i < _selectedPhotos.length; i++) {
@@ -616,8 +706,15 @@ class _PuzzleEditorScreenState extends ConsumerState<PuzzleEditorScreen>
     CanvasConfig finalCanvas = canvas;
 
     if (isLongImage) {
-      // 🔥 长图拼接：根据实际图片尺寸计算画布
+      // 🔥 长图：先算好真实画布再一次性 setState，避免先占位再跳动
       finalCanvas = await _calculateLongImageCanvas(template, images);
+      if (!mounted) return;
+    } else {
+      // 非长图：先更新画布与模板，避免布局面板与画布不同步
+      setState(() {
+        _canvasConfig = canvas;
+        _currentLayout = template;
+      });
     }
 
     // 🔥 预解码图片获取宽高比
@@ -1345,14 +1442,21 @@ class _PuzzleEditorScreenState extends ConsumerState<PuzzleEditorScreen>
             puzzleThumbnail = _coverFrames[0] ?? _photoThumbnails[0];
           }
 
-          // 🔥 保存成功后添加历史记录
+          // 🔥 保存成功后添加历史记录（含上次布局与封面帧，便于从首页再次进入时恢复）
           final photoIds = _selectedPhotos.map((p) => p.id).toList();
+          final coverMs = List<int>.generate(
+            _selectedPhotos.length,
+            (i) => _coverFrameTime[i] ?? -1,
+          );
           final history = PuzzleHistory(
             id: DateTime.now().millisecondsSinceEpoch.toString(),
             photoIds: photoIds,
             createdAt: DateTime.now(),
             thumbnail: puzzleThumbnail,
             photoCount: _selectedPhotos.length,
+            lastLayoutId: _currentLayout?.id,
+            lastRatio: _canvasConfig.ratio,
+            lastCoverFrameTimeMs: coverMs,
           );
           await ref.read(puzzleHistoryProvider.notifier).addHistory(history);
 

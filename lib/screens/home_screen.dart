@@ -443,11 +443,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             selectedAssets.map((a) => a.id).toList(),
           );
 
-      // 导航到编辑器
+      // 导航到编辑器（传入 history 以便恢复上次布局与封面帧）
       Navigator.push(
         context,
         MaterialPageRoute(
           builder: (context) => const PuzzleEditorScreen(),
+          settings: RouteSettings(arguments: history),
         ),
       );
     }

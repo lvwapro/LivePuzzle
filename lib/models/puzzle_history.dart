@@ -9,6 +9,12 @@ class PuzzleHistory {
   final DateTime createdAt; // 创建时间
   final Uint8List? thumbnail; // 缩略图
   final int photoCount; // 照片数量
+  /// 上次使用的布局模板 id（如 grid_2x1）
+  final String? lastLayoutId;
+  /// 上次使用的画布比例（如 3:4）
+  final String? lastRatio;
+  /// 每个格子的封面帧时间（毫秒），-1 表示使用默认
+  final List<int>? lastCoverFrameTimeMs;
 
   const PuzzleHistory({
     required this.id,
@@ -16,18 +22,28 @@ class PuzzleHistory {
     required this.createdAt,
     this.thumbnail,
     required this.photoCount,
+    this.lastLayoutId,
+    this.lastRatio,
+    this.lastCoverFrameTimeMs,
   });
 
   /// 从JSON创建
   factory PuzzleHistory.fromJson(Map<String, dynamic> json) {
+    List<int>? coverMs;
+    if (json['lastCoverFrameTimeMs'] != null) {
+      coverMs = (json['lastCoverFrameTimeMs'] as List).cast<int>();
+    }
     return PuzzleHistory(
       id: json['id'] as String,
       photoIds: (json['photoIds'] as List).cast<String>(),
       createdAt: DateTime.parse(json['createdAt'] as String),
-      thumbnail: json['thumbnail'] != null 
-          ? Uint8List.fromList((json['thumbnail'] as List).cast<int>()) 
+      thumbnail: json['thumbnail'] != null
+          ? Uint8List.fromList((json['thumbnail'] as List).cast<int>())
           : null,
       photoCount: json['photoCount'] as int,
+      lastLayoutId: json['lastLayoutId'] as String?,
+      lastRatio: json['lastRatio'] as String?,
+      lastCoverFrameTimeMs: coverMs,
     );
   }
 
@@ -39,6 +55,9 @@ class PuzzleHistory {
       'createdAt': createdAt.toIso8601String(),
       'thumbnail': thumbnail?.toList(),
       'photoCount': photoCount,
+      if (lastLayoutId != null) 'lastLayoutId': lastLayoutId,
+      if (lastRatio != null) 'lastRatio': lastRatio,
+      if (lastCoverFrameTimeMs != null) 'lastCoverFrameTimeMs': lastCoverFrameTimeMs,
     };
   }
 

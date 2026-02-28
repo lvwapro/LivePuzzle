@@ -205,7 +205,7 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get liveFormat => 'LIVE';
+  String get liveFormat => '实况';
 
   @override
   String get formatLabel => '格式';

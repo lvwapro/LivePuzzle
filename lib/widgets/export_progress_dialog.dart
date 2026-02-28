@@ -82,22 +82,6 @@ class _ExportProgressDialogContent extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // 简化的图标 - 静态圆形背景
-              Container(
-                width: 56,
-                height: 56,
-                decoration: const BoxDecoration(
-                  color: Color(0xFFFFE0E8),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(
-                  Icons.photo_library,
-                  size: 28,
-                  color: Color(0xFFFF85A2),
-                ),
-              ),
-              const SizedBox(height: 16),
-
               // 主标题
               ValueListenableBuilder<String>(
                 valueListenable: controller.message,

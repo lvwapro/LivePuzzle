@@ -74,7 +74,7 @@
   "completionTitle": "创作完成！",
   "completionMessage": "Live Photo 已保存到相册",
   "photoCount": "{count} 张照片",
-  "liveFormat": "LIVE",
+  "liveFormat": "实况",
   "formatLabel": "格式",
   "share": "分享",
   "createNewPuzzle": "创建新拼图",

@@ -231,16 +231,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
                     const SizedBox(height: 40),
 
-                    // My Studio Section - 只在有历史记录时显示
+                    // My Studio Section - 有历史显示列表，无历史显示占位
                     Consumer(
                       builder: (context, ref, child) {
                         final histories = ref.watch(puzzleHistoryProvider);
-
-                        if (histories.isEmpty) {
-                          return const SizedBox.shrink();
-                        }
-
-                        final recentHistories = histories.take(4).toList();
 
                         return Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -261,60 +255,66 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                       color: const Color(0xFF1F2937),
                                     ),
                                   ),
-                                  GestureDetector(
-                                    onTap: () {
-                                      Navigator.push(
-                                        context,
-                                        MaterialPageRoute(
-                                          builder: (context) =>
-                                              const AllHistoryScreen(),
+                                  if (histories.isNotEmpty)
+                                    GestureDetector(
+                                      onTap: () {
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (context) =>
+                                                const AllHistoryScreen(),
+                                          ),
+                                        );
+                                      },
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 12,
+                                          vertical: 4,
                                         ),
-                                      );
-                                    },
-                                    child: Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 12,
-                                        vertical: 4,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: Colors.white.withOpacity(0.5),
-                                        borderRadius: BorderRadius.circular(20),
-                                      ),
-                                      child: Text(
-                                        l10n.viewAll,
-                                        style: TextStyle(
-                                          fontSize: 10,
-                                          fontWeight: FontWeight.w700,
-                                          color: const Color(0xFFFF85A2),
-                                          letterSpacing: 1.2,
+                                        decoration: BoxDecoration(
+                                          color: Colors.white.withOpacity(0.5),
+                                          borderRadius:
+                                              BorderRadius.circular(20),
+                                        ),
+                                        child: Text(
+                                          l10n.viewAll,
+                                          style: TextStyle(
+                                            fontSize: 10,
+                                            fontWeight: FontWeight.w700,
+                                            color: const Color(0xFFFF85A2),
+                                            letterSpacing: 1.2,
+                                          ),
                                         ),
                                       ),
                                     ),
-                                  ),
                                 ],
                               ),
                             ),
                             const SizedBox(height: 16),
-                            Padding(
-                              padding:
-                                  const EdgeInsets.symmetric(horizontal: 24),
-                              child: GridView.builder(
-                                gridDelegate:
-                                    const SliverGridDelegateWithFixedCrossAxisCount(
-                                  crossAxisCount: 2,
-                                  mainAxisSpacing: 20,
-                                  crossAxisSpacing: 20,
-                                  childAspectRatio: 1.0, // 正方形卡片
+                            if (histories.isEmpty)
+                              _buildHistoryEmptyPlaceholder(context, l10n)
+                            else
+                              Padding(
+                                padding:
+                                    const EdgeInsets.symmetric(horizontal: 24),
+                                child: GridView.builder(
+                                  gridDelegate:
+                                      const SliverGridDelegateWithFixedCrossAxisCount(
+                                    crossAxisCount: 2,
+                                    mainAxisSpacing: 20,
+                                    crossAxisSpacing: 20,
+                                    childAspectRatio: 1.0,
+                                  ),
+                                  shrinkWrap: true,
+                                  physics: const NeverScrollableScrollPhysics(),
+                                  itemCount: histories.take(4).toList().length,
+                                  itemBuilder: (context, index) {
+                                    final history =
+                                        histories.take(4).toList()[index];
+                                    return _buildHistoryCard(history);
+                                  },
                                 ),
-                                shrinkWrap: true,
-                                physics: const NeverScrollableScrollPhysics(),
-                                itemCount: recentHistories.length,
-                                itemBuilder: (context, index) {
-                                  final history = recentHistories[index];
-                                  return _buildHistoryCard(history);
-                                },
                               ),
-                            ),
                           ],
                         );
                       },
@@ -323,6 +323,47 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   ],
                 ),
               ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHistoryEmptyPlaceholder(
+      BuildContext context, AppLocalizations l10n) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 24),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(vertical: 48, horizontal: 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.photo_library_outlined,
+              size: 56,
+              color: const Color(0xFFFF85A2).withOpacity(0.6),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              l10n.noHistoryTitle,
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: Color(0xFF6B7280),
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              l10n.noHistorySubtitle,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
+                color: const Color(0xFF9CA3AF),
+              ),
+              textAlign: TextAlign.center,
             ),
           ],
         ),

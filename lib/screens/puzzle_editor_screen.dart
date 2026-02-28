@@ -148,7 +148,8 @@ class _PuzzleEditorScreenState extends ConsumerState<PuzzleEditorScreen>
     super.didChangeDependencies();
     // 在 didChangeDependencies 中读取 route arguments，避免在 initState 中调用 ModalRoute.of(context)
     if (_restoreHistory == null) {
-      _restoreHistory = ModalRoute.of(context)?.settings.arguments as PuzzleHistory?;
+      _restoreHistory =
+          ModalRoute.of(context)?.settings.arguments as PuzzleHistory?;
     }
   }
 
@@ -211,7 +212,8 @@ class _PuzzleEditorScreenState extends ConsumerState<PuzzleEditorScreen>
   Future<void> _loadSelectedPhotos() async {
     // 若尚未从 didChangeDependencies 取得，在此处再取一次（确保 route 已挂载）
     if (_restoreHistory == null && mounted) {
-      _restoreHistory = ModalRoute.of(context)?.settings.arguments as PuzzleHistory?;
+      _restoreHistory =
+          ModalRoute.of(context)?.settings.arguments as PuzzleHistory?;
     }
 
     final selectedAllIds = ref.read(selectedAllPhotoIdsProvider);
@@ -249,7 +251,8 @@ class _PuzzleEditorScreenState extends ConsumerState<PuzzleEditorScreen>
             restore.lastLayoutId != null &&
             restore.lastRatio != null;
         if (useRestore) {
-          final t = _findTemplateById(restore.lastLayoutId!, selectedAssets.length);
+          final t =
+              _findTemplateById(restore.lastLayoutId!, selectedAssets.length);
           if (t != null) {
             template = t;
             canvas = CanvasConfig.fromRatio(restore.lastRatio!);
@@ -370,7 +373,8 @@ class _PuzzleEditorScreenState extends ConsumerState<PuzzleEditorScreen>
           _applyLayout(_canvasConfig, _currentLayout!);
           // 若恢复了封面帧时间，异步拉取对应帧并设为封面
           final hasCoverTimes = List.generate(_selectedPhotos.length, (i) => i)
-              .any((i) => _coverFrameTime[i] != null && _coverFrameTime[i]! >= 0);
+              .any((i) =>
+                  _coverFrameTime[i] != null && _coverFrameTime[i]! >= 0);
           if (mounted && hasCoverTimes) {
             _restoreCoverFramesFromSavedTimes();
           }
@@ -1399,7 +1403,7 @@ class _PuzzleEditorScreenState extends ConsumerState<PuzzleEditorScreen>
           await _stitchImages(cellData, framePath);
         }
         frameImagePaths.add(framePath);
-        
+
         // 更新进度 (10% 已用于加载帧，10%-80% 用于渲染)
         progressNotifier.value = 0.1 + 0.7 * (frameIdx + 1) / kTotalFrames;
       }
@@ -1415,7 +1419,7 @@ class _PuzzleEditorScreenState extends ConsumerState<PuzzleEditorScreen>
       // 3. 调用原生方法创建 Live Photo
       messageNotifier.value = '正在保存到相册...';
       progressNotifier.value = 0.85;
-      
+
       // 🔥 封面帧始终是第0帧（包含所有格子的原始封面或设置的封面）
       final coverIndex = 0;
       debugPrint('📸 整个拼图的封面帧索引: $coverIndex');
@@ -1466,6 +1470,7 @@ class _PuzzleEditorScreenState extends ConsumerState<PuzzleEditorScreen>
               builder: (context) => CompletionScreen(
                 thumbnail: puzzleThumbnail,
                 photoCount: _selectedPhotos.length,
+                imageAspectRatio: _canvasConfig.width / _canvasConfig.height,
               ),
             ),
           );

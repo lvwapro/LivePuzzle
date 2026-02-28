@@ -98,9 +98,11 @@ class _DataDrivenCanvasState extends State<DataDrivenCanvas> {
     final selectedId = widget.selectedBlockId;
     if (selectedId == null) return [];
     final all = _findAllSharedEdges();
-    return all.where((e) =>
-        e.leftOrTopIds.contains(selectedId) ||
-        e.rightOrBottomIds.contains(selectedId)).toList();
+    return all
+        .where((e) =>
+            e.leftOrTopIds.contains(selectedId) ||
+            e.rightOrBottomIds.contains(selectedId))
+        .toList();
   }
 
   /// 找到所有共享边
@@ -129,15 +131,20 @@ class _DataDrivenCanvasState extends State<DataDrivenCanvas> {
       if (rightX < tolerance || rightX > 1.0 - tolerance) continue;
       bool alreadyFound = false;
       for (final fv in foundVEdges) {
-        if ((fv - rightX).abs() < tolerance) { alreadyFound = true; break; }
+        if ((fv - rightX).abs() < tolerance) {
+          alreadyFound = true;
+          break;
+        }
       }
       if (alreadyFound) continue;
 
       final leftIds = <String>[];
       final rightIds = <String>[];
       for (int j = 0; j < blocks.length; j++) {
-        if ((allRights[j] - rightX).abs() < tolerance) leftIds.add(blocks[j].id);
-        if ((allLefts[j] - rightX).abs() < tolerance) rightIds.add(blocks[j].id);
+        if ((allRights[j] - rightX).abs() < tolerance)
+          leftIds.add(blocks[j].id);
+        if ((allLefts[j] - rightX).abs() < tolerance)
+          rightIds.add(blocks[j].id);
       }
       if (leftIds.isNotEmpty && rightIds.isNotEmpty) {
         foundVEdges.add(rightX);
@@ -157,15 +164,20 @@ class _DataDrivenCanvasState extends State<DataDrivenCanvas> {
       if (bottomY < tolerance || bottomY > 1.0 - tolerance) continue;
       bool alreadyFound = false;
       for (final fh in foundHEdges) {
-        if ((fh - bottomY).abs() < tolerance) { alreadyFound = true; break; }
+        if ((fh - bottomY).abs() < tolerance) {
+          alreadyFound = true;
+          break;
+        }
       }
       if (alreadyFound) continue;
 
       final topIds = <String>[];
       final bottomIds = <String>[];
       for (int j = 0; j < blocks.length; j++) {
-        if ((allBottoms[j] - bottomY).abs() < tolerance) topIds.add(blocks[j].id);
-        if ((allTops[j] - bottomY).abs() < tolerance) bottomIds.add(blocks[j].id);
+        if ((allBottoms[j] - bottomY).abs() < tolerance)
+          topIds.add(blocks[j].id);
+        if ((allTops[j] - bottomY).abs() < tolerance)
+          bottomIds.add(blocks[j].id);
       }
       if (topIds.isNotEmpty && bottomIds.isNotEmpty) {
         foundHEdges.add(bottomY);
@@ -200,11 +212,15 @@ class _DataDrivenCanvasState extends State<DataDrivenCanvas> {
     final edges = _findSelectedEdges();
     for (final edge in edges) {
       if (edge.isVertical) {
-        if ((relX - edge.position).abs() < hitDistX && relY > -0.02 && relY < 1.02) {
+        if ((relX - edge.position).abs() < hitDistX &&
+            relY > -0.02 &&
+            relY < 1.02) {
           return edge;
         }
       } else {
-        if ((relY - edge.position).abs() < hitDistY && relX > -0.02 && relX < 1.02) {
+        if ((relY - edge.position).abs() < hitDistY &&
+            relX > -0.02 &&
+            relX < 1.02) {
           return edge;
         }
       }
@@ -230,8 +246,10 @@ class _DataDrivenCanvasState extends State<DataDrivenCanvas> {
     for (final block in widget.imageBlocks) {
       if (block.id == excludeId) continue;
       final abs = block.toAbsolute(cw, ch);
-      if (cx >= abs.x && cx <= abs.x + abs.width &&
-          cy >= abs.y && cy <= abs.y + abs.height) {
+      if (cx >= abs.x &&
+          cx <= abs.x + abs.width &&
+          cy >= abs.y &&
+          cy <= abs.y + abs.height) {
         return block.id;
       }
     }
@@ -242,7 +260,8 @@ class _DataDrivenCanvasState extends State<DataDrivenCanvas> {
 
   Offset _getMidpoint() {
     if (_pointers.isEmpty) return Offset.zero;
-    return _pointers.values.reduce((a, b) => a + b) / _pointers.length.toDouble();
+    return _pointers.values.reduce((a, b) => a + b) /
+        _pointers.length.toDouble();
   }
 
   double _getPointerDistance() {
@@ -310,7 +329,9 @@ class _DataDrivenCanvasState extends State<DataDrivenCanvas> {
         } else {
           _edgeDragDelta += screenDelta.dy / (_scale * ch);
         }
-      } else if (_pointers.length >= 2 && _lastPointerDistance != null && _lastPointerDistance! > 0) {
+      } else if (_pointers.length >= 2 &&
+          _lastPointerDistance != null &&
+          _lastPointerDistance! > 0) {
         final d = _getPointerDistance();
         final factor = d / _lastPointerDistance!;
         if (widget.selectedBlockId != null) {
@@ -362,15 +383,19 @@ class _DataDrivenCanvasState extends State<DataDrivenCanvas> {
 
           if (_isDeltaWithinBounds()) {
             final (overflowX, overflowY) = _calcCoverOverflow(abs);
-            final maxOx = overflowX * block.scale + abs.width * (block.scale - 1) / 2;
-            final maxOy = overflowY * block.scale + abs.height * (block.scale - 1) / 2;
+            final maxOx =
+                overflowX * block.scale + abs.width * (block.scale - 1) / 2;
+            final maxOy =
+                overflowY * block.scale + abs.height * (block.scale - 1) / 2;
             final newOx = (block.offsetX + _moveDeltaX).clamp(-maxOx, maxOx);
             final newOy = (block.offsetY + _moveDeltaY).clamp(-maxOy, maxOy);
-            widget.onBlockChanged(movingId, block.copyWith(offsetX: newOx, offsetY: newOy));
+            widget.onBlockChanged(
+                movingId, block.copyWith(offsetX: newOx, offsetY: newOy));
           } else {
             final centerX = abs.x + _moveDeltaX + abs.width / 2;
             final centerY = abs.y + _moveDeltaY + abs.height / 2;
-            final targetId = _findBlockAtCanvasPos(centerX, centerY, excludeId: movingId);
+            final targetId =
+                _findBlockAtCanvasPos(centerX, centerY, excludeId: movingId);
             if (targetId != null) {
               widget.onBlockSwap(movingId, targetId);
             }
@@ -447,7 +472,8 @@ class _DataDrivenCanvasState extends State<DataDrivenCanvas> {
   }
 
   void _zoomSelectedImage(double factor) {
-    final idx = widget.imageBlocks.indexWhere((b) => b.id == widget.selectedBlockId);
+    final idx =
+        widget.imageBlocks.indexWhere((b) => b.id == widget.selectedBlockId);
     if (idx < 0) return;
     final block = widget.imageBlocks[idx];
     final newScale = (block.scale * factor).clamp(1.0, 5.0);
@@ -477,7 +503,9 @@ class _DataDrivenCanvasState extends State<DataDrivenCanvas> {
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        if (_needsRecenter && constraints.maxWidth > 0 && constraints.maxHeight > 0) {
+        if (_needsRecenter &&
+            constraints.maxWidth > 0 &&
+            constraints.maxHeight > 0) {
           _computeCenter(constraints.maxWidth, constraints.maxHeight);
           _needsRecenter = false;
         }
@@ -493,7 +521,9 @@ class _DataDrivenCanvasState extends State<DataDrivenCanvas> {
               children: [
                 Positioned.fill(
                   child: GestureDetector(
-                    onTap: () { if (!_hasMoved) widget.onCanvasTap(); },
+                    onTap: () {
+                      if (!_hasMoved) widget.onCanvasTap();
+                    },
                     onDoubleTap: _resetView,
                     behavior: HitTestBehavior.opaque,
                     child: Container(color: const Color(0xFFF5F5F5)),
@@ -526,10 +556,13 @@ class _DataDrivenCanvasState extends State<DataDrivenCanvas> {
                           children: [
                             // 图片块
                             ...sortedBlocks.map((block) {
-                              final selected = widget.selectedBlockId == block.id;
+                              final selected =
+                                  widget.selectedBlockId == block.id;
                               final abs = block.toAbsolute(cw, ch);
-                              final isMoving = _isMovingImage && _movingBlockId == block.id;
-                              return _buildImageBlock(block, abs, selected, isMoving);
+                              final isMoving =
+                                  _isMovingImage && _movingBlockId == block.id;
+                              return _buildImageBlock(
+                                  block, abs, selected, isMoving);
                             }),
                             // 共享边拖动条（实时预览）
                             ..._buildEdgeDividers(cw, ch),
@@ -552,18 +585,19 @@ class _DataDrivenCanvasState extends State<DataDrivenCanvas> {
     // 只有选中图片时才显示
     if (widget.selectedBlockId == null && !_isDraggingEdge) return [];
     final edges = _isDraggingEdge && _draggingEdge != null
-        ? [_draggingEdge!]  // 拖动中只显示正在拖的边
+        ? [_draggingEdge!] // 拖动中只显示正在拖的边
         : _findSelectedEdges();
     final dividers = <Widget>[];
     // 尺寸按画布比例计算，确保缩放后在屏幕上可见
-    final handleThick = math.max(cw, ch) * 0.012;  // 手柄粗度
-    final handleLen = math.min(cw, ch) * 0.08;      // 手柄长度
-    final lineThick = math.max(cw, ch) * 0.004;     // 分界线粗度
-    final hitArea = math.max(cw, ch) * 0.03;        // 触控区域
+    final handleThick = math.max(cw, ch) * 0.012; // 手柄粗度
+    final handleLen = math.min(cw, ch) * 0.08; // 手柄长度
+    final lineThick = math.max(cw, ch) * 0.004; // 分界线粗度
+    final hitArea = math.max(cw, ch) * 0.03; // 触控区域
 
     for (final edge in edges) {
       double pos = edge.position;
-      final isDragging = _isDraggingEdge && _draggingEdge != null &&
+      final isDragging = _isDraggingEdge &&
+          _draggingEdge != null &&
           _draggingEdge!.position == edge.position &&
           _draggingEdge!.isVertical == edge.isVertical;
       if (isDragging) {
@@ -666,7 +700,10 @@ class _DataDrivenCanvasState extends State<DataDrivenCanvas> {
   }
 
   Widget _buildImageBlock(
-    ImageBlock block, ImageBlockAbsolute abs, bool selected, bool isMoving,
+    ImageBlock block,
+    ImageBlockAbsolute abs,
+    bool selected,
+    bool isMoving,
   ) {
     final withinBounds = isMoving ? _isDeltaWithinBounds() : true;
 

@@ -9,11 +9,14 @@ import 'package:image_gallery_saver/image_gallery_saver.dart';
 class CompletionScreen extends StatelessWidget {
   final Uint8List? thumbnail; // 拼图缩略图
   final int photoCount; // 照片数量
+  /// 保存的图片比例（宽/高），用于预览区按比例展示
+  final double imageAspectRatio;
 
   const CompletionScreen({
     super.key,
     this.thumbnail,
     required this.photoCount,
+    this.imageAspectRatio = 1.0,
   });
 
   @override
@@ -61,142 +64,156 @@ class CompletionScreen extends StatelessWidget {
               ),
             ),
 
-            // Main Content
+            // 整页可滚动：预览、标题与底部按钮分享为一体，随滚动上移
             Expanded(
               child: SingleChildScrollView(
                 child: Column(
                   children: [
                     const SizedBox(height: 30),
 
-                    // Preview - 固定高度
+                    // Preview - 最长边限制，按保存图片比例展示：横图限宽，竖图限高
                     if (thumbnail != null)
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 60),
-                        child: Container(
-                          height: 400,
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(16),
-                            boxShadow: [
-                              BoxShadow(
-                                color: const Color(0xFFFF85A2).withOpacity(0.4),
-                                blurRadius: 30,
-                                offset: const Offset(0, 15),
-                                spreadRadius: -5,
+                        child: LayoutBuilder(
+                          builder: (context, constraints) {
+                            const double maxSide = 400.0;
+                            final ratio = imageAspectRatio > 0 ? imageAspectRatio : 1.0;
+                            double w;
+                            double h;
+                            if (ratio >= 1.0) {
+                              w = maxSide.clamp(0.0, constraints.maxWidth);
+                              h = w / ratio;
+                            } else {
+                              h = maxSide;
+                              w = h * ratio;
+                            }
+                            return Container(
+                              width: w,
+                              height: h,
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(16),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: const Color(0xFFFF85A2).withOpacity(0.4),
+                                    blurRadius: 30,
+                                    offset: const Offset(0, 15),
+                                    spreadRadius: -5,
+                                  ),
+                                ],
                               ),
-                            ],
-                          ),
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(16),
-                            child: Image.memory(
-                              thumbnail!,
-                              fit: BoxFit.cover,
-                            ),
-                          ),
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(16),
+                                child: Image.memory(
+                                  thumbnail!,
+                                  fit: BoxFit.cover,
+                                  width: w,
+                                  height: h,
+                                ),
+                              ),
+                            );
+                          },
                         ),
                       ),
 
-                    const SizedBox(height: 40),
+                    const SizedBox(height: 32),
 
-                    // Success Title
+                    // Success Title - 标题小一点
                     const Text(
                       '创作完成！',
                       style: TextStyle(
                         fontFamily: 'Fredoka',
-                        fontSize: 32,
+                        fontSize: 24,
                         fontWeight: FontWeight.w700,
                         color: Color(0xFFFF85A2),
                       ),
                     ),
 
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 6),
 
                     Text(
                       'Live Photo 已保存到相册',
                       style: TextStyle(
-                        fontSize: 16,
+                        fontSize: 14,
                         color: Colors.grey.shade600,
                         fontWeight: FontWeight.w500,
                       ),
                     ),
 
-                    const SizedBox(height: 40),
-                  ],
-                ),
-              ),
-            ),
+                    const SizedBox(height: 32),
 
-            // Bottom Actions
-            Padding(
-              padding: const EdgeInsets.fromLTRB(24, 0, 24, 40),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // Create New Button
-                  _buildActionButton(
-                    label: '创建新拼图',
-                    color: const Color(0xFFFF85A2),
-                    onTap: () {
-                      Navigator.of(context).popUntil((route) => route.isFirst);
-                    },
-                  ),
-                  
-                  const SizedBox(height: 24),
-
-                  // 分享平台选项
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        '分享到',
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Colors.grey.shade600,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    // 创作新拼图按钮 + 分享：作为一部分，随内容上移
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(24, 0, 24, 40),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
                         children: [
-                          _buildSharePlatform(
-                            context,
-                            icon: Icons.photo_album,
-                            label: '闪传相册',
-                            onTap: () => _saveToAlbum(context),
+                          _buildActionButton(
+                            label: '创建新拼图',
+                            color: const Color(0xFFFF85A2),
+                            onTap: () {
+                              Navigator.of(context).popUntil((route) => route.isFirst);
+                            },
                           ),
-                          _buildSharePlatform(
-                            context,
-                            icon: Icons.wechat,
-                            label: '微信好友',
-                            color: const Color(0xFF1AAD19),
-                            onTap: () => _shareToWeChat(context),
-                          ),
-                          _buildSharePlatform(
-                            context,
-                            icon: Icons.circle,
-                            label: '朋友圈',
-                            color: const Color(0xFF1AAD19),
-                            onTap: () => _shareToMoments(context),
-                          ),
-                          _buildSharePlatform(
-                            context,
-                            icon: Icons.music_note,
-                            label: '抖音',
-                            color: Colors.black,
-                            onTap: () => _shareToDouyin(context),
-                          ),
-                          _buildSharePlatform(
-                            context,
-                            icon: Icons.book,
-                            label: '小红书',
-                            color: const Color(0xFFFF2442),
-                            onTap: () => _shareToXiaohongshu(context),
+                          const SizedBox(height: 24),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                '分享到',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: Colors.grey.shade600,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                              const SizedBox(height: 16),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                                children: [
+                                  _buildSharePlatform(
+                                    context,
+                                    icon: Icons.photo_album,
+                                    label: '闪传相册',
+                                    onTap: () => _saveToAlbum(context),
+                                  ),
+                                  _buildSharePlatform(
+                                    context,
+                                    icon: Icons.wechat,
+                                    label: '微信好友',
+                                    color: const Color(0xFF1AAD19),
+                                    onTap: () => _shareToWeChat(context),
+                                  ),
+                                  _buildSharePlatform(
+                                    context,
+                                    icon: Icons.circle,
+                                    label: '朋友圈',
+                                    color: const Color(0xFF1AAD19),
+                                    onTap: () => _shareToMoments(context),
+                                  ),
+                                  _buildSharePlatform(
+                                    context,
+                                    icon: Icons.music_note,
+                                    label: '抖音',
+                                    color: Colors.black,
+                                    onTap: () => _shareToDouyin(context),
+                                  ),
+                                  _buildSharePlatform(
+                                    context,
+                                    icon: Icons.book,
+                                    label: '小红书',
+                                    color: const Color(0xFFFF2442),
+                                    onTap: () => _shareToXiaohongshu(context),
+                                  ),
+                                ],
+                              ),
+                            ],
                           ),
                         ],
                       ),
-                    ],
-                  ),
-                ],
+                    ),
+                  ],
+                ),
               ),
             ),
           ],

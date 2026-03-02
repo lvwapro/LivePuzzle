@@ -180,14 +180,13 @@ class _VideoFrameSelectorWidgetState extends State<VideoFrameSelectorWidget> {
                           setState(() => _isDragging = true),
                       onChanged: (v) {
                         setState(() => _currentPosition = v);
-                        widget.videoController
-                            .seekTo(Duration(milliseconds: v.toInt()));
-                        // 实时通知父组件更新编辑区
                         widget.onFrameTimeChanged(v.toInt());
                       },
                       onChangeEnd: (v) {
                         setState(() => _isDragging = false);
-                        // 拖动结束时再通知一次确保最终帧准确
+                        // 松手后再 seek 视频播放器（保证确认时 position 准确）
+                        widget.videoController
+                            .seekTo(Duration(milliseconds: v.toInt()));
                         widget.onFrameTimeChanged(v.toInt());
                       },
                     ),
@@ -252,22 +251,25 @@ class _VideoFrameSelectorWidgetState extends State<VideoFrameSelectorWidget> {
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
                         ),
+                        padding: const EdgeInsets.symmetric(horizontal: 8),
                       ),
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.center,
-                        mainAxisSize: MainAxisSize.min,
                         children: [
                           Icon(
                             widget.isCover
                                 ? Icons.refresh_rounded
                                 : Icons.star_rounded,
-                            size: 18,
+                            size: 15,
                           ),
-                          const SizedBox(width: 6),
-                          Text(
-                            widget.isCover ? '重新设置' : '确定设为封面',
-                            style: const TextStyle(
-                                fontSize: 14, fontWeight: FontWeight.w600),
+                          const SizedBox(width: 4),
+                          Flexible(
+                            child: Text(
+                              widget.isCover ? '重新设置' : '设为封面',
+                              style: const TextStyle(
+                                  fontSize: 13, fontWeight: FontWeight.w600),
+                              overflow: TextOverflow.ellipsis,
+                            ),
                           ),
                         ],
                       ),

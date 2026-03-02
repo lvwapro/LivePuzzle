@@ -92,7 +92,6 @@ class CompletionScreen extends StatelessWidget {
                               width: w,
                               height: h,
                               decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(16),
                                 boxShadow: [
                                   BoxShadow(
                                     color: const Color(0xFFFF85A2).withOpacity(0.4),
@@ -102,14 +101,11 @@ class CompletionScreen extends StatelessWidget {
                                   ),
                                 ],
                               ),
-                              child: ClipRRect(
-                                borderRadius: BorderRadius.circular(16),
-                                child: Image.memory(
-                                  thumbnail!,
-                                  fit: BoxFit.cover,
-                                  width: w,
-                                  height: h,
-                                ),
+                              child: Image.memory(
+                                thumbnail!,
+                                fit: BoxFit.cover,
+                                width: w,
+                                height: h,
                               ),
                             );
                           },

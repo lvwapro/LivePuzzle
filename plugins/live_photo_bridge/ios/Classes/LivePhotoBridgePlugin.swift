@@ -40,6 +40,15 @@ public class LivePhotoBridgePlugin: NSObject, FlutterPlugin {
       } else {
         result(FlutterError(code: "INVALID_ARGS", message: "frameImagePaths and coverFrameIndex are required", details: nil))
       }
+    case "createLivePhotoHardware":
+      if let args = call.arguments as? [String: Any],
+         let assetIds = args["assetIds"] as? [String],
+         let layoutConfig = args["layoutConfig"] as? [String: Any],
+         let coverTimes = args["coverTimes"] as? [Int] {
+        createLivePhotoHardware(assetIds: assetIds, layoutConfig: layoutConfig, coverTimes: coverTimes, result: result)
+      } else {
+        result(FlutterError(code: "INVALID_ARGS", message: "assetIds, layoutConfig and coverTimes are required", details: nil))
+      }
     case "getVideoDuration":
       if let args = call.arguments as? [String: Any],
          let assetId = args["assetId"] as? String {
@@ -706,5 +715,331 @@ public class LivePhotoBridgePlugin: NSObject, FlutterPlugin {
     cgContext.draw(cgImage, in: CGRect(origin: .zero, size: size))
     
     return buffer
+  }
+  
+  // MARK: - Hardware Accelerated Live Photo Creation
+
+  /// 🚀 硬件加速：AVMutableComposition + AVAssetExportSession，零帧解码
+  private func createLivePhotoHardware(
+    assetIds: [String],
+    layoutConfig: [String: Any],
+    coverTimes: [Int],
+    result: @escaping FlutterResult
+  ) {
+    print("🚀 开始硬件加速合成(v4): \(assetIds.count)路视频")
+
+    DispatchQueue.global(qos: .userInitiated).async {
+      do {
+        // 1. 解析布局配置
+        guard let canvasWidth = layoutConfig["canvasWidth"] as? Double,
+              let canvasHeight = layoutConfig["canvasHeight"] as? Double,
+              let blocksData = layoutConfig["blocks"] as? [[String: Any]] else {
+          throw NSError(domain: "LivePhotoBridge", code: -1,
+                        userInfo: [NSLocalizedDescriptionKey: "Invalid layout config"])
+        }
+
+        let blocks = try blocksData.map { blockData -> HardwareVideoCompositor.LayoutBlock in
+          guard let x = blockData["x"] as? Double,
+                let y = blockData["y"] as? Double,
+                let width = blockData["width"] as? Double,
+                let height = blockData["height"] as? Double else {
+            throw NSError(domain: "LivePhotoBridge", code: -2,
+                          userInfo: [NSLocalizedDescriptionKey: "Invalid block data"])
+          }
+          return HardwareVideoCompositor.LayoutBlock(
+            x: x, y: y, width: width, height: height,
+            scale: blockData["scale"] as? Double ?? 1.0,
+            offsetX: blockData["offsetX"] as? Double ?? 0.0,
+            offsetY: blockData["offsetY"] as? Double ?? 0.0
+          )
+        }
+
+        let isLongImage = layoutConfig["isLongImage"] as? Bool ?? false
+        let config = HardwareVideoCompositor.CompositorConfig(
+          canvasWidth: canvasWidth,
+          canvasHeight: canvasHeight,
+          blocks: blocks,
+          coverTimes: coverTimes,
+          isLongImage: isLongImage
+        )
+
+        // 2. 获取视频 AVAsset（导出到临时文件）
+        print("📥 获取 \(assetIds.count) 个视频资源...")
+        let videoAssets = try self.fetchVideoAssetsSync(assetIds: assetIds)
+
+        // 3. 创建合成器
+        let compositor = try HardwareVideoCompositor(videoAssets: videoAssets, config: config)
+
+        // 4. 生成 Live Photo 唯一标识
+        let assetIdentifier = UUID().uuidString
+        print("🆔 Live Photo 标识符: \(assetIdentifier)")
+
+        // 5. 合成 + 注入元数据（输出到 videoURL）
+        let tempDir = FileManager.default.temporaryDirectory
+        let videoURL = tempDir.appendingPathComponent("lp_final_\(UUID().uuidString).mov")
+        print("⚡ 开始硬件合成...")
+        try compositor.compose(outputURL: videoURL, assetIdentifier: assetIdentifier)
+
+        // 6. 合成高分辨率封面（用户设置了自定义帧时从源视频提取，否则用原始静态图）
+        print("📸 合成高分辨率封面图片... coverTimes=\(coverTimes)")
+        let coverTimeMs = coverTimes.first ?? 0
+        let coverImage: UIImage
+        if let hiResCover = self.compositeHighResStill(assetIds: assetIds, videoAssets: videoAssets, config: config) {
+          coverImage = hiResCover
+        } else {
+          print("⚠️ 高清封面合成失败，降级到视频帧提取")
+          coverImage = try self.extractCoverImage(from: videoURL, atTimeMs: coverTimeMs)
+        }
+        let coverImageURL = tempDir.appendingPathComponent("lp_cover_\(UUID().uuidString).jpg")
+        try self.writeCoverImage(coverImage, to: coverImageURL, assetIdentifier: assetIdentifier, coverTimeMs: coverTimeMs)
+
+        // 7. 保存到相册
+        print("💾 保存到相册...")
+        try self.saveLivePhotoToLibrary(videoURL: videoURL, imageURL: coverImageURL)
+
+        // 8. 清理
+        try? FileManager.default.removeItem(at: videoURL)
+        try? FileManager.default.removeItem(at: coverImageURL)
+
+        DispatchQueue.main.async {
+          print("✅ 硬件加速合成完成！")
+          result(true)
+        }
+
+      } catch {
+        DispatchQueue.main.async {
+          print("❌ 硬件合成失败: \(error.localizedDescription)")
+          result(FlutterError(
+            code: "HARDWARE_COMPOSITION_FAILED",
+            message: error.localizedDescription,
+            details: nil
+          ))
+        }
+      }
+    }
+  }
+
+  /// 同步获取多个 Live Photo 的视频 AVAsset（写到临时文件）
+  private func fetchVideoAssetsSync(assetIds: [String]) throws -> [AVAsset] {
+    var videoAssets: [AVAsset] = []
+
+    for assetId in assetIds {
+      let fetchResult = PHAsset.fetchAssets(withLocalIdentifiers: [assetId], options: nil)
+      guard let asset = fetchResult.firstObject else {
+        throw NSError(domain: "LivePhotoBridge", code: -1,
+                      userInfo: [NSLocalizedDescriptionKey: "Asset \(assetId) not found"])
+      }
+
+      let resources = PHAssetResource.assetResources(for: asset)
+      guard let videoResource = resources.first(where: { $0.type == .pairedVideo }) else {
+        throw NSError(domain: "LivePhotoBridge", code: -2,
+                      userInfo: [NSLocalizedDescriptionKey: "No paired video for \(assetId)"])
+      }
+
+      let tempURL = FileManager.default.temporaryDirectory
+        .appendingPathComponent("src_video_\(UUID().uuidString).mov")
+
+      let semaphore = DispatchSemaphore(value: 0)
+      var fetchError: Error?
+
+      PHAssetResourceManager.default().writeData(
+        for: videoResource, toFile: tempURL, options: nil
+      ) { error in
+        fetchError = error
+        semaphore.signal()
+      }
+      semaphore.wait()
+
+      if let error = fetchError { throw error }
+      print("📥 视频资源已导出: \(assetId.prefix(8))…")
+      videoAssets.append(AVURLAsset(url: tempURL))
+    }
+
+    return videoAssets
+  }
+
+  /// 合成高分辨率封面：
+  /// - 若用户设置了自定义封面帧(coverTimes[i]>0)，从对应源视频提取该帧
+  /// - 否则使用原始 PHAsset 静态图（画质最佳）
+  private func compositeHighResStill(
+    assetIds: [String],
+    videoAssets: [AVAsset],
+    config: HardwareVideoCompositor.CompositorConfig
+  ) -> UIImage? {
+    let canvasW = CGFloat(config.canvasWidth)
+    let canvasH = CGFloat(config.canvasHeight)
+    let coverW: CGFloat
+    let coverH: CGFloat
+
+    if config.isLongImage {
+      let shortSide = min(canvasW, canvasH)
+      let longSide  = max(canvasW, canvasH)
+      let scale = min(min(1.0, 1080.0 / shortSide), 4096.0 / longSide)
+      coverW = (canvasW * scale / 2).rounded() * 2
+      coverH = (canvasH * scale / 2).rounded() * 2
+    } else {
+      let maxSide: CGFloat = 3024
+      let aspect = canvasW / canvasH
+      if aspect >= 1.0 {
+        coverW = maxSide
+        coverH = (maxSide / aspect).rounded()
+      } else {
+        coverW = (maxSide * aspect).rounded()
+        coverH = maxSide
+      }
+    }
+    let coverSize = CGSize(width: coverW, height: coverH)
+    print("📸 封面尺寸: \(Int(coverW))×\(Int(coverH)), isLongImage=\(config.isLongImage)")
+
+    var sourceImages: [UIImage] = []
+    for (i, assetId) in assetIds.enumerated() {
+      let coverTimeMs = i < config.coverTimes.count ? config.coverTimes[i] : 0
+
+      if coverTimeMs > 0, i < videoAssets.count {
+        // 用户设置了自定义封面帧 → 从源视频提取该帧
+        let generator = AVAssetImageGenerator(asset: videoAssets[i])
+        generator.appliesPreferredTrackTransform = true
+        generator.requestedTimeToleranceBefore = CMTime(value: 50, timescale: 1000)
+        generator.requestedTimeToleranceAfter = CMTime(value: 50, timescale: 1000)
+        let time = CMTime(value: Int64(coverTimeMs), timescale: 1000)
+        if let cgImage = try? generator.copyCGImage(at: time, actualTime: nil) {
+          sourceImages.append(UIImage(cgImage: cgImage))
+          print("📸 封面[\(i)]: 使用自定义帧 @ \(coverTimeMs)ms")
+        } else {
+          print("⚠️ 封面[\(i)]: 提取自定义帧失败，降级到原图")
+          guard let fallback = fetchStillImage(assetId: assetId) else { return nil }
+          sourceImages.append(fallback)
+        }
+      } else {
+        // 未设置自定义封面 → 使用原始 PHAsset 静态图
+        guard let img = fetchStillImage(assetId: assetId) else { return nil }
+        sourceImages.append(img)
+        print("📸 封面[\(i)]: 使用原始静态图")
+      }
+    }
+
+    guard sourceImages.count == assetIds.count else { return nil }
+
+    UIGraphicsBeginImageContextWithOptions(coverSize, true, 1.0)
+    defer { UIGraphicsEndImageContext() }
+    guard let ctx = UIGraphicsGetCurrentContext() else { return nil }
+
+    UIColor.black.setFill()
+    UIRectFill(CGRect(origin: .zero, size: coverSize))
+
+    for (i, image) in sourceImages.enumerated() {
+      guard i < config.blocks.count else { break }
+      let block = config.blocks[i]
+
+      let dstX = block.x * coverW
+      let dstY = block.y * coverH
+      let dstW = block.width * coverW
+      let dstH = block.height * coverH
+      let dstRect = CGRect(x: dstX, y: dstY, width: dstW, height: dstH)
+
+      let imgW = image.size.width
+      let imgH = image.size.height
+      guard imgW > 0, imgH > 0 else { continue }
+      let scale = max(dstW / imgW, dstH / imgH)
+      let scaledW = imgW * scale
+      let scaledH = imgH * scale
+      let drawX = dstX + (dstW - scaledW) / 2.0
+      let drawY = dstY + (dstH - scaledH) / 2.0
+
+      ctx.saveGState()
+      ctx.clip(to: dstRect)
+      image.draw(in: CGRect(x: drawX, y: drawY, width: scaledW, height: scaledH))
+      ctx.restoreGState()
+    }
+
+    let result = UIGraphicsGetImageFromCurrentImageContext()
+    print("📸 高分辨率封面合成: \(Int(coverW))×\(Int(coverH)), 源图 \(sourceImages.count) 张")
+    return result
+  }
+
+  /// 从 PHAsset 拉取全分辨率静态图
+  private func fetchStillImage(assetId: String) -> UIImage? {
+    let fetchResult = PHAsset.fetchAssets(withLocalIdentifiers: [assetId], options: nil)
+    guard let phAsset = fetchResult.firstObject else { return nil }
+
+    let options = PHImageRequestOptions()
+    options.isSynchronous = true
+    options.deliveryMode = .highQualityFormat
+    options.resizeMode = .exact
+    options.isNetworkAccessAllowed = false
+
+    var fetched: UIImage?
+    PHImageManager.default().requestImage(
+      for: phAsset,
+      targetSize: CGSize(width: 4032, height: 4032),
+      contentMode: .aspectFit,
+      options: options
+    ) { image, _ in
+      fetched = image
+    }
+    return fetched
+  }
+
+  /// 从视频在指定时间点提取封面图（仅作降级备用）
+  private func extractCoverImage(from videoURL: URL, atTimeMs: Int) throws -> UIImage {
+    let asset = AVAsset(url: videoURL)
+    let generator = AVAssetImageGenerator(asset: asset)
+    generator.appliesPreferredTrackTransform = true
+    generator.requestedTimeToleranceAfter = CMTime(value: 1, timescale: 15)
+    generator.requestedTimeToleranceBefore = CMTime(value: 1, timescale: 15)
+
+    let time = CMTime(value: CMTimeValue(atTimeMs), timescale: 1000)
+    let cgImage = try generator.copyCGImage(at: time, actualTime: nil)
+    return UIImage(cgImage: cgImage)
+  }
+
+  /// 将封面图写入文件，并嵌入 MakerApple 元数据（Live Photo 配对必须）
+  private func writeCoverImage(
+    _ image: UIImage,
+    to url: URL,
+    assetIdentifier: String,
+    coverTimeMs: Int
+  ) throws {
+    guard let jpegData = image.jpegData(compressionQuality: 0.95),
+          let source = CGImageSourceCreateWithData(jpegData as CFData, nil),
+          let imageType = CGImageSourceGetType(source),
+          let destination = CGImageDestinationCreateWithURL(url as CFURL, imageType, 1, nil) else {
+      throw NSError(domain: "LivePhotoBridge", code: -5,
+                    userInfo: [NSLocalizedDescriptionKey: "Failed to create cover image destination"])
+    }
+
+    var properties = (CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [String: Any]) ?? [:]
+    let coverTimeSec = Double(coverTimeMs) / 1000.0
+    properties[kCGImagePropertyMakerAppleDictionary as String] = [
+      "17": assetIdentifier,
+      "8": String(format: "%.6f", coverTimeSec)
+    ]
+
+    CGImageDestinationAddImageFromSource(destination, source, 0, properties as CFDictionary)
+    guard CGImageDestinationFinalize(destination) else {
+      throw NSError(domain: "LivePhotoBridge", code: -6,
+                    userInfo: [NSLocalizedDescriptionKey: "Failed to write cover image"])
+    }
+  }
+
+  /// 保存 Live Photo（视频 + 封面图）到相册
+  private func saveLivePhotoToLibrary(videoURL: URL, imageURL: URL) throws {
+    let semaphore = DispatchSemaphore(value: 0)
+    var saveError: Error?
+
+    PHPhotoLibrary.shared().performChanges({
+      let request = PHAssetCreationRequest.forAsset()
+      request.addResource(with: .photo, fileURL: imageURL, options: nil)
+      let videoOptions = PHAssetResourceCreationOptions()
+      videoOptions.shouldMoveFile = false
+      request.addResource(with: .pairedVideo, fileURL: videoURL, options: videoOptions)
+    }) { success, error in
+      saveError = success ? nil : (error ?? NSError(domain: "LivePhotoBridge", code: -1,
+                                                     userInfo: [NSLocalizedDescriptionKey: "Save failed"]))
+      semaphore.signal()
+    }
+
+    semaphore.wait()
+    if let error = saveError { throw error }
   }
 }

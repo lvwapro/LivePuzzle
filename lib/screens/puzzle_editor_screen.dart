@@ -78,6 +78,7 @@ class _PuzzleEditorScreenState extends ConsumerState<PuzzleEditorScreen>
   // 🔥 封面帧：存储截取的封面图片
   final Map<int, Uint8List?> _coverFrames = {}; // null 表示使用原始封面
   final Map<int, int?> _coverFrameTime = {}; // 存储封面帧的时间点（毫秒）
+  final Map<int, int> _currentSliderTimeMs = {}; // 滑块当前选中时间（不依赖 seekTo 异步结果）
 
   // 🔥 Live 拼图播放
   AnimationController? _animationController;
@@ -89,8 +90,7 @@ class _PuzzleEditorScreenState extends ConsumerState<PuzzleEditorScreen>
 
   // 🔥 帧编辑：进入帧选择时保存原始图片，取消时恢复
   final Map<int, Uint8List?> _preEditImageData = {};
-  Timer? _frameExtractTimer; // 节流定时器
-  bool _isExtractingFrame = false; // 防止重入
+  Timer? _frameExtractTimer;
 
   /// 从首页历史进入时传入，用于恢复上次布局与封面帧（用后即清）
   PuzzleHistory? _restoreHistory;
@@ -378,6 +378,9 @@ class _PuzzleEditorScreenState extends ConsumerState<PuzzleEditorScreen>
           if (mounted && hasCoverTimes) {
             _restoreCoverFramesFromSavedTimes();
           }
+
+          // 后台预提取所有视频帧（不阻塞UI）
+          _preExtractAllVideoFrames();
         }
       }
     });
@@ -455,7 +458,10 @@ class _PuzzleEditorScreenState extends ConsumerState<PuzzleEditorScreen>
     if (controller == null || !controller.value.isInitialized) return null;
 
     try {
-      final timeMs = controller.value.position.inMilliseconds;
+      // 优先用滑块记录的时间，避免 seekTo 异步未完成导致读到错误位置
+      final timeMs = _currentSliderTimeMs[cellIndex] ??
+          controller.value.position.inMilliseconds;
+      debugPrint('🎞️ 截帧: cell=$cellIndex, time=${timeMs}ms');
       final framePath = await LivePhotoBridge.extractFrame(videoPath, timeMs);
 
       if (framePath != null) {
@@ -620,41 +626,25 @@ class _PuzzleEditorScreenState extends ConsumerState<PuzzleEditorScreen>
     }
   }
 
-  /// 真正的节流（throttle）：滑动过程中持续提取帧，不等松手
-  int? _pendingFrameTimeMs; // 排队等待的帧时间
-
+  /// 拖动 Slider 时使用已提取的帧做即时预览（零延迟），避免原生 extractFrame 的磁盘 I/O 卡顿
   void _throttledExtractFrame(int cellIndex, int timeMs) {
-    if (_isExtractingFrame) {
-      // 正在提取中 → 记录最新请求，等当前完成后自动处理
-      _pendingFrameTimeMs = timeMs;
-      return;
-    }
-    // 立即开始提取
-    _doExtractFrame(cellIndex, timeMs);
-  }
-
-  Future<void> _doExtractFrame(int cellIndex, int timeMs) async {
     if (!mounted || cellIndex < 0 || cellIndex >= _imageBlocks.length) return;
-    _isExtractingFrame = true;
-    _pendingFrameTimeMs = null;
 
-    try {
-      final frameData = await _captureVideoFrame(cellIndex);
-      if (frameData != null && mounted && cellIndex < _imageBlocks.length) {
-        setState(() {
-          _imageBlocks[cellIndex] = _imageBlocks[cellIndex].copyWith(
-            imageData: frameData,
-          );
-        });
-      }
-    } finally {
-      _isExtractingFrame = false;
-      // 如果有排队的请求，立即处理最新的那个
-      if (_pendingFrameTimeMs != null && mounted) {
-        final pending = _pendingFrameTimeMs!;
-        _pendingFrameTimeMs = null;
-        _doExtractFrame(cellIndex, pending);
-      }
+    // 记录滑块选中时间，供 _handleSetCover 使用（不依赖 seekTo 异步结果）
+    _currentSliderTimeMs[cellIndex] = timeMs;
+
+    final frames = _videoFrames[cellIndex];
+    if (frames != null && frames.isNotEmpty) {
+      // 用预提取帧做即时预览
+      final durationMs = _videoDurations[cellIndex] ?? 2000;
+      final progress = (timeMs / durationMs).clamp(0.0, 1.0);
+      final frameIndex =
+          (progress * (frames.length - 1)).round().clamp(0, frames.length - 1);
+      setState(() {
+        _imageBlocks[cellIndex] = _imageBlocks[cellIndex].copyWith(
+          imageData: frames[frameIndex],
+        );
+      });
     }
   }
 
@@ -707,19 +697,28 @@ class _PuzzleEditorScreenState extends ConsumerState<PuzzleEditorScreen>
     // 🔥 检查是否为长图拼接
     final isLongImage =
         template.id == 'long_horizontal' || template.id == 'long_vertical';
-    CanvasConfig finalCanvas = canvas;
 
     if (isLongImage) {
-      // 🔥 长图：先算好真实画布再一次性 setState，避免先占位再跳动
-      finalCanvas = await _calculateLongImageCanvas(template, images);
+      // 🔥 长图：按每张图片的真实比例计算画布和分块，一次性 setState
+      final (longCanvas, longBlocks) =
+          await _calculateLongImageCanvasAndBlocks(template, images);
       if (!mounted) return;
-    } else {
-      // 非长图：先更新画布与模板，避免布局面板与画布不同步
       setState(() {
-        _canvasConfig = canvas;
+        _useNewCanvas = true;
+        _canvasConfig = longCanvas;
         _currentLayout = template;
+        _imageBlocks = longBlocks;
+        _selectedBlockId = null;
+        _editorState = EditorState.global;
       });
+      return;
     }
+
+    // 非长图：先更新画布与模板，避免布局面板与画布不同步
+    setState(() {
+      _canvasConfig = canvas;
+      _currentLayout = template;
+    });
 
     // 🔥 预解码图片获取宽高比
     final aspectRatios = <double>[];
@@ -736,11 +735,11 @@ class _PuzzleEditorScreenState extends ConsumerState<PuzzleEditorScreen>
 
     setState(() {
       _useNewCanvas = true;
-      _canvasConfig = finalCanvas;
+      _canvasConfig = canvas;
       _currentLayout = template;
 
       _imageBlocks = LayoutEngine.calculateLayout(
-        canvas: finalCanvas,
+        canvas: canvas,
         template: template,
         images: images,
         spacing: 0.0,
@@ -757,75 +756,110 @@ class _PuzzleEditorScreenState extends ConsumerState<PuzzleEditorScreen>
     });
   }
 
-  // 🔥 计算长图拼接的画布尺寸（基于实际图片）
-  Future<CanvasConfig> _calculateLongImageCanvas(
+  /// 🔥 计算长图拼接的画布尺寸和比例分块（基于每张图片的真实尺寸）
+  ///
+  /// 纵向：统一宽度，每块高度 = (图片高/图片宽) × 统一宽度
+  /// 横向：统一高度，每块宽度 = (图片宽/图片高) × 统一高度
+  /// 这样每个 block 的宽高比与原图完全一致，不会裁剪任何内容。
+  Future<(CanvasConfig, List<ImageBlock>)> _calculateLongImageCanvasAndBlocks(
     LayoutTemplate template,
     List<Uint8List> images,
   ) async {
     if (images.isEmpty) {
-      return CanvasConfig.fromRatio('1:1');
+      return (CanvasConfig.fromRatio('1:1'), <ImageBlock>[]);
     }
 
     final isHorizontal = template.id == 'long_horizontal';
 
-    // 解码所有图片获取实际尺寸
+    // 一次解码获取实际尺寸
     final imageSizes = <Size>[];
     for (final imageData in images) {
       try {
         final codec = await ui.instantiateImageCodec(imageData);
         final frame = await codec.getNextFrame();
-        final imgWidth = frame.image.width.toDouble();
-        final imgHeight = frame.image.height.toDouble();
-        imageSizes.add(Size(imgWidth, imgHeight));
-        debugPrint('🖼️ Image size: ${imgWidth}x${imgHeight}');
+        imageSizes.add(Size(
+          frame.image.width.toDouble(),
+          frame.image.height.toDouble(),
+        ));
         frame.image.dispose();
         codec.dispose();
-      } catch (e) {
-        // 解码失败，使用默认尺寸
-        debugPrint('⚠️ Error decoding image: $e');
+      } catch (_) {
         imageSizes.add(const Size(1080, 1920));
       }
     }
 
+    final blocks = <ImageBlock>[];
+    late CanvasConfig canvas;
+
     if (isHorizontal) {
-      // 🔥 横向拼接：统一高度为最大高度，按比例调整宽度
-      final maxHeight = imageSizes.map((s) => s.height).reduce(math.max);
+      // 横向：统一高度 = 所有图片中最大高度，各图按比例调整宽度
+      final unifiedH = imageSizes.map((s) => s.height).reduce(math.max);
+      final scaledWidths = imageSizes
+          .map((s) => (s.width / s.height) * unifiedH)
+          .toList();
+      final totalWidth = scaledWidths.fold(0.0, (a, b) => a + b);
 
-      // 计算所有图片按统一高度缩放后的总宽度
-      double totalWidth = 0;
-      for (final size in imageSizes) {
-        final scaledWidth = (size.width / size.height) * maxHeight;
-        totalWidth += scaledWidth;
-      }
-
-      debugPrint('📐 横向拼接: ${totalWidth.toInt()}x${maxHeight.toInt()}');
-
-      return CanvasConfig(
+      canvas = CanvasConfig(
         width: totalWidth,
-        height: maxHeight,
-        ratio: '${totalWidth.toInt()}:${maxHeight.toInt()}',
+        height: unifiedH,
+        ratio: '${totalWidth.toInt()}:${unifiedH.toInt()}',
         type: CanvasRatioType.custom,
       );
-    } else {
-      // 🔥 纵向拼接：统一宽度为最大宽度，按比例调整高度
-      final maxWidth = imageSizes.map((s) => s.width).reduce(math.max);
 
-      // 计算所有图片按统一宽度缩放后的总高度
-      double totalHeight = 0;
-      for (final size in imageSizes) {
-        final scaledHeight = (size.height / size.width) * maxWidth;
-        totalHeight += scaledHeight;
+      double cumX = 0;
+      for (int i = 0; i < imageSizes.length; i++) {
+        final blockW = scaledWidths[i] / totalWidth;
+        blocks.add(ImageBlock(
+          id: 'block_$i',
+          layoutBlockId: '${template.id}_$i',
+          x: cumX / totalWidth,
+          y: 0,
+          width: blockW,
+          height: 1.0,
+          imageData: images[i],
+          imageAspectRatio: imageSizes[i].width / imageSizes[i].height,
+          zIndex: i,
+        ));
+        cumX += scaledWidths[i];
       }
 
-      debugPrint('📐 纵向拼接: ${maxWidth.toInt()}x${totalHeight.toInt()}');
+      debugPrint('📐 横向长图: ${totalWidth.toInt()}×${unifiedH.toInt()}, ${blocks.length} 块');
+    } else {
+      // 纵向：统一宽度 = 所有图片中最大宽度，各图按比例调整高度
+      final unifiedW = imageSizes.map((s) => s.width).reduce(math.max);
+      final scaledHeights = imageSizes
+          .map((s) => (s.height / s.width) * unifiedW)
+          .toList();
+      final totalHeight = scaledHeights.fold(0.0, (a, b) => a + b);
 
-      return CanvasConfig(
-        width: maxWidth,
+      canvas = CanvasConfig(
+        width: unifiedW,
         height: totalHeight,
-        ratio: '${maxWidth.toInt()}:${totalHeight.toInt()}',
+        ratio: '${unifiedW.toInt()}:${totalHeight.toInt()}',
         type: CanvasRatioType.custom,
       );
+
+      double cumY = 0;
+      for (int i = 0; i < imageSizes.length; i++) {
+        final blockH = scaledHeights[i] / totalHeight;
+        blocks.add(ImageBlock(
+          id: 'block_$i',
+          layoutBlockId: '${template.id}_$i',
+          x: 0,
+          y: cumY / totalHeight,
+          width: 1.0,
+          height: blockH,
+          imageData: images[i],
+          imageAspectRatio: imageSizes[i].width / imageSizes[i].height,
+          zIndex: i,
+        ));
+        cumY += scaledHeights[i];
+      }
+
+      debugPrint('📐 纵向长图: ${unifiedW.toInt()}×${totalHeight.toInt()}, ${blocks.length} 块');
     }
+
+    return (canvas, blocks);
   }
 
   // 🔥 单图工具处理
@@ -1046,6 +1080,18 @@ class _PuzzleEditorScreenState extends ConsumerState<PuzzleEditorScreen>
     );
   }
 
+  /// 页面加载后在后台逐个预提取所有视频帧，避免点击 Live/帧选择时等待
+  Future<void> _preExtractAllVideoFrames() async {
+    for (int i = 0; i < _selectedPhotos.length; i++) {
+      if (!mounted) return;
+      if (_videoFrames.containsKey(i)) continue;
+      await _extractVideoFrames(i);
+    }
+    if (mounted) {
+      debugPrint('✅ 所有视频帧预提取完成 (${_videoFrames.length}/${_selectedPhotos.length})');
+    }
+  }
+
   Future<void> _extractVideoFrames(int cellIndex) async {
     // 先初始化视频播放器（用于交互选择）
     await _initVideoPlayer(cellIndex);
@@ -1232,7 +1278,7 @@ class _PuzzleEditorScreenState extends ConsumerState<PuzzleEditorScreen>
     _animationController?.forward(from: 0.0);
   }
 
-  // 🔥 保存拼图到图库（Live Photo 格式）
+  // 🔥 保存拼图到图库（Live Photo 格式）- 🚀 硬件加速版本
   Future<void> _savePuzzleToGallery() async {
     if (_selectedPhotos.isEmpty) return;
 
@@ -1314,8 +1360,120 @@ class _PuzzleEditorScreenState extends ConsumerState<PuzzleEditorScreen>
         ),
       );
 
-      // 1. 确保所有帧都已加载
+      final sw = Stopwatch()..start();
+
+      // 🚀 使用硬件加速合成（无需提取和渲染所有帧）
+      if (_useNewCanvas && _imageBlocks.isNotEmpty) {
+        debugPrint('🚀 使用硬件加速模式导出...');
+        
+        messageNotifier.value = '正在准备布局配置...';
+        progressNotifier.value = 0.1;
+
+        // 准备布局配置
+        final isLongImageLayout = _currentLayout?.id == 'long_horizontal' ||
+            _currentLayout?.id == 'long_vertical';
+        final layoutConfig = {
+          'canvasWidth': _canvasConfig.width,
+          'canvasHeight': _canvasConfig.height,
+          'isLongImage': isLongImageLayout,
+          'blocks': _imageBlocks.map((block) => {
+            'x': block.x,
+            'y': block.y,
+            'width': block.width,
+            'height': block.height,
+            'scale': block.scale,
+            'offsetX': block.offsetX,
+            'offsetY': block.offsetY,
+          }).toList(),
+        };
+
+        // 诊断日志
+        debugPrint('🔍 画布: ${_canvasConfig.width}×${_canvasConfig.height} ratio=${_canvasConfig.ratio}');
+        for (int i = 0; i < _imageBlocks.length; i++) {
+          final b = _imageBlocks[i];
+          debugPrint('🔍 Block[$i]: x=${b.x.toStringAsFixed(3)} y=${b.y.toStringAsFixed(3)} w=${b.width.toStringAsFixed(3)} h=${b.height.toStringAsFixed(3)} scale=${b.scale} offsetX=${b.offsetX} offsetY=${b.offsetY}');
+        }
+
+        // 准备封面时间
+        final coverTimes = List<int>.generate(
+          _selectedPhotos.length,
+          (i) => _coverFrameTime[i] ?? 0,
+        );
+
+        // 准备 asset IDs
+        final assetIds = _selectedPhotos.map((p) => p.id).toList();
+
+        messageNotifier.value = '正在硬件编码合成...';
+        progressNotifier.value = 0.2;
+
+        // 调用硬件加速方法
+        final success = await LivePhotoBridge.createLivePhotoHardware(
+          assetIds: assetIds,
+          layoutConfig: layoutConfig,
+          coverTimes: coverTimes,
+        );
+
+        progressNotifier.value = 1.0;
+        messageNotifier.value = '完成！';
+
+        debugPrint('⏱️ 硬件加速导出完成，总耗时 ${sw.elapsedMilliseconds}ms');
+
+        if (mounted) {
+          // 关闭加载对话框
+          Navigator.of(context, rootNavigator: true).pop();
+
+          if (success) {
+            // 准备缩略图（合成画布全图）
+            final puzzleThumbnail =
+                await _buildCompositeThumbnail() ?? _photoThumbnails[0];
+
+            // 保存历史记录
+            final photoIds = _selectedPhotos.map((p) => p.id).toList();
+            final coverMs = List<int>.generate(
+              _selectedPhotos.length,
+              (i) => _coverFrameTime[i] ?? -1,
+            );
+            final history = PuzzleHistory(
+              id: DateTime.now().millisecondsSinceEpoch.toString(),
+              photoIds: photoIds,
+              createdAt: DateTime.now(),
+              thumbnail: puzzleThumbnail,
+              photoCount: _selectedPhotos.length,
+              lastLayoutId: _currentLayout?.id,
+              lastRatio: _canvasConfig.ratio,
+              lastCoverFrameTimeMs: coverMs,
+            );
+            await ref.read(puzzleHistoryProvider.notifier).addHistory(history);
+
+            // 跳转到完成页面
+            Navigator.of(context).pushReplacement(
+              MaterialPageRoute(
+                builder: (context) => CompletionScreen(
+                  thumbnail: puzzleThumbnail,
+                  photoCount: _selectedPhotos.length,
+                  imageAspectRatio: _canvasConfig.width / _canvasConfig.height,
+                ),
+              ),
+            );
+          } else {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('保存失败，请重试'),
+                duration: Duration(seconds: 2),
+                behavior: SnackBarBehavior.floating,
+                backgroundColor: Colors.red,
+              ),
+            );
+          }
+        }
+        return;
+      }
+
+      // 旧版软编码逻辑（作为备用，仅在未使用新画布时）
+      debugPrint('⚠️ 使用旧版软编码模式（较慢）');
       messageNotifier.value = '正在加载视频帧...';
+      
+      // [保留原有的软编码逻辑作为备用...]
       for (int i = 0; i < _selectedPhotos.length; i++) {
         if (!_videoFrames.containsKey(i)) {
           await _extractVideoFrames(i);
@@ -1323,39 +1481,15 @@ class _PuzzleEditorScreenState extends ConsumerState<PuzzleEditorScreen>
         progressNotifier.value = 0.1 * (i + 1) / _selectedPhotos.length;
       }
 
-      // 2. 为每一帧创建拼接图片
       final tempDir = await getTemporaryDirectory();
       final timestamp = DateTime.now().millisecondsSinceEpoch;
       final frameImagePaths = <String>[];
-      final useLayout = _useNewCanvas && _imageBlocks.isNotEmpty;
 
-      // 🔥 预计算输出尺寸（布局模式），提高到 2400px 保证清晰
-      int outW = 0, outH = 0;
-      if (useLayout) {
-        final cw = _canvasConfig.width;
-        final ch = _canvasConfig.height;
-        const int maxSide = 2400;
-        final sf = cw >= ch ? maxSide / cw : maxSide / ch;
-        outW = (cw * sf).round();
-        outH = (ch * sf).round();
-      }
-
-      // 🔥 预解码所有不变的图片（封面/缩略图），建立缓存
-      final imageCache = <String, ui.Image>{}; // key = bytes hashCode
-      Future<ui.Image> getCachedImage(Uint8List data) async {
-        final key = '${identityHashCode(data)}';
-        if (imageCache.containsKey(key)) return imageCache[key]!;
-        final img = await _decodeImage(data);
-        imageCache[key] = img;
-        return img;
-      }
-
-      // 🔥 获取某一帧的每个格子的图片数据
+      // 简化的旧版逻辑（纵向拼接）
       List<Uint8List> getFrameCellData(int frameIdx) {
         final cellFrames = <Uint8List>[];
         for (int i = 0; i < _selectedPhotos.length; i++) {
           if (frameIdx == 0) {
-            // 封面帧
             final coverData = _coverFrames[i] ?? _photoThumbnails[i];
             if (coverData != null) cellFrames.add(coverData);
           } else {
@@ -1363,7 +1497,7 @@ class _PuzzleEditorScreenState extends ConsumerState<PuzzleEditorScreen>
             if (frames != null && frames.isNotEmpty) {
               final progress = frameIdx / (kTotalFrames - 1);
               final currentTimeMs = progress * _maxDurationMs;
-              final videoDurationMs = _videoDurations[i] ?? 2000;
+              final videoDurationMs = _videoDurations[i] ?? 3000; // Apple标准3秒
               if (currentTimeMs >= videoDurationMs) {
                 final coverData = _coverFrames[i] ?? _photoThumbnails[i];
                 if (coverData != null) cellFrames.add(coverData);
@@ -1383,70 +1517,35 @@ class _PuzzleEditorScreenState extends ConsumerState<PuzzleEditorScreen>
         return cellFrames;
       }
 
-      final sw = Stopwatch()..start();
-
-      // 🔥 生成所有帧
       messageNotifier.value = '正在渲染帧...';
       for (int frameIdx = 0; frameIdx < kTotalFrames; frameIdx++) {
         final cellData = getFrameCellData(frameIdx);
         final framePath =
             '${tempDir.path}/puzzle_frame_${timestamp}_$frameIdx.jpg';
-
-        if (useLayout) {
-          // 解码当前帧图片（利用缓存避免重复解码）
-          final decoded = <ui.Image>[];
-          for (final data in cellData) {
-            decoded.add(await getCachedImage(data));
-          }
-          await _renderLayoutFrameFast(decoded, outW, outH, framePath);
-        } else {
-          await _stitchImages(cellData, framePath);
-        }
+        await _stitchImages(cellData, framePath);
         frameImagePaths.add(framePath);
-
-        // 更新进度 (10% 已用于加载帧，10%-80% 用于渲染)
         progressNotifier.value = 0.1 + 0.7 * (frameIdx + 1) / kTotalFrames;
       }
 
-      debugPrint('⏱️ 全部 $kTotalFrames 帧渲染完成，耗时 ${sw.elapsedMilliseconds}ms');
+      debugPrint('⏱️ 软编码渲染完成，耗时 ${sw.elapsedMilliseconds}ms');
 
-      // 清理图片缓存
-      for (final img in imageCache.values) {
-        img.dispose();
-      }
-      imageCache.clear();
-
-      // 3. 调用原生方法创建 Live Photo
       messageNotifier.value = '正在保存到相册...';
       progressNotifier.value = 0.85;
 
-      // 🔥 封面帧始终是第0帧（包含所有格子的原始封面或设置的封面）
-      final coverIndex = 0;
-      debugPrint('📸 整个拼图的封面帧索引: $coverIndex');
       final success =
-          await LivePhotoBridge.createLivePhoto(frameImagePaths, coverIndex);
+          await LivePhotoBridge.createLivePhoto(frameImagePaths, 0);
 
       progressNotifier.value = 1.0;
       messageNotifier.value = '完成！';
 
       if (mounted) {
-        // 关闭加载对话框
         Navigator.of(context, rootNavigator: true).pop();
 
         if (success) {
-          // 🔥 读取第一帧图片作为拼接效果缩略图
-          Uint8List? puzzleThumbnail;
-          try {
-            final firstFrameFile = File(frameImagePaths[0]);
-            if (await firstFrameFile.exists()) {
-              puzzleThumbnail = await firstFrameFile.readAsBytes();
-            }
-          } catch (e) {
-            debugPrint('读取缩略图失败: $e');
-            puzzleThumbnail = _coverFrames[0] ?? _photoThumbnails[0];
-          }
+          // 生成合成缩略图
+          final puzzleThumbnail =
+              await _buildCompositeThumbnail() ?? _photoThumbnails[0];
 
-          // 🔥 保存成功后添加历史记录（含上次布局与封面帧，便于从首页再次进入时恢复）
           final photoIds = _selectedPhotos.map((p) => p.id).toList();
           final coverMs = List<int>.generate(
             _selectedPhotos.length,
@@ -1464,13 +1563,12 @@ class _PuzzleEditorScreenState extends ConsumerState<PuzzleEditorScreen>
           );
           await ref.read(puzzleHistoryProvider.notifier).addHistory(history);
 
-          // 🔥 跳转到完成页面
           Navigator.of(context).pushReplacement(
             MaterialPageRoute(
               builder: (context) => CompletionScreen(
                 thumbnail: puzzleThumbnail,
                 photoCount: _selectedPhotos.length,
-                imageAspectRatio: _canvasConfig.width / _canvasConfig.height,
+                imageAspectRatio: 3 / 4, // 默认比例
               ),
             ),
           );
@@ -1486,7 +1584,7 @@ class _PuzzleEditorScreenState extends ConsumerState<PuzzleEditorScreen>
         }
       }
 
-      // 4. 清理临时文件
+      // 清理临时文件
       for (final path in frameImagePaths) {
         try {
           await File(path).delete();
@@ -1497,9 +1595,7 @@ class _PuzzleEditorScreenState extends ConsumerState<PuzzleEditorScreen>
     } catch (e) {
       debugPrint('保存拼图失败: $e');
       if (mounted) {
-        // 关闭加载对话框
         Navigator.of(context, rootNavigator: true).pop();
-
         ScaffoldMessenger.of(context).clearSnackBars();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -2019,14 +2115,88 @@ class _PuzzleEditorScreenState extends ConsumerState<PuzzleEditorScreen>
     ); // WillPopScope
   }
 
+  /// 生成拼图画布的合成缩略图（用于完成页展示）
+  Future<Uint8List?> _buildCompositeThumbnail() async {
+    if (_imageBlocks.isEmpty) return null;
+    const double maxSide = 800.0;
+    final ratio = _canvasConfig.width / _canvasConfig.height;
+    final double canvasW = ratio >= 1.0 ? maxSide : maxSide * ratio;
+    final double canvasH = ratio >= 1.0 ? maxSide / ratio : maxSide;
+
+    final recorder = ui.PictureRecorder();
+    final canvas = Canvas(recorder, Rect.fromLTWH(0, 0, canvasW, canvasH));
+    canvas.drawRect(
+      Rect.fromLTWH(0, 0, canvasW, canvasH),
+      Paint()..color = const Color(0xFF000000),
+    );
+
+    for (int i = 0; i < _imageBlocks.length; i++) {
+      final block = _imageBlocks[i];
+      final imageData = _coverFrames[i] ?? _photoThumbnails[i];
+      if (imageData == null) continue;
+      try {
+        final codec = await ui.instantiateImageCodec(imageData);
+        final frame = await codec.getNextFrame();
+        final image = frame.image;
+
+        final dstRect = Rect.fromLTWH(
+          block.x * canvasW,
+          block.y * canvasH,
+          block.width * canvasW,
+          block.height * canvasH,
+        );
+        final srcW = image.width.toDouble();
+        final srcH = image.height.toDouble();
+        final srcAspect = srcW / srcH;
+        final dstAspect = dstRect.width / dstRect.height;
+
+        Rect srcRect;
+        if (srcAspect > dstAspect) {
+          final cropW = srcH * dstAspect;
+          final offsetX = (block.offsetX / _canvasConfig.width) * srcW;
+          final cropX = ((srcW - cropW) / 2 - offsetX).clamp(0.0, srcW - cropW);
+          srcRect = Rect.fromLTWH(cropX, 0, cropW, srcH);
+        } else {
+          final cropH = srcW / dstAspect;
+          final offsetY = (block.offsetY / _canvasConfig.height) * srcH;
+          final cropY = ((srcH - cropH) / 2 - offsetY).clamp(0.0, srcH - cropH);
+          srcRect = Rect.fromLTWH(0, cropY, srcW, cropH);
+        }
+
+        canvas.save();
+        canvas.clipRect(dstRect);
+        canvas.drawImageRect(
+          image,
+          srcRect,
+          dstRect,
+          Paint()..filterQuality = FilterQuality.medium,
+        );
+        canvas.restore();
+        image.dispose();
+      } catch (e) {
+        debugPrint('⚠️ 合成缩略图 block[$i] 失败: $e');
+      }
+    }
+
+    final picture = recorder.endRecording();
+    final finalImage = await picture.toImage(canvasW.round(), canvasH.round());
+    final byteData = await finalImage.toByteData(format: ui.ImageByteFormat.png);
+    finalImage.dispose();
+    return byteData?.buffer.asUint8List();
+  }
+
   /// 设置封面帧（确定时调用）
   Future<void> _handleSetCover(int cellIndex) async {
     _frameExtractTimer?.cancel();
     final frameData = await _captureVideoFrame(cellIndex);
 
     if (frameData != null) {
-      final controller = _videoControllers[cellIndex]!;
-      final timeMs = controller.value.position.inMilliseconds;
+      final controller = _videoControllers[cellIndex];
+      // 优先用滑块记录的时间，避免 seekTo 异步未完成导致读到错误位置
+      final timeMs = _currentSliderTimeMs[cellIndex] ??
+          controller?.value.position.inMilliseconds ??
+          0;
+      debugPrint('📸 设置封面: cell=$cellIndex, time=${timeMs}ms (slider=${_currentSliderTimeMs[cellIndex]}, ctrl=${controller?.value.position.inMilliseconds})');
 
       setState(() {
         _coverFrames[cellIndex] = frameData;

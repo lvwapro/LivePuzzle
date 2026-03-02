@@ -1366,7 +1366,7 @@ class _PuzzleEditorScreenState extends ConsumerState<PuzzleEditorScreen>
       if (_useNewCanvas && _imageBlocks.isNotEmpty) {
         debugPrint('🚀 使用硬件加速模式导出...');
         
-        messageNotifier.value = '正在准备布局配置...';
+        messageNotifier.value = AppLocalizations.of(context)!.preparingLayout;
         progressNotifier.value = 0.1;
 
         // 准备布局配置
@@ -1403,7 +1403,7 @@ class _PuzzleEditorScreenState extends ConsumerState<PuzzleEditorScreen>
         // 准备 asset IDs
         final assetIds = _selectedPhotos.map((p) => p.id).toList();
 
-        messageNotifier.value = '正在硬件编码合成...';
+        messageNotifier.value = AppLocalizations.of(context)!.hardwareEncoding;
         progressNotifier.value = 0.2;
 
         // 调用硬件加速方法
@@ -1414,7 +1414,7 @@ class _PuzzleEditorScreenState extends ConsumerState<PuzzleEditorScreen>
         );
 
         progressNotifier.value = 1.0;
-        messageNotifier.value = '完成！';
+        messageNotifier.value = AppLocalizations.of(context)!.completed;
 
         debugPrint('⏱️ 硬件加速导出完成，总耗时 ${sw.elapsedMilliseconds}ms');
 
@@ -1536,7 +1536,7 @@ class _PuzzleEditorScreenState extends ConsumerState<PuzzleEditorScreen>
           await LivePhotoBridge.createLivePhoto(frameImagePaths, 0);
 
       progressNotifier.value = 1.0;
-      messageNotifier.value = '完成！';
+      messageNotifier.value = AppLocalizations.of(context)!.completed;
 
       if (mounted) {
         Navigator.of(context, rootNavigator: true).pop();
@@ -2217,7 +2217,7 @@ class _PuzzleEditorScreenState extends ConsumerState<PuzzleEditorScreen>
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              '已设置为封面 (${(timeMs / 1000).toStringAsFixed(2)}s)',
+              '${AppLocalizations.of(context)!.frameSetSuccess} (${(timeMs / 1000).toStringAsFixed(2)}s)',
             ),
             duration: const Duration(seconds: 2),
             behavior: SnackBarBehavior.floating,
@@ -2231,9 +2231,9 @@ class _PuzzleEditorScreenState extends ConsumerState<PuzzleEditorScreen>
     } else {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('截取帧失败，请重试'),
-            duration: Duration(seconds: 2),
+          SnackBar(
+            content: Text(AppLocalizations.of(context)!.frameSetFailed),
+            duration: const Duration(seconds: 2),
             backgroundColor: Colors.red,
           ),
         );

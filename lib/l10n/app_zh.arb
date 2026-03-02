@@ -151,5 +151,43 @@
   "preparingFrames": "准备帧数据...",
   "loadingFrames": "加载视频帧",
   "renderingFrames": "渲染帧",
-  "savingToAlbum": "正在保存到相册..."
+  "savingToAlbum": "正在保存到相册...",
+  
+  "selectFrameTitle": "选择定格帧",
+  "alreadySetCover": "已设封面",
+  "dragSliderPreview": "拖动滑块在编辑区实时预览",
+  "setCover": "设为封面",
+  "resetCover": "重新设置",
+  "frameSetSuccess": "已设置为封面",
+  "frameSetFailed": "截取帧失败，请重试",
+  
+  "canvasRatio": "画布比例",
+  "layoutStyle": "布局样式",
+  "puzzleTab": "拼图",
+  "longImageTab": "长图拼接",
+  
+  "preparingLayout": "正在准备布局配置...",
+  "hardwareEncoding": "正在硬件编码合成...",
+  "completed": "完成！",
+  
+  "shareTo": "分享到",
+  "quickShare": "闪传相册",
+  "wechatFriend": "微信好友",
+  "wechatMoments": "朋友圈",
+  "douyin": "抖音",
+  "xiaohongshu": "小红书",
+  "savedToAlbum": "已保存到相册",
+  "saveFailed": "保存失败：{error}",
+  "shareToWeChat": "分享我的 Live Photo 拼图到微信",
+  "shareToMoments": "分享我的 Live Photo 拼图到朋友圈",
+  "shareToDouyin": "分享我的 Live Photo 拼图到抖音",
+  "shareToXiaohongshu": "分享我的 Live Photo 拼图到小红书",
+  
+  "tabAll": "全部",
+  "tabLivePhotos": "实况",
+  "stitchDirection": "拼接方向",
+  "noLivePhotosFound": "没有找到实况照片",
+  "noPhotosFound": "没有找到照片",
+  "pleaseAddLivePhotos": "请在相册中添加实况照片",
+  "pleaseAddPhotos": "请确保相册中有照片"
 }

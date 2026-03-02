@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
+import 'package:live_puzzle/l10n/app_localizations.dart';
 
 /// 帧选择器 - 紧凑模式，拖动进度条直接在编辑区预览
 class VideoFrameSelectorWidget extends StatefulWidget {
@@ -65,6 +66,7 @@ class _VideoFrameSelectorWidgetState extends State<VideoFrameSelectorWidget> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final duration =
         widget.videoController.value.duration.inMilliseconds.toDouble();
     final position = _currentPosition.clamp(0.0, duration);
@@ -103,9 +105,9 @@ class _VideoFrameSelectorWidgetState extends State<VideoFrameSelectorWidget> {
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Row(
               children: [
-                const Text(
-                  '选择定格帧',
-                  style: TextStyle(
+                Text(
+                  l10n.selectFrameTitle,
+                  style: const TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
                     color: Color(0xFF4A3F44),
@@ -120,9 +122,9 @@ class _VideoFrameSelectorWidgetState extends State<VideoFrameSelectorWidget> {
                       color: const Color(0xFFFF4D7D),
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    child: const Text(
-                      '已设封面',
-                      style: TextStyle(
+                    child: Text(
+                      l10n.alreadySetCover,
+                      style: const TextStyle(
                         fontSize: 10,
                         fontWeight: FontWeight.w600,
                         color: Colors.white,
@@ -132,7 +134,7 @@ class _VideoFrameSelectorWidgetState extends State<VideoFrameSelectorWidget> {
                 ],
                 const Spacer(),
                 Text(
-                  '拖动滑块在编辑区实时预览',
+                  l10n.dragSliderPreview,
                   style: TextStyle(fontSize: 10, color: Colors.grey.shade400),
                 ),
               ],
@@ -227,9 +229,9 @@ class _VideoFrameSelectorWidgetState extends State<VideoFrameSelectorWidget> {
                           borderRadius: BorderRadius.circular(12),
                         ),
                       ),
-                      child: const Text(
-                        '取消',
-                        style: TextStyle(
+                      child: Text(
+                        l10n.cancel,
+                        style: const TextStyle(
                             fontSize: 14, fontWeight: FontWeight.w600),
                       ),
                     ),
@@ -265,7 +267,7 @@ class _VideoFrameSelectorWidgetState extends State<VideoFrameSelectorWidget> {
                           const SizedBox(width: 4),
                           Flexible(
                             child: Text(
-                              widget.isCover ? '重新设置' : '设为封面',
+                              widget.isCover ? l10n.resetCover : l10n.setCover,
                               style: const TextStyle(
                                   fontSize: 13, fontWeight: FontWeight.w600),
                               overflow: TextOverflow.ellipsis,

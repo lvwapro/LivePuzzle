@@ -248,9 +248,9 @@ class _PhotoSelectionScreenState extends ConsumerState<PhotoSelectionScreen> {
                     padding: const EdgeInsets.fromLTRB(32, 0, 32, 12),
                     child: Row(
                       children: [
-                        _buildTab('全部', 0),
+                        _buildTab(AppLocalizations.of(context)!.tabAll, 0),
                         const SizedBox(width: 24),
-                        _buildTab('实况', 1),
+                        _buildTab(AppLocalizations.of(context)!.tabLivePhotos, 1),
                       ],
                     ),
                   ),
@@ -329,7 +329,7 @@ class _PhotoSelectionScreenState extends ConsumerState<PhotoSelectionScreen> {
                         ),
                         const SizedBox(height: 16),
                         Text(
-                          _selectedTabIndex == 1 ? '没有找到实况照片' : '没有找到照片',
+                          _selectedTabIndex == 1 ? AppLocalizations.of(context)!.noLivePhotosFound : AppLocalizations.of(context)!.noPhotosFound,
                           style: TextStyle(
                             fontSize: 18,
                             color: Colors.grey.shade600,
@@ -337,7 +337,7 @@ class _PhotoSelectionScreenState extends ConsumerState<PhotoSelectionScreen> {
                         ),
                         const SizedBox(height: 8),
                         Text(
-                          _selectedTabIndex == 1 ? '请在相册中添加实况照片' : '请确保相册中有照片',
+                          _selectedTabIndex == 1 ? AppLocalizations.of(context)!.pleaseAddLivePhotos : AppLocalizations.of(context)!.pleaseAddPhotos,
                           style: TextStyle(
                             fontSize: 14,
                             color: Colors.grey.shade500,

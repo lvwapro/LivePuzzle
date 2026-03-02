@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../models/canvas_config.dart';
 import '../../models/layout_template.dart';
+import '../../l10n/app_localizations.dart';
 
 /// 布局类型标签
 enum LayoutTabType {
@@ -101,6 +102,7 @@ class _LayoutSelectionPanelState extends State<LayoutSelectionPanel> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Container(
       height: 280,
       decoration: BoxDecoration(
@@ -123,9 +125,9 @@ class _LayoutSelectionPanelState extends State<LayoutSelectionPanel> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                _buildTab('拼图', LayoutTabType.puzzle),
+                _buildTab(l10n.puzzleTab, LayoutTabType.puzzle),
                 const SizedBox(width: 40),
-                _buildTab('长图拼接', LayoutTabType.longImage),
+                _buildTab(l10n.longImageTab, LayoutTabType.longImage),
               ],
             ),
           ),
@@ -143,7 +145,7 @@ class _LayoutSelectionPanelState extends State<LayoutSelectionPanel> {
                   if (_selectedTab == LayoutTabType.puzzle) ...[
                     // 画布比例选择
                     Text(
-                      '画布比例',
+                      l10n.canvasRatio,
                       style: TextStyle(
                         color: Colors.grey.shade600,
                         fontSize: 12,
@@ -203,7 +205,7 @@ class _LayoutSelectionPanelState extends State<LayoutSelectionPanel> {
 
                   // 布局模板选择
                   Text(
-                    _selectedTab == LayoutTabType.longImage ? '拼接方向' : '布局样式',
+                    _selectedTab == LayoutTabType.longImage ? l10n.stitchDirection : l10n.layoutStyle,
                     style: TextStyle(
                       color: Colors.grey.shade600,
                       fontSize: 12,

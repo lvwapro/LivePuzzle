@@ -595,5 +595,168 @@
   "categoryClassic": "Classic",
   "@categoryClassic": {
     "description": "分类 - 经典"
+  },
+  
+  "exportingLivePhoto": "Exporting Live Photo",
+  "@exportingLivePhoto": {
+    "description": "正在导出"
+  },
+  "preparingFrames": "Preparing frame data...",
+  "@preparingFrames": {
+    "description": "准备帧数据"
+  },
+  "loadingFrames": "Loading video frames",
+  "@loadingFrames": {
+    "description": "加载视频帧"
+  },
+  "renderingFrames": "Rendering frames",
+  "@renderingFrames": {
+    "description": "渲染帧"
+  },
+  "savingToAlbum": "Saving to album...",
+  "@savingToAlbum": {
+    "description": "保存到相册"
+  },
+  
+  "selectFrameTitle": "Select Frame",
+  "@selectFrameTitle": {
+    "description": "选择定格帧"
+  },
+  "alreadySetCover": "Cover Set",
+  "@alreadySetCover": {
+    "description": "已设封面"
+  },
+  "dragSliderPreview": "Drag slider to preview in editor",
+  "@dragSliderPreview": {
+    "description": "拖动滑块预览提示"
+  },
+  "setCover": "Set as Cover",
+  "@setCover": {
+    "description": "设为封面"
+  },
+  "resetCover": "Reset",
+  "@resetCover": {
+    "description": "重新设置"
+  },
+  "frameSetSuccess": "Frame set as cover",
+  "@frameSetSuccess": {
+    "description": "设置封面成功"
+  },
+  "frameSetFailed": "Failed to capture frame, please try again",
+  "@frameSetFailed": {
+    "description": "截取帧失败"
+  },
+  
+  "canvasRatio": "Canvas Ratio",
+  "@canvasRatio": {
+    "description": "画布比例"
+  },
+  "layoutStyle": "Layout Style",
+  "@layoutStyle": {
+    "description": "布局样式"
+  },
+  "puzzleTab": "Puzzle",
+  "@puzzleTab": {
+    "description": "拼图标签"
+  },
+  "longImageTab": "Long Image",
+  "@longImageTab": {
+    "description": "长图拼接标签"
+  },
+  
+  "preparingLayout": "Preparing layout configuration...",
+  "@preparingLayout": {
+    "description": "准备布局"
+  },
+  "hardwareEncoding": "Hardware encoding...",
+  "@hardwareEncoding": {
+    "description": "硬件编码"
+  },
+  "completed": "Completed!",
+  "@completed": {
+    "description": "完成"
+  },
+  
+  "shareTo": "Share to",
+  "@shareTo": {
+    "description": "分享到"
+  },
+  "quickShare": "Quick Share",
+  "@quickShare": {
+    "description": "闪传相册"
+  },
+  "wechatFriend": "WeChat",
+  "@wechatFriend": {
+    "description": "微信好友"
+  },
+  "wechatMoments": "Moments",
+  "@wechatMoments": {
+    "description": "朋友圈"
+  },
+  "douyin": "Douyin",
+  "@douyin": {
+    "description": "抖音"
+  },
+  "xiaohongshu": "RedNote",
+  "@xiaohongshu": {
+    "description": "小红书"
+  },
+  "savedToAlbum": "Saved to album",
+  "@savedToAlbum": {
+    "description": "已保存到相册"
+  },
+  "saveFailed": "Save failed: {error}",
+  "@saveFailed": {
+    "description": "保存失败",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "shareToWeChat": "Share my Live Photo puzzle to WeChat",
+  "@shareToWeChat": {
+    "description": "分享到微信"
+  },
+  "shareToMoments": "Share my Live Photo puzzle to Moments",
+  "@shareToMoments": {
+    "description": "分享到朋友圈"
+  },
+  "shareToDouyin": "Share my Live Photo puzzle to Douyin",
+  "@shareToDouyin": {
+    "description": "分享到抖音"
+  },
+  "shareToXiaohongshu": "Share my Live Photo puzzle to RedNote",
+  "@shareToXiaohongshu": {
+    "description": "分享到小红书"
+  },
+  
+  "tabAll": "All",
+  "@tabAll": {
+    "description": "全部标签"
+  },
+  "tabLivePhotos": "Live",
+  "@tabLivePhotos": {
+    "description": "实况标签"
+  },
+  "stitchDirection": "Stitch Direction",
+  "@stitchDirection": {
+    "description": "拼接方向"
+  },
+  "noLivePhotosFound": "No Live Photos found",
+  "@noLivePhotosFound": {
+    "description": "没有找到实况照片"
+  },
+  "noPhotosFound": "No photos found",
+  "@noPhotosFound": {
+    "description": "没有找到照片"
+  },
+  "pleaseAddLivePhotos": "Please add Live Photos to your album",
+  "@pleaseAddLivePhotos": {
+    "description": "请添加实况照片"
+  },
+  "pleaseAddPhotos": "Please add photos to your album",
+  "@pleaseAddPhotos": {
+    "description": "请添加照片"
   }
 }

@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:image_gallery_saver/image_gallery_saver.dart';
+import 'package:live_puzzle/l10n/app_localizations.dart';
 
 /// 完成页面 - Live Photo 保存成功
 class CompletionScreen extends StatelessWidget {
@@ -21,6 +22,7 @@ class CompletionScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       backgroundColor: const Color(0xFFFFF0F3),
       body: SafeArea(
@@ -115,9 +117,9 @@ class CompletionScreen extends StatelessWidget {
                     const SizedBox(height: 32),
 
                     // Success Title - 标题小一点
-                    const Text(
-                      '创作完成！',
-                      style: TextStyle(
+                    Text(
+                      l10n.completionTitle,
+                      style: const TextStyle(
                         fontFamily: 'Fredoka',
                         fontSize: 24,
                         fontWeight: FontWeight.w700,
@@ -128,7 +130,7 @@ class CompletionScreen extends StatelessWidget {
                     const SizedBox(height: 6),
 
                     Text(
-                      'Live Photo 已保存到相册',
+                      l10n.completionMessage,
                       style: TextStyle(
                         fontSize: 14,
                         color: Colors.grey.shade600,
@@ -145,7 +147,7 @@ class CompletionScreen extends StatelessWidget {
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           _buildActionButton(
-                            label: '创建新拼图',
+                            label: l10n.createNewPuzzle,
                             color: const Color(0xFFFF85A2),
                             onTap: () {
                               Navigator.of(context).popUntil((route) => route.isFirst);
@@ -156,7 +158,7 @@ class CompletionScreen extends StatelessWidget {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                '分享到',
+                                l10n.shareTo,
                                 style: TextStyle(
                                   fontSize: 14,
                                   color: Colors.grey.shade600,
@@ -170,34 +172,34 @@ class CompletionScreen extends StatelessWidget {
                                   _buildSharePlatform(
                                     context,
                                     icon: Icons.photo_album,
-                                    label: '闪传相册',
+                                    label: l10n.quickShare,
                                     onTap: () => _saveToAlbum(context),
                                   ),
                                   _buildSharePlatform(
                                     context,
                                     icon: Icons.wechat,
-                                    label: '微信好友',
+                                    label: l10n.wechatFriend,
                                     color: const Color(0xFF1AAD19),
                                     onTap: () => _shareToWeChat(context),
                                   ),
                                   _buildSharePlatform(
                                     context,
                                     icon: Icons.circle,
-                                    label: '朋友圈',
+                                    label: l10n.wechatMoments,
                                     color: const Color(0xFF1AAD19),
                                     onTap: () => _shareToMoments(context),
                                   ),
                                   _buildSharePlatform(
                                     context,
                                     icon: Icons.music_note,
-                                    label: '抖音',
+                                    label: l10n.douyin,
                                     color: Colors.black,
                                     onTap: () => _shareToDouyin(context),
                                   ),
                                   _buildSharePlatform(
                                     context,
                                     icon: Icons.book,
-                                    label: '小红书',
+                                    label: l10n.xiaohongshu,
                                     color: const Color(0xFFFF2442),
                                     onTap: () => _shareToXiaohongshu(context),
                                   ),
@@ -258,14 +260,15 @@ class CompletionScreen extends StatelessWidget {
 
   // 保存到相册
   Future<void> _saveToAlbum(BuildContext context) async {
+    final l10n = AppLocalizations.of(context)!;
     try {
       if (thumbnail != null) {
         await ImageGallerySaver.saveImage(thumbnail!);
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('已保存到相册'),
-              duration: Duration(seconds: 2),
+            SnackBar(
+              content: Text(l10n.savedToAlbum),
+              duration: const Duration(seconds: 2),
             ),
           );
         }
@@ -273,7 +276,7 @@ class CompletionScreen extends StatelessWidget {
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('保存失败：$e')),
+          SnackBar(content: Text(l10n.saveFailed(e.toString()))),
         );
       }
     }
@@ -281,6 +284,7 @@ class CompletionScreen extends StatelessWidget {
 
   // 通用分享方法 - 调起系统分享面板
   Future<void> _shareImage(BuildContext context, {String? text}) async {
+    final l10n = AppLocalizations.of(context)!;
     try {
       if (thumbnail != null) {
         // 保存图片到临时文件
@@ -291,7 +295,7 @@ class CompletionScreen extends StatelessWidget {
         // 调起系统分享面板
         final result = await Share.shareXFiles(
           [XFile(file.path)],
-          text: text ?? '我用 LivePuzzle 创建了精美的 Live Photo 拼图！',
+          text: text ?? l10n.shareImageMessage,
         );
         
         // 分享完成后删除临时文件
@@ -305,7 +309,7 @@ class CompletionScreen extends StatelessWidget {
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('分享失败：$e')),
+          SnackBar(content: Text(l10n.shareFailed(e.toString()))),
         );
       }
     }
@@ -313,22 +317,26 @@ class CompletionScreen extends StatelessWidget {
 
   // 分享到微信
   Future<void> _shareToWeChat(BuildContext context) async {
-    await _shareImage(context, text: '分享我的 Live Photo 拼图到微信');
+    final l10n = AppLocalizations.of(context)!;
+    await _shareImage(context, text: l10n.shareToWeChat);
   }
 
   // 分享到朋友圈
   Future<void> _shareToMoments(BuildContext context) async {
-    await _shareImage(context, text: '分享我的 Live Photo 拼图到朋友圈');
+    final l10n = AppLocalizations.of(context)!;
+    await _shareImage(context, text: l10n.shareToMoments);
   }
 
   // 分享到抖音
   Future<void> _shareToDouyin(BuildContext context) async {
-    await _shareImage(context, text: '分享我的 Live Photo 拼图到抖音');
+    final l10n = AppLocalizations.of(context)!;
+    await _shareImage(context, text: l10n.shareToDouyin);
   }
 
   // 分享到小红书
   Future<void> _shareToXiaohongshu(BuildContext context) async {
-    await _shareImage(context, text: '分享我的 Live Photo 拼图到小红书');
+    final l10n = AppLocalizations.of(context)!;
+    await _shareImage(context, text: l10n.shareToXiaohongshu);
   }
 
   Widget _buildActionButton({

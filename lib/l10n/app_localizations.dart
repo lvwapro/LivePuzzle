@@ -728,31 +728,31 @@ abstract class AppLocalizations {
   /// **'All Photos'**
   String get allPhotos;
 
-  /// 导出进度 - 主标题
+  /// 正在导出
   ///
   /// In en, this message translates to:
   /// **'Exporting Live Photo'**
   String get exportingLivePhoto;
 
-  /// 导出进度 - 准备阶段
+  /// 准备帧数据
   ///
   /// In en, this message translates to:
-  /// **'Preparing frames...'**
+  /// **'Preparing frame data...'**
   String get preparingFrames;
 
-  /// 导出进度 - 加载帧
+  /// 加载视频帧
   ///
   /// In en, this message translates to:
   /// **'Loading video frames'**
   String get loadingFrames;
 
-  /// 导出进度 - 渲染帧
+  /// 渲染帧
   ///
   /// In en, this message translates to:
   /// **'Rendering frames'**
   String get renderingFrames;
 
-  /// 导出进度 - 保存阶段
+  /// 保存到相册
   ///
   /// In en, this message translates to:
   /// **'Saving to album...'**
@@ -883,6 +883,204 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Classic'**
   String get categoryClassic;
+
+  /// 选择定格帧
+  ///
+  /// In en, this message translates to:
+  /// **'Select Frame'**
+  String get selectFrameTitle;
+
+  /// 已设封面
+  ///
+  /// In en, this message translates to:
+  /// **'Cover Set'**
+  String get alreadySetCover;
+
+  /// 拖动滑块预览提示
+  ///
+  /// In en, this message translates to:
+  /// **'Drag slider to preview in editor'**
+  String get dragSliderPreview;
+
+  /// 设为封面
+  ///
+  /// In en, this message translates to:
+  /// **'Set as Cover'**
+  String get setCover;
+
+  /// 重新设置
+  ///
+  /// In en, this message translates to:
+  /// **'Reset'**
+  String get resetCover;
+
+  /// 设置封面成功
+  ///
+  /// In en, this message translates to:
+  /// **'Frame set as cover'**
+  String get frameSetSuccess;
+
+  /// 截取帧失败
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to capture frame, please try again'**
+  String get frameSetFailed;
+
+  /// 画布比例
+  ///
+  /// In en, this message translates to:
+  /// **'Canvas Ratio'**
+  String get canvasRatio;
+
+  /// 布局样式
+  ///
+  /// In en, this message translates to:
+  /// **'Layout Style'**
+  String get layoutStyle;
+
+  /// 拼图标签
+  ///
+  /// In en, this message translates to:
+  /// **'Puzzle'**
+  String get puzzleTab;
+
+  /// 长图拼接标签
+  ///
+  /// In en, this message translates to:
+  /// **'Long Image'**
+  String get longImageTab;
+
+  /// 准备布局
+  ///
+  /// In en, this message translates to:
+  /// **'Preparing layout configuration...'**
+  String get preparingLayout;
+
+  /// 硬件编码
+  ///
+  /// In en, this message translates to:
+  /// **'Hardware encoding...'**
+  String get hardwareEncoding;
+
+  /// 完成
+  ///
+  /// In en, this message translates to:
+  /// **'Completed!'**
+  String get completed;
+
+  /// 分享到
+  ///
+  /// In en, this message translates to:
+  /// **'Share to'**
+  String get shareTo;
+
+  /// 闪传相册
+  ///
+  /// In en, this message translates to:
+  /// **'Quick Share'**
+  String get quickShare;
+
+  /// 微信好友
+  ///
+  /// In en, this message translates to:
+  /// **'WeChat'**
+  String get wechatFriend;
+
+  /// 朋友圈
+  ///
+  /// In en, this message translates to:
+  /// **'Moments'**
+  String get wechatMoments;
+
+  /// 抖音
+  ///
+  /// In en, this message translates to:
+  /// **'Douyin'**
+  String get douyin;
+
+  /// 小红书
+  ///
+  /// In en, this message translates to:
+  /// **'RedNote'**
+  String get xiaohongshu;
+
+  /// 已保存到相册
+  ///
+  /// In en, this message translates to:
+  /// **'Saved to album'**
+  String get savedToAlbum;
+
+  /// 保存失败
+  ///
+  /// In en, this message translates to:
+  /// **'Save failed: {error}'**
+  String saveFailed(String error);
+
+  /// 分享到微信
+  ///
+  /// In en, this message translates to:
+  /// **'Share my Live Photo puzzle to WeChat'**
+  String get shareToWeChat;
+
+  /// 分享到朋友圈
+  ///
+  /// In en, this message translates to:
+  /// **'Share my Live Photo puzzle to Moments'**
+  String get shareToMoments;
+
+  /// 分享到抖音
+  ///
+  /// In en, this message translates to:
+  /// **'Share my Live Photo puzzle to Douyin'**
+  String get shareToDouyin;
+
+  /// 分享到小红书
+  ///
+  /// In en, this message translates to:
+  /// **'Share my Live Photo puzzle to RedNote'**
+  String get shareToXiaohongshu;
+
+  /// 全部标签
+  ///
+  /// In en, this message translates to:
+  /// **'All'**
+  String get tabAll;
+
+  /// 实况标签
+  ///
+  /// In en, this message translates to:
+  /// **'Live'**
+  String get tabLivePhotos;
+
+  /// 拼接方向
+  ///
+  /// In en, this message translates to:
+  /// **'Stitch Direction'**
+  String get stitchDirection;
+
+  /// 没有找到实况照片
+  ///
+  /// In en, this message translates to:
+  /// **'No Live Photos found'**
+  String get noLivePhotosFound;
+
+  /// 没有找到照片
+  ///
+  /// In en, this message translates to:
+  /// **'No photos found'**
+  String get noPhotosFound;
+
+  /// 请添加实况照片
+  ///
+  /// In en, this message translates to:
+  /// **'Please add Live Photos to your album'**
+  String get pleaseAddLivePhotos;
+
+  /// 请添加照片
+  ///
+  /// In en, this message translates to:
+  /// **'Please add photos to your album'**
+  String get pleaseAddPhotos;
 }
 
 class _AppLocalizationsDelegate

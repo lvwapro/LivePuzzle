@@ -420,4 +420,105 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get categoryClassic => '经典';
+
+  @override
+  String get selectFrameTitle => '选择定格帧';
+
+  @override
+  String get alreadySetCover => '已设封面';
+
+  @override
+  String get dragSliderPreview => '拖动滑块在编辑区实时预览';
+
+  @override
+  String get setCover => '设为封面';
+
+  @override
+  String get resetCover => '重新设置';
+
+  @override
+  String get frameSetSuccess => '已设置为封面';
+
+  @override
+  String get frameSetFailed => '截取帧失败，请重试';
+
+  @override
+  String get canvasRatio => '画布比例';
+
+  @override
+  String get layoutStyle => '布局样式';
+
+  @override
+  String get puzzleTab => '拼图';
+
+  @override
+  String get longImageTab => '长图拼接';
+
+  @override
+  String get preparingLayout => '正在准备布局配置...';
+
+  @override
+  String get hardwareEncoding => '正在硬件编码合成...';
+
+  @override
+  String get completed => '完成！';
+
+  @override
+  String get shareTo => '分享到';
+
+  @override
+  String get quickShare => '闪传相册';
+
+  @override
+  String get wechatFriend => '微信好友';
+
+  @override
+  String get wechatMoments => '朋友圈';
+
+  @override
+  String get douyin => '抖音';
+
+  @override
+  String get xiaohongshu => '小红书';
+
+  @override
+  String get savedToAlbum => '已保存到相册';
+
+  @override
+  String saveFailed(String error) {
+    return '保存失败：$error';
+  }
+
+  @override
+  String get shareToWeChat => '分享我的 Live Photo 拼图到微信';
+
+  @override
+  String get shareToMoments => '分享我的 Live Photo 拼图到朋友圈';
+
+  @override
+  String get shareToDouyin => '分享我的 Live Photo 拼图到抖音';
+
+  @override
+  String get shareToXiaohongshu => '分享我的 Live Photo 拼图到小红书';
+
+  @override
+  String get tabAll => '全部';
+
+  @override
+  String get tabLivePhotos => '实况';
+
+  @override
+  String get stitchDirection => '拼接方向';
+
+  @override
+  String get noLivePhotosFound => '没有找到实况照片';
+
+  @override
+  String get noPhotosFound => '没有找到照片';
+
+  @override
+  String get pleaseAddLivePhotos => '请在相册中添加实况照片';
+
+  @override
+  String get pleaseAddPhotos => '请确保相册中有照片';
 }

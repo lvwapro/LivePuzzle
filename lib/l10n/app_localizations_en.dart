@@ -351,7 +351,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get exportingLivePhoto => 'Exporting Live Photo';
 
   @override
-  String get preparingFrames => 'Preparing frames...';
+  String get preparingFrames => 'Preparing frame data...';
 
   @override
   String get loadingFrames => 'Loading video frames';
@@ -425,4 +425,105 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get categoryClassic => 'Classic';
+
+  @override
+  String get selectFrameTitle => 'Select Frame';
+
+  @override
+  String get alreadySetCover => 'Cover Set';
+
+  @override
+  String get dragSliderPreview => 'Drag slider to preview in editor';
+
+  @override
+  String get setCover => 'Set as Cover';
+
+  @override
+  String get resetCover => 'Reset';
+
+  @override
+  String get frameSetSuccess => 'Frame set as cover';
+
+  @override
+  String get frameSetFailed => 'Failed to capture frame, please try again';
+
+  @override
+  String get canvasRatio => 'Canvas Ratio';
+
+  @override
+  String get layoutStyle => 'Layout Style';
+
+  @override
+  String get puzzleTab => 'Puzzle';
+
+  @override
+  String get longImageTab => 'Long Image';
+
+  @override
+  String get preparingLayout => 'Preparing layout configuration...';
+
+  @override
+  String get hardwareEncoding => 'Hardware encoding...';
+
+  @override
+  String get completed => 'Completed!';
+
+  @override
+  String get shareTo => 'Share to';
+
+  @override
+  String get quickShare => 'Quick Share';
+
+  @override
+  String get wechatFriend => 'WeChat';
+
+  @override
+  String get wechatMoments => 'Moments';
+
+  @override
+  String get douyin => 'Douyin';
+
+  @override
+  String get xiaohongshu => 'RedNote';
+
+  @override
+  String get savedToAlbum => 'Saved to album';
+
+  @override
+  String saveFailed(String error) {
+    return 'Save failed: $error';
+  }
+
+  @override
+  String get shareToWeChat => 'Share my Live Photo puzzle to WeChat';
+
+  @override
+  String get shareToMoments => 'Share my Live Photo puzzle to Moments';
+
+  @override
+  String get shareToDouyin => 'Share my Live Photo puzzle to Douyin';
+
+  @override
+  String get shareToXiaohongshu => 'Share my Live Photo puzzle to RedNote';
+
+  @override
+  String get tabAll => 'All';
+
+  @override
+  String get tabLivePhotos => 'Live';
+
+  @override
+  String get stitchDirection => 'Stitch Direction';
+
+  @override
+  String get noLivePhotosFound => 'No Live Photos found';
+
+  @override
+  String get noPhotosFound => 'No photos found';
+
+  @override
+  String get pleaseAddLivePhotos => 'Please add Live Photos to your album';
+
+  @override
+  String get pleaseAddPhotos => 'Please add photos to your album';
 }

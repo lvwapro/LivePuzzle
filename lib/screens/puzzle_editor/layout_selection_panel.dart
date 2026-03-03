@@ -355,6 +355,7 @@ class _LayoutSelectionPanelState extends State<LayoutSelectionPanel> {
 
   /// 长图拼接布局项（横向显示）
   Widget _buildLongImageLayoutItem(LayoutTemplate layout) {
+    final l10n = AppLocalizations.of(context)!;
     final isHorizontal = layout.id == 'long_horizontal';
     final isSelected = _selectedLayoutId == layout.id;
     
@@ -427,8 +428,8 @@ class _LayoutSelectionPanelState extends State<LayoutSelectionPanel> {
                   ),
                   Text(
                     isHorizontal 
-                        ? '${widget.photoCount}张图片从左到右拼接'
-                        : '${widget.photoCount}张图片从上到下拼接',
+                        ? l10n.horizontalStitchDesc(widget.photoCount)
+                        : l10n.verticalStitchDesc(widget.photoCount),
                     style: TextStyle(
                       color: isSelected 
                           ? Colors.white.withOpacity(0.9)

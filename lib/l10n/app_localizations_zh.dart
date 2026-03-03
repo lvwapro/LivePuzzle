@@ -521,4 +521,14 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get pleaseAddPhotos => '请确保相册中有照片';
+
+  @override
+  String horizontalStitchDesc(int count) {
+    return '$count张图片从左到右拼接';
+  }
+
+  @override
+  String verticalStitchDesc(int count) {
+    return '$count张图片从上到下拼接';
+  }
 }

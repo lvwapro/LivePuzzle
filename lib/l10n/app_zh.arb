@@ -189,5 +189,8 @@
   "noLivePhotosFound": "没有找到实况照片",
   "noPhotosFound": "没有找到照片",
   "pleaseAddLivePhotos": "请在相册中添加实况照片",
-  "pleaseAddPhotos": "请确保相册中有照片"
+  "pleaseAddPhotos": "请确保相册中有照片",
+  
+  "horizontalStitchDesc": "{count}张图片从左到右拼接",
+  "verticalStitchDesc": "{count}张图片从上到下拼接"
 }

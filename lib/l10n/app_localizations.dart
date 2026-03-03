@@ -1081,6 +1081,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Please add photos to your album'**
   String get pleaseAddPhotos;
+
+  /// 横向拼接描述
+  ///
+  /// In en, this message translates to:
+  /// **'{count} photos stitched left to right'**
+  String horizontalStitchDesc(int count);
+
+  /// 纵向拼接描述
+  ///
+  /// In en, this message translates to:
+  /// **'{count} photos stitched top to bottom'**
+  String verticalStitchDesc(int count);
 }
 
 class _AppLocalizationsDelegate

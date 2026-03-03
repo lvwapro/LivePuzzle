@@ -758,5 +758,24 @@
   "pleaseAddPhotos": "Please add photos to your album",
   "@pleaseAddPhotos": {
     "description": "请添加照片"
+  },
+  
+  "horizontalStitchDesc": "{count} photos stitched left to right",
+  "@horizontalStitchDesc": {
+    "description": "横向拼接描述",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "verticalStitchDesc": "{count} photos stitched top to bottom",
+  "@verticalStitchDesc": {
+    "description": "纵向拼接描述",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   }
 }

@@ -526,4 +526,14 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get pleaseAddPhotos => 'Please add photos to your album';
+
+  @override
+  String horizontalStitchDesc(int count) {
+    return '$count photos stitched left to right';
+  }
+
+  @override
+  String verticalStitchDesc(int count) {
+    return '$count photos stitched top to bottom';
+  }
 }

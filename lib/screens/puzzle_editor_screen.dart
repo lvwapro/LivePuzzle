@@ -428,9 +428,11 @@ class _PuzzleEditorScreenState extends ConsumerState<PuzzleEditorScreen>
       if (!await videoFile.exists()) return;
 
       // 存储视频路径
-      setState(() {
-        _videoPaths[cellIndex] = videoPath;
-      });
+      if (mounted) {
+        setState(() {
+          _videoPaths[cellIndex] = videoPath;
+        });
+      }
 
       // 初始化视频播放器
       final controller = VideoPlayerController.file(videoFile);
@@ -1137,10 +1139,12 @@ class _PuzzleEditorScreenState extends ConsumerState<PuzzleEditorScreen>
       }
 
       if (frames.isNotEmpty) {
-        setState(() {
-          _videoFrames[cellIndex] = frames;
-        });
-        debugPrint('✅ Live Photo $cellIndex 提取了 ${frames.length} 帧');
+        if (mounted) {
+          setState(() {
+            _videoFrames[cellIndex] = frames;
+          });
+          debugPrint('✅ Live Photo $cellIndex 提取了 ${frames.length} 帧');
+        }
       }
     } catch (e) {
       debugPrint('❌ 提取 Live Photo 帧失败: $e');
@@ -1366,6 +1370,12 @@ class _PuzzleEditorScreenState extends ConsumerState<PuzzleEditorScreen>
       if (_useNewCanvas && _imageBlocks.isNotEmpty) {
         debugPrint('🚀 使用硬件加速模式导出...');
         
+        messageNotifier.value = AppLocalizations.of(context)!.loadingVideoResources;
+        progressNotifier.value = 0.05;
+        
+        // 等待一小段时间，确保UI更新
+        await Future.delayed(const Duration(milliseconds: 100));
+        
         messageNotifier.value = AppLocalizations.of(context)!.preparingLayout;
         progressNotifier.value = 0.1;
 
@@ -1388,7 +1398,9 @@ class _PuzzleEditorScreenState extends ConsumerState<PuzzleEditorScreen>
         };
 
         // 诊断日志
-        debugPrint('🔍 画布: ${_canvasConfig.width}×${_canvasConfig.height} ratio=${_canvasConfig.ratio}');
+        final canvasH = _canvasConfig.height;
+        final canvasW = _canvasConfig.width;
+        debugPrint('🔍 画布: ${canvasW}×${canvasH} ratio=${_canvasConfig.ratio} 高>宽=${canvasH > canvasW}');
         for (int i = 0; i < _imageBlocks.length; i++) {
           final b = _imageBlocks[i];
           debugPrint('🔍 Block[$i]: x=${b.x.toStringAsFixed(3)} y=${b.y.toStringAsFixed(3)} w=${b.width.toStringAsFixed(3)} h=${b.height.toStringAsFixed(3)} scale=${b.scale} offsetX=${b.offsetX} offsetY=${b.offsetY}');

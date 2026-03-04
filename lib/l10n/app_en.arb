@@ -777,5 +777,10 @@
         "type": "int"
       }
     }
+  },
+  
+  "loadingVideoResources": "Loading video resources...",
+  "@loadingVideoResources": {
+    "description": "正在加载视频资源"
   }
 }

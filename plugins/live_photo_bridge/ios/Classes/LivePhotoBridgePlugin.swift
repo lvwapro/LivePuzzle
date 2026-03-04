@@ -848,11 +848,47 @@ public class LivePhotoBridgePlugin: NSObject, FlutterPlugin {
         fetchError = error
         semaphore.signal()
       }
-      semaphore.wait()
+      
+      // 等待最多30秒
+      let timeout = DispatchTime.now() + .seconds(30)
+      let result = semaphore.wait(timeout: timeout)
+      
+      if result == .timedOut {
+        throw NSError(domain: "LivePhotoBridge", code: -3,
+                      userInfo: [NSLocalizedDescriptionKey: "Timeout loading video for \(assetId)"])
+      }
 
       if let error = fetchError { throw error }
-      print("📥 视频资源已导出: \(assetId.prefix(8))…")
-      videoAssets.append(AVURLAsset(url: tempURL))
+      
+      // 验证文件是否真的存在且有内容
+      guard FileManager.default.fileExists(atPath: tempURL.path) else {
+        throw NSError(domain: "LivePhotoBridge", code: -4,
+                      userInfo: [NSLocalizedDescriptionKey: "Video file not created for \(assetId)"])
+      }
+      
+      let avAsset = AVURLAsset(url: tempURL)
+      
+      // 验证视频轨道是否可用（同步加载）
+      let tracks = avAsset.tracks(withMediaType: .video)
+      guard !tracks.isEmpty else {
+        throw NSError(domain: "LivePhotoBridge", code: -5,
+                      userInfo: [NSLocalizedDescriptionKey: "No video track in \(assetId)"])
+      }
+      
+      // 验证视频可解码性
+      let generator = AVAssetImageGenerator(asset: avAsset)
+      generator.appliesPreferredTrackTransform = true
+      let testTime = CMTime(value: 0, timescale: 1)
+      do {
+        _ = try generator.copyCGImage(at: testTime, actualTime: nil)
+        print("✅ 视频资源可解码验证通过: \(assetId.prefix(8))…")
+      } catch {
+        throw NSError(domain: "LivePhotoBridge", code: -6,
+                      userInfo: [NSLocalizedDescriptionKey: "Video not decodable: \(error)"])
+      }
+      
+      print("📥 视频资源已导出并验证: \(assetId.prefix(8))… (\(tracks.count) tracks)")
+      videoAssets.append(avAsset)
     }
 
     return videoAssets
@@ -940,11 +976,16 @@ public class LivePhotoBridgePlugin: NSObject, FlutterPlugin {
       let imgW = image.size.width
       let imgH = image.size.height
       guard imgW > 0, imgH > 0 else { continue }
-      let scale = max(dstW / imgW, dstH / imgH)
+      // BoxFit.cover：略放大缩放比(1.002)，避免浮点误差导致 scaled 略小于 dst 而出现左侧/上侧黑边
+      let userScale = max(CGFloat(block.scale), 0.1)
+      let scale = max(dstW / imgW, dstH / imgH) * 1.002 * userScale
       let scaledW = imgW * scale
       let scaledH = imgH * scale
-      let drawX = dstX + (dstW - scaledW) / 2.0
-      let drawY = dstY + (dstH - scaledH) / 2.0
+      // 应用用户平移偏移（UIKit y-down，与 Flutter 编辑器坐标方向一致，直接加偏移）
+      let panX = CGFloat(block.offsetX) / canvasW * coverW
+      let panY = CGFloat(block.offsetY) / canvasH * coverH
+      let drawX = dstX + (dstW - scaledW) / 2.0 + panX
+      let drawY = dstY + (dstH - scaledH) / 2.0 + panY
 
       ctx.saveGState()
       ctx.clip(to: dstRect)

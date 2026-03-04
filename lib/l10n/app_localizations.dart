@@ -1093,6 +1093,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{count} photos stitched top to bottom'**
   String verticalStitchDesc(int count);
+
+  /// 正在加载视频资源
+  ///
+  /// In en, this message translates to:
+  /// **'Loading video resources...'**
+  String get loadingVideoResources;
 }
 
 class _AppLocalizationsDelegate

@@ -46,6 +46,20 @@ class HardwareVideoCompositor {
         self.videoAssets = videoAssets
         self.config = config
 
+        // 校验：blocks 数量与视频数量一致
+        guard config.blocks.count == videoAssets.count else {
+            throw CompositorError.compositionFailed
+        }
+        let f = { (x: CGFloat) in String(format: "%.2f", x) }
+        for (index, asset) in videoAssets.enumerated() {
+            guard let tr = asset.tracks(withMediaType: .video).first else {
+                throw CompositorError.noVideoTrack
+            }
+            let dur = CMTimeGetSeconds(asset.duration)
+            let t = tr.preferredTransform
+            print("📹 视频 \(index): \(Int(tr.naturalSize.width))×\(Int(tr.naturalSize.height)), 时长 \(String(format: "%.2f", dur))s pref a=\(f(t.a)) b=\(f(t.b)) c=\(f(t.c)) d=\(f(t.d)) tx=\(f(t.tx)) ty=\(f(t.ty))")
+        }
+
         let canvasW = CGFloat(config.canvasWidth)
         let canvasH = CGFloat(config.canvasHeight)
 
@@ -91,6 +105,15 @@ class HardwareVideoCompositor {
     /// 主入口：合成带元数据的 Live Photo 视频到 outputURL
     func compose(outputURL: URL, assetIdentifier: String) throws {
         let t0 = Date()
+
+        for (i, block) in config.blocks.enumerated() {
+            if block.x < 0 || block.y < 0 || block.x + block.width > 1.0 || block.y + block.height > 1.0 {
+                print("⚠️ 块 \(i) 超出画布: x=\(block.x) y=\(block.y) w=\(block.width) h=\(block.height)")
+            }
+            if block.width <= 0 || block.height <= 0 {
+                print("⚠️ 块 \(i) 尺寸无效: w=\(block.width) h=\(block.height)")
+            }
+        }
 
         // Step 1: AVAssetReader(composition) + AVAssetWriter(H.264) → 严格 renderSize
         let rawURL = URL(fileURLWithPath: NSTemporaryDirectory())
@@ -251,6 +274,41 @@ class HardwareVideoCompositor {
                         let pbW = CVPixelBufferGetWidth(pb)
                         let pbH = CVPixelBufferGetHeight(pb)
                         print("🖼️ 第一帧像素缓冲区: \(pbW)×\(pbH)，期望 renderSize: \(Int(self.outputSize.width))×\(Int(self.outputSize.height))")
+                        
+                        // 检测第一帧是否为黑屏
+                        CVPixelBufferLockBaseAddress(pb, .readOnly)
+                        defer { CVPixelBufferUnlockBaseAddress(pb, .readOnly) }
+                        
+                        if let baseAddress = CVPixelBufferGetBaseAddress(pb) {
+                            let bytesPerRow = CVPixelBufferGetBytesPerRow(pb)
+                            let buffer = baseAddress.assumingMemoryBound(to: UInt8.self)
+                            
+                            // 采样中心区域的像素来检测是否全黑
+                            let centerY = pbH / 2
+                            let centerX = pbW / 2
+                            let sampleSize = min(100, min(pbW, pbH) / 4)
+                            
+                            var totalBrightness: Int = 0
+                            var sampleCount = 0
+                            
+                            for y in (centerY - sampleSize/2)..<(centerY + sampleSize/2) {
+                                for x in (centerX - sampleSize/2)..<(centerX + sampleSize/2) {
+                                    let offset = y * bytesPerRow + x * 4
+                                    let r = Int(buffer[offset + 1])
+                                    let g = Int(buffer[offset + 2])
+                                    let b = Int(buffer[offset + 3])
+                                    totalBrightness += (r + g + b) / 3
+                                    sampleCount += 1
+                                }
+                            }
+                            
+                            let avgBrightness = sampleCount > 0 ? totalBrightness / sampleCount : 0
+                            if avgBrightness < 10 {
+                                print("⚠️ 警告：第一帧中心区域几乎全黑（亮度: \(avgBrightness)/255）")
+                            } else {
+                                print("✅ 第一帧亮度正常（平均亮度: \(avgBrightness)/255）")
+                            }
+                        }
                     }
                     let pts = CMSampleBufferGetPresentationTimeStamp(sample)
                     adaptor.append(pb, withPresentationTime: pts)
@@ -287,102 +345,34 @@ class HardwareVideoCompositor {
         videoComposition.renderSize = outputSize
         videoComposition.frameDuration = CMTime(value: 1, timescale: 30)
 
+        print("📐 [合成] renderSize=\(Int(outputSize.width))×\(Int(outputSize.height)) isLongImage=\(config.isLongImage) blocks=\(config.blocks.count)")
+
+        // 使用自定义合成器：完全绕过 setCropRectangle/setTransform 坐标系问题
+        // 由 BlockVideoCompositor 在 display 空间用 CIImage 做 BoxFit.cover 合成
+        let trackInfos = compositionTracks.enumerated().map { (i, track) in
+            BlockVideoCompositor.TrackInfo(
+                trackID: track.trackID,
+                blockIndex: i,
+                preferredTransform: sourceTrackInfos[i].preferredTransform
+            )
+        }
+        BlockVideoCompositor.pendingSetup = BlockVideoCompositor.Setup(
+            trackInfos: trackInfos,
+            config: config,
+            outputSize: outputSize
+        )
+        videoComposition.customVideoCompositorClass = BlockVideoCompositor.self
+
         let instruction = AVMutableVideoCompositionInstruction()
         instruction.timeRange = CMTimeRange(start: .zero, duration: targetDuration)
 
-        var layerInstructions: [AVMutableVideoCompositionLayerInstruction] = []
-
-        for (i, track) in compositionTracks.enumerated() {
-            guard i < config.blocks.count, i < sourceTrackInfos.count else { break }
-            let block = config.blocks[i]
-            let info = sourceTrackInfos[i]
-
+        // 即使使用自定义合成器，也需要 layerInstructions 告知 AVFoundation 要提供哪些轨道帧
+        instruction.layerInstructions = compositionTracks.map { track in
             let layer = AVMutableVideoCompositionLayerInstruction(assetTrack: track)
-
-            // 目标区域（输出像素坐标）
-            let dstX = block.x * outputSize.width
-            let dstY = block.y * outputSize.height
-            let dstW = block.width * outputSize.width
-            let dstH = block.height * outputSize.height
-
-            // 用四个角点计算经 preferredTransform 变换后的实际显示尺寸
-            // （比 CGSize.applying 更准确，能处理所有旋转/翻转组合）
-            let pref = info.preferredTransform
-            let nat = info.naturalSize
-            let corners = [
-                CGPoint.zero.applying(pref),
-                CGPoint(x: nat.width, y: 0).applying(pref),
-                CGPoint(x: 0, y: nat.height).applying(pref),
-                CGPoint(x: nat.width, y: nat.height).applying(pref)
-            ]
-            let minX = corners.map(\.x).min()!
-            let maxX = corners.map(\.x).max()!
-            let minY = corners.map(\.y).min()!
-            let maxY = corners.map(\.y).max()!
-            let displayW = maxX - minX   // 显示宽（旋转后）
-            let displayH = maxY - minY   // 显示高（旋转后）
-
-            guard displayW > 0, displayH > 0 else {
-                print("⚠️ Block \(i) 显示尺寸为零，跳过")
-                continue
-            }
-
-            // BoxFit.cover：取更大的缩放比保证完全覆盖目标区域
-            // 同时叠加用户的额外缩放（block.scale，默认 1.0）
-            let userScale = max(block.scale, 1.0)
-            let coverScale = max(dstW / displayW, dstH / displayH) * userScale
-
-            // 居中裁剪偏移：缩放后的显示尺寸超出目标区域的部分居中裁掉
-            // 同时叠加用户的平移（block.offsetX/Y，单位为画布像素，需折算）
-            let scaledDisplayW = displayW * coverScale
-            let scaledDisplayH = displayH * coverScale
-            let panX = block.offsetX / config.canvasWidth * outputSize.width
-            let panY = block.offsetY / config.canvasHeight * outputSize.height
-            let cropOffsetX = (scaledDisplayW - dstW) / 2.0 - panX
-            let cropOffsetY = (scaledDisplayH - dstH) / 2.0 - panY
-
-            // pref 可能包含平移（让旋转后的视频保持在正坐标区域）
-            // 连接顺序：原始旋转 → cover 缩放 → 目标平移
-            // 注意：concatenating 会把 pref 的 tx/ty 也一起缩放，效果等同于
-            //   先应用 pref（旋转+平移），再整体缩放，再整体平移到目标位置
-            let finalTransform = pref
-                .concatenating(CGAffineTransform(scaleX: coverScale, y: coverScale))
-                .concatenating(CGAffineTransform(
-                    translationX: dstX - cropOffsetX,
-                    y: dstY - cropOffsetY
-                ))
-
-            layer.setTransform(finalTransform, at: .zero)
-
-            // setCropRectangle 在 track space（源视频坐标）生效，而非 output space。
-            // 将 dstRect 对应的 display-space 区域通过 pref 的逆变换映射回 track space。
-            // display-space 中，对应 dstRect 的区域边界：
-            let displayCropX0 = minX + cropOffsetX / coverScale
-            let displayCropY0 = minY + cropOffsetY / coverScale
-            let displayCropX1 = minX + (cropOffsetX + dstW) / coverScale
-            let displayCropY1 = minY + (cropOffsetY + dstH) / coverScale
-
-            let invPref = pref.inverted()
-            let trackPts = [
-                CGPoint(x: displayCropX0, y: displayCropY0).applying(invPref),
-                CGPoint(x: displayCropX1, y: displayCropY0).applying(invPref),
-                CGPoint(x: displayCropX0, y: displayCropY1).applying(invPref),
-                CGPoint(x: displayCropX1, y: displayCropY1).applying(invPref)
-            ]
-            let trackCropRect = CGRect(
-                x: trackPts.map(\.x).min()!,
-                y: trackPts.map(\.y).min()!,
-                width:  trackPts.map(\.x).max()! - trackPts.map(\.x).min()!,
-                height: trackPts.map(\.y).max()! - trackPts.map(\.y).min()!
-            ).intersection(CGRect(origin: .zero, size: nat))
-            layer.setCropRectangle(trackCropRect, at: .zero)
-
-            print("📐 Block \(i): dst(\(Int(dstX)),\(Int(dstY)),\(Int(dstW))×\(Int(dstH))) display(\(Int(displayW))×\(Int(displayH))) scale=\(String(format:"%.3f", coverScale))")
-
-            layerInstructions.append(layer)
+            layer.setOpacity(1.0, at: .zero)
+            return layer
         }
 
-        instruction.layerInstructions = layerInstructions
         videoComposition.instructions = [instruction]
         return videoComposition
     }
@@ -508,6 +498,179 @@ class HardwareVideoCompositor {
     // MARK: - Helpers
 
     private func f(_ v: CGFloat) -> String { String(format: "%.2f", v) }
+}
+
+// MARK: - Custom Video Compositor (AVVideoCompositing)
+// 完全绕过 setCropRectangle / setTransform 坐标系问题，
+// 在 display 空间（preferredTransform 已应用的 CIImage）做 BoxFit.cover 合成。
+
+final class BlockVideoCompositor: NSObject, AVVideoCompositing {
+
+    // MARK: Types
+
+    struct TrackInfo {
+        let trackID: CMPersistentTrackID
+        let blockIndex: Int
+        let preferredTransform: CGAffineTransform
+    }
+
+    struct Setup {
+        let trackInfos: [TrackInfo]
+        let config: HardwareVideoCompositor.CompositorConfig
+        let outputSize: CGSize
+    }
+
+    // 在实例化前由外部设置（导出过程串行，无并发风险）
+    static var pendingSetup: Setup?
+
+    private let setup: Setup
+
+    // Metal 加速的 CIContext，复用同一实例避免重复初始化开销
+    private lazy var ciContext: CIContext = {
+        if let device = MTLCreateSystemDefaultDevice() {
+            return CIContext(mtlDevice: device, options: [.cacheIntermediates: false])
+        }
+        return CIContext(options: [.useSoftwareRenderer: false])
+    }()
+
+    // MARK: AVVideoCompositing Protocol
+
+    var sourcePixelBufferAttributes: [String: Any]? {
+        [kCVPixelBufferPixelFormatTypeKey as String: [
+            kCVPixelFormatType_420YpCbCr8BiPlanarFullRange,
+            kCVPixelFormatType_32BGRA
+        ]]
+    }
+
+    var requiredPixelBufferAttributesForRenderContext: [String: Any] {
+        [kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_32BGRA]
+    }
+
+    override init() {
+        guard let s = BlockVideoCompositor.pendingSetup else {
+            fatalError("BlockVideoCompositor.pendingSetup 必须在实例化前设置")
+        }
+        setup = s
+        super.init()
+    }
+
+    func renderContextChanged(_ newRenderContext: AVVideoCompositionRenderContext) { }
+
+    func startRequest(_ request: AVAsynchronousVideoCompositionRequest) {
+        guard let outBuf = request.renderContext.newPixelBuffer() else {
+            request.finish(with: CompositorError.compositionFailed)
+            return
+        }
+
+        let renderSize = setup.outputSize
+
+        CVPixelBufferLockBaseAddress(outBuf, [])
+        defer { CVPixelBufferUnlockBaseAddress(outBuf, []) }
+
+        // 填黑底色
+        if let addr = CVPixelBufferGetBaseAddress(outBuf) {
+            memset(addr, 0, CVPixelBufferGetBytesPerRow(outBuf) * Int(renderSize.height))
+        }
+
+        // 创建 CGContext（y-up 坐标系，与 CIImage 一致，无需翻转）
+        // kCVPixelFormatType_32BGRA 对应 premultipliedFirst | byteOrder32Little
+        guard let ctx = CGContext(
+            data: CVPixelBufferGetBaseAddress(outBuf),
+            width: Int(renderSize.width),
+            height: Int(renderSize.height),
+            bitsPerComponent: 8,
+            bytesPerRow: CVPixelBufferGetBytesPerRow(outBuf),
+            space: CGColorSpaceCreateDeviceRGB(),
+            bitmapInfo: CGImageAlphaInfo.premultipliedFirst.rawValue | CGBitmapInfo.byteOrder32Little.rawValue
+        ) else {
+            request.finish(with: CompositorError.compositionFailed)
+            return
+        }
+
+        for info in setup.trackInfos {
+            guard info.blockIndex < setup.config.blocks.count else { continue }
+            let block = setup.config.blocks[info.blockIndex]
+            guard let srcBuf = request.sourceFrame(byTrackID: info.trackID) else { continue }
+            drawBlock(src: srcBuf, pref: info.preferredTransform, block: block,
+                      ctx: ctx, renderSize: renderSize)
+        }
+
+        request.finish(withComposedVideoFrame: outBuf)
+    }
+
+    func cancelAllPendingVideoCompositionRequests() { }
+
+    // MARK: Per-Block Compositing
+
+    private func drawBlock(
+        src: CVPixelBuffer,
+        pref: CGAffineTransform,
+        block: HardwareVideoCompositor.LayoutBlock,
+        ctx: CGContext,
+        renderSize: CGSize
+    ) {
+        // 1. 将源帧转为 CIImage，应用 preferredTransform 使其进入 display 空间
+        var ciImg = CIImage(cvPixelBuffer: src).transformed(by: pref)
+
+        // 2. 归一化原点到 (0,0)，方便后续坐标计算
+        let o = ciImg.extent.origin
+        if o.x != 0 || o.y != 0 {
+            ciImg = ciImg.transformed(by: CGAffineTransform(translationX: -o.x, y: -o.y))
+        }
+
+        // 3. preferredTransform 是为 y-down（UIKit/屏幕）坐标设计的，
+        //    而 CIImage 使用 y-up 坐标系。对于含旋转的 pref（b≠0 或 c≠0，
+        //    即竖向视频），直接应用后画面方向出错，需补 180° 旋转来修正。
+        if pref.b != 0 || pref.c != 0 {
+            let w = ciImg.extent.width
+            let h = ciImg.extent.height
+            ciImg = ciImg.transformed(by: CGAffineTransform(a: -1, b: 0, c: 0, d: -1, tx: w, ty: h))
+        }
+
+        let imgW = ciImg.extent.width
+        let imgH = ciImg.extent.height
+        guard imgW > 0, imgH > 0 else { return }
+
+        // 3. 目标区域（屏幕 y-down 坐标）
+        let dstX = CGFloat(block.x) * renderSize.width
+        let dstY = CGFloat(block.y) * renderSize.height
+        let dstW = max(1, CGFloat(block.width)  * renderSize.width)
+        let dstH = max(1, CGFloat(block.height) * renderSize.height)
+
+        // 4. BoxFit.cover 缩放比
+        let userScale  = max(CGFloat(block.scale), 0.1)
+        let coverScale = max(dstW / imgW, dstH / imgH) * userScale
+
+        // 5. 居中裁剪偏移
+        // panX: offsetX>0 向右拖 → 看左侧内容 → srcX 减小 → 用 -panX ✓
+        // panY 符号取决于 CIImage y 轴方向：
+        //   横向视频（无旋转）：CIImage y=0 = 视觉顶部 → 看顶部需 srcY 减小 → -panY
+        //   竖向视频（已补 180° 旋转，y 轴翻转）：视觉顶部 = 高 y → 看顶部需 srcY 增大 → +panY
+        let isRotated = pref.b != 0 || pref.c != 0
+        let panX = CGFloat(block.offsetX) / CGFloat(setup.config.canvasWidth)  * renderSize.width
+        let panY = CGFloat(block.offsetY) / CGFloat(setup.config.canvasHeight) * renderSize.height
+        let cropOffsetX = (imgW * coverScale - dstW) / 2.0 - panX
+        let cropOffsetY = (imgH * coverScale - dstH) / 2.0 + (isRotated ? panY : -panY)
+
+        // 6. CIImage y-up 坐标系中的可见源矩形
+        let srcX = max(0.0, cropOffsetX / coverScale)
+        let srcY = max(0.0, cropOffsetY / coverScale)
+        let srcW = max(1.0, min(imgW - srcX, dstW / coverScale))
+        let srcH = max(1.0, min(imgH - srcY, dstH / coverScale))
+
+        // 7. 将屏幕 y-down 的 dstY 转换为 CGContext y-up 的 cgY
+        let cgY = renderSize.height - dstY - dstH
+
+        // 8. 裁剪到目标区域后绘制，不会溢出相邻 block
+        ctx.saveGState()
+        ctx.clip(to: CGRect(x: dstX, y: cgY, width: dstW, height: dstH))
+
+        if let cgImg = ciContext.createCGImage(ciImg, from: CGRect(x: srcX, y: srcY, width: srcW, height: srcH)) {
+            ctx.draw(cgImg, in: CGRect(x: dstX, y: cgY, width: srcW * coverScale, height: srcH * coverScale))
+        }
+
+        ctx.restoreGState()
+    }
 }
 
 // MARK: - Errors

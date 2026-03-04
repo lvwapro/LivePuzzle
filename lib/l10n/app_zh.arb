@@ -192,5 +192,7 @@
   "pleaseAddPhotos": "请确保相册中有照片",
   
   "horizontalStitchDesc": "{count}张图片从左到右拼接",
-  "verticalStitchDesc": "{count}张图片从上到下拼接"
+  "verticalStitchDesc": "{count}张图片从上到下拼接",
+  
+  "loadingVideoResources": "正在加载视频资源..."
 }

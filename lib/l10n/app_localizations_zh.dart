@@ -531,4 +531,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String verticalStitchDesc(int count) {
     return '$count张图片从上到下拼接';
   }
+
+  @override
+  String get loadingVideoResources => '正在加载视频资源...';
 }

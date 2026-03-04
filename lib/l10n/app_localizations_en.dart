@@ -536,4 +536,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String verticalStitchDesc(int count) {
     return '$count photos stitched top to bottom';
   }
+
+  @override
+  String get loadingVideoResources => 'Loading video resources...';
 }

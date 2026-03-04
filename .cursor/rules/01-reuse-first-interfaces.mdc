@@ -1,0 +1,22 @@
+---
+description: Reuse-first interfaces and shared entry points
+alwaysApply: true
+---
+
+# Reuse First, Then Extend
+
+Before creating new services/utilities, check and reuse these interfaces first:
+- Bridge API: `plugins/live_photo_bridge/lib/live_photo_bridge.dart` (`LivePhotoBridge`)
+- Media service: `lib/services/live_photo_manager.dart` (`LivePhotoManager`)
+- Layout engine: `lib/services/layout_engine.dart` (`LayoutEngine.calculateLayout`)
+- Unified block model: `lib/models/image_block.dart` (`ImageBlock`)
+
+Mandatory:
+- If a new feature overlaps with an existing interface, extend the existing one first.
+- If you still add a new interface, include a short code comment explaining why reuse is not possible.
+- Keep business logic out of screens if it can live in `services`.
+
+Avoid:
+- Duplicating bridge calls in multiple places.
+- Re-implementing layout algorithms inside UI files.
+- Introducing alternate block models with the same semantics as `ImageBlock`.

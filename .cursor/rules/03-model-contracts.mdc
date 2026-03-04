@@ -1,0 +1,23 @@
+---
+description: Shared model and Flutter-native contract consistency
+alwaysApply: true
+---
+
+# Model and Contract Consistency
+
+`ImageBlock` is the shared block contract:
+- `x`, `y`, `width`, `height`: relative values in [0, 1]
+- `offsetX`, `offsetY`: canvas pixel offsets
+- `scale`: image zoom factor within block
+
+Flutter-native `layoutConfig` contract is canonical:
+- `canvasWidth`
+- `canvasHeight`
+- `isLongImage`
+- `blocks[]` with `x/y/width/height/scale/offsetX/offsetY`
+
+Rules:
+- Do not rename/retype these fields in one side only.
+- Any contract change must be updated on both Flutter and native sides in the same task.
+- Document unit semantics when adding new fields (relative ratio vs canvas pixels vs render pixels).
+- Prefer updating existing model fields over adding parallel contract models.

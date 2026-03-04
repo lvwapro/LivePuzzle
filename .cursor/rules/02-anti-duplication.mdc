@@ -1,0 +1,23 @@
+---
+description: Anti-duplication rules for export and layout workflows
+alwaysApply: true
+---
+
+# Anti-Duplication
+
+Do not copy similar logic across files/functions. Extract shared helpers/services.
+
+Priority duplication hotspots to prevent:
+- Export success flow (history save, navigation to completion page)
+- Frame extraction and compose orchestration
+- Layout block mapping and transformation logic
+- Repeated native bridge parameter assembly
+
+Enforcement:
+- If the same logic appears twice, refactor into one reusable function/service.
+- Prefer small shared helpers over large copy-pasted branches.
+- Keep one canonical implementation per workflow.
+
+When refactoring:
+- Preserve existing behavior and data contracts.
+- Add concise inline comments only for non-obvious decisions.

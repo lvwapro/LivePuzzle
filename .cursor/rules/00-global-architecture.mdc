@@ -1,0 +1,22 @@
+---
+description: LivePuzzle global architecture boundaries
+alwaysApply: true
+---
+
+# LivePuzzle Architecture Boundaries
+
+Use this layering order for all new work:
+- UI: `lib/screens`, `lib/widgets`
+- State: `lib/providers`
+- Domain/service: `lib/services`
+- Bridge: `plugins/live_photo_bridge/lib`
+- Native implementation: `plugins/live_photo_bridge/ios|android`
+
+Rules:
+- UI must not call native `MethodChannel` directly; go through bridge/service.
+- Prefer extending an existing layer/module over creating parallel `v2` classes with same responsibility.
+- New export or media flow changes must keep Flutter and native contracts aligned.
+- Keep cross-layer dependency one-way. Do not import higher-layer code into lower layers.
+
+Critical flow reference:
+- Editor export path should stay: UI -> service/model -> `LivePhotoBridge` -> native compositor/plugin.

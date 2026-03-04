@@ -1,0 +1,19 @@
+---
+description: File size and component splitting conventions
+alwaysApply: true
+---
+
+# File Size and Splitting
+
+Project convention:
+- Keep each source file under ~500 lines whenever practical.
+- For complex screens, extract reusable widgets/services instead of adding more branches.
+
+Guidelines:
+- UI composition belongs in widgets; heavy logic belongs in services/providers.
+- Prefer focused files with one clear responsibility.
+- If a file grows too large, split by feature sections or reusable subcomponents.
+
+Notes:
+- Do not add or modify `README.md` unless explicitly requested.
+- Keep code comments concise and only for non-obvious logic.

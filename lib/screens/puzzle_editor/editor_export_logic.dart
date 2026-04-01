@@ -227,32 +227,26 @@ extension _EditorExportLogic on _PuzzleEditorScreenState {
         );
         final srcW = image.width.toDouble();
         final srcH = image.height.toDouble();
-        final srcAspect = srcW / srcH;
-        final dstAspect = dstRect.width / dstRect.height;
+        final dstW = dstRect.width;
+        final dstH = dstRect.height;
 
-        Rect srcRect;
-        if (srcAspect > dstAspect) {
-          final cropW = srcH * dstAspect;
-          final offsetX =
-              (block.offsetX / _canvasConfig.width) * srcW;
-          final cropX =
-              ((srcW - cropW) / 2 - offsetX).clamp(0.0, srcW - cropW);
-          srcRect = Rect.fromLTWH(cropX, 0, cropW, srcH);
-        } else {
-          final cropH = srcW / dstAspect;
-          final offsetY =
-              (block.offsetY / _canvasConfig.height) * srcH;
-          final cropY =
-              ((srcH - cropH) / 2 - offsetY).clamp(0.0, srcH - cropH);
-          srcRect = Rect.fromLTWH(0, cropY, srcW, cropH);
-        }
+        // 与原生 compositeHighResStill 一致：BoxFit.cover + userScale + pan
+        final userScale = block.scale.clamp(0.1, double.infinity);
+        final baseScale =
+            math.max(dstW / srcW, dstH / srcH) * 1.002 * userScale;
+        final scaledW = srcW * baseScale;
+        final scaledH = srcH * baseScale;
+        final panX = block.offsetX / _canvasConfig.width * canvasW;
+        final panY = block.offsetY / _canvasConfig.height * canvasH;
+        final drawX = dstRect.left + (dstW - scaledW) / 2.0 + panX;
+        final drawY = dstRect.top + (dstH - scaledH) / 2.0 + panY;
 
         canvas.save();
         canvas.clipRect(dstRect);
         canvas.drawImageRect(
           image,
-          srcRect,
-          dstRect,
+          Rect.fromLTWH(0, 0, srcW, srcH),
+          Rect.fromLTWH(drawX, drawY, scaledW, scaledH),
           Paint()..filterQuality = FilterQuality.medium,
         );
         canvas.restore();

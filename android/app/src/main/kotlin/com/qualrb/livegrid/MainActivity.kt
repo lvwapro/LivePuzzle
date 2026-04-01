@@ -1,4 +1,4 @@
-package com.example.live_puzzle
+package com.qualrb.livegrid
 
 import android.content.ContentResolver
 import android.content.ContentValues

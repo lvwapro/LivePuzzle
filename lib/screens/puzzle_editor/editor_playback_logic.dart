@@ -14,60 +14,9 @@ extension _EditorPlaybackLogic on _PuzzleEditorScreenState {
     }
   }
 
-  /// 按需提取帧（仅用于封面帧选择时的 fallback）
-  Future<void> extractVideoFrames(int cellIndex) async {
-    await initVideoPlayer(cellIndex);
-
-    if (_videoFrames.containsKey(cellIndex)) return;
-
-    final asset = _selectedPhotos[cellIndex];
-    try {
-      final isLive = await LivePhotoManager.isLivePhoto(asset);
-      if (!isLive) return;
-
-      final videoPath = _videoPaths[cellIndex];
-      if (videoPath == null || videoPath.isEmpty) return;
-
-      final videoDurationMs = _videoDurations[cellIndex] ?? 2000;
-      debugPrint(
-          '🎞️ 开始提取 Live Photo 帧: $cellIndex, 时长: ${videoDurationMs}ms');
-
-      final frames = <Uint8List>[];
-      for (int i = 0; i < _PuzzleEditorScreenState.kTotalFrames; i++) {
-        final progress = i / (_PuzzleEditorScreenState.kTotalFrames - 1);
-        final timeMs = (progress * videoDurationMs).round();
-
-        try {
-          final framePath =
-              await LivePhotoBridge.extractFrame(videoPath, timeMs);
-          if (framePath != null) {
-            final file = File(framePath);
-            if (await file.exists()) {
-              final bytes = await file.readAsBytes();
-              frames.add(bytes);
-              await file.delete();
-            }
-          }
-        } catch (e) {
-          debugPrint('⚠️ 提取帧 $i (${timeMs}ms) 失败: $e');
-        }
-      }
-
-      if (frames.isNotEmpty && mounted) {
-        setState(() {
-          _videoFrames[cellIndex] = frames;
-        });
-        debugPrint('✅ Live Photo $cellIndex 提取了 ${frames.length} 帧');
-      }
-    } catch (e) {
-      debugPrint('❌ 提取 Live Photo 帧失败: $e');
-    }
-  }
-
   /// 播放时不再需要 onAnimationTick 做帧替换（保留接口以兼容 AnimationController.addListener）
-  void onAnimationTick() {
-    // VideoPlayer 模式下由原生视频解码驱动，无需手动替换帧
-  }
+  void onAnimationTick() {}
+
 
   void restoreImageBlocksToCovers() {
     for (int i = 0;

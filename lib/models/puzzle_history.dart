@@ -15,6 +15,8 @@ class PuzzleHistory {
   final String? lastRatio;
   /// 每个格子的封面帧时间（毫秒），-1 表示使用默认
   final List<int>? lastCoverFrameTimeMs;
+  /// 每个区块的变换状态 [{layoutBlockId, offsetX, offsetY, scale}, ...]
+  final List<Map<String, dynamic>>? lastBlockTransforms;
 
   const PuzzleHistory({
     required this.id,
@@ -25,6 +27,7 @@ class PuzzleHistory {
     this.lastLayoutId,
     this.lastRatio,
     this.lastCoverFrameTimeMs,
+    this.lastBlockTransforms,
   });
 
   /// 从JSON创建
@@ -32,6 +35,12 @@ class PuzzleHistory {
     List<int>? coverMs;
     if (json['lastCoverFrameTimeMs'] != null) {
       coverMs = (json['lastCoverFrameTimeMs'] as List).cast<int>();
+    }
+    List<Map<String, dynamic>>? blockTransforms;
+    if (json['lastBlockTransforms'] != null) {
+      blockTransforms = (json['lastBlockTransforms'] as List)
+          .map((e) => Map<String, dynamic>.from(e as Map))
+          .toList();
     }
     return PuzzleHistory(
       id: json['id'] as String,
@@ -44,6 +53,7 @@ class PuzzleHistory {
       lastLayoutId: json['lastLayoutId'] as String?,
       lastRatio: json['lastRatio'] as String?,
       lastCoverFrameTimeMs: coverMs,
+      lastBlockTransforms: blockTransforms,
     );
   }
 
@@ -58,6 +68,7 @@ class PuzzleHistory {
       if (lastLayoutId != null) 'lastLayoutId': lastLayoutId,
       if (lastRatio != null) 'lastRatio': lastRatio,
       if (lastCoverFrameTimeMs != null) 'lastCoverFrameTimeMs': lastCoverFrameTimeMs,
+      if (lastBlockTransforms != null) 'lastBlockTransforms': lastBlockTransforms,
     };
   }
 

@@ -132,6 +132,14 @@ extension _EditorExportLogic on _PuzzleEditorScreenState {
             _selectedPhotos.length,
             (i) => _coverFrameTime[i] ?? -1,
           );
+          final blockTransforms = _imageBlocks
+              .map((b) => {
+                    'layoutBlockId': b.layoutBlockId,
+                    'offsetX': b.offsetX,
+                    'offsetY': b.offsetY,
+                    'scale': b.scale,
+                  })
+              .toList();
           final history = PuzzleHistory(
             id: DateTime.now().millisecondsSinceEpoch.toString(),
             photoIds: photoIds,
@@ -141,6 +149,7 @@ extension _EditorExportLogic on _PuzzleEditorScreenState {
             lastLayoutId: _currentLayout?.id,
             lastRatio: _canvasConfig.ratio,
             lastCoverFrameTimeMs: coverMs,
+            lastBlockTransforms: blockTransforms,
           );
           // 不等待历史记录写入，立即跳转
           ref.read(puzzleHistoryProvider.notifier).addHistory(history);

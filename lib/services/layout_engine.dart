@@ -211,29 +211,4 @@ class LayoutEngine {
     return blocks;
   }
 
-  /// 更新单个图片块的变换（用于单图编辑）
-  static ImageBlock updateBlockTransform(
-    ImageBlock block, {
-    double? deltaX,
-    double? deltaY,
-    double? deltaScale,
-    double? deltaRotate,
-    int? newZIndex,
-  }) {
-    return block.copyWith(
-      x: deltaX != null ? block.x + deltaX : block.x,
-      y: deltaY != null ? block.y + deltaY : block.y,
-      scale: deltaScale != null ? block.scale * deltaScale : block.scale,
-      rotate: deltaRotate != null ? block.rotate + deltaRotate : block.rotate,
-      zIndex: newZIndex ?? block.zIndex,
-    );
-  }
-
-  /// 限制图片块在画布内（边界处理）
-  static ImageBlock constrainBlock(ImageBlock block) {
-    double x = block.x.clamp(0.0, 1.0 - block.width);
-    double y = block.y.clamp(0.0, 1.0 - block.height);
-    
-    return block.copyWith(x: x, y: y);
-  }
 }

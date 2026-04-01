@@ -44,15 +44,11 @@ class PuzzleEditorScreen extends ConsumerStatefulWidget {
 class _PuzzleEditorScreenState extends ConsumerState<PuzzleEditorScreen>
     with TickerProviderStateMixin {
   // 🔥 基础状态
-  static const int kTotalFrames = 30;
   int _selectedCellIndex = -1; // -1 表示未选中任何图片
   List<AssetEntity> _selectedPhotos = [];
   final Map<int, Uint8List?> _photoThumbnails = {};
 
-  // 🔥 新增：编辑状态管理
-  EditorState _editorState = EditorState.global; // 当前编辑状态
-  GlobalTool? _selectedGlobalTool; // 选中的全局工具
-  SingleTool? _selectedSingleTool; // 选中的单图工具
+  EditorState _editorState = EditorState.global;
 
   // 🔥 新的数据驱动布局系统
   CanvasConfig _canvasConfig = CanvasConfig.fromRatio('1:1'); // 画布配置
@@ -60,11 +56,7 @@ class _PuzzleEditorScreenState extends ConsumerState<PuzzleEditorScreen>
   List<ImageBlock> _imageBlocks = []; // 图片块列表（使用相对坐标0-1）
   String? _selectedBlockId; // 选中的图片块ID
 
-  // 🔥 旧的frame-by-frame方式(保留用于播放和保存)
-  final Map<int, int> _selectedFrames = {}; // 当前选中的帧索引
-  final Map<int, List<Uint8List>> _videoFrames = {}; // 提取的所有帧
-
-  // 🔥 视频播放器相关(新的video-player方式，用于交互选择)
+  // 🔥 视频播放器相关
   final Map<int, VideoPlayerController?> _videoControllers = {};
   final Map<int, String?> _videoPaths = {}; // 存储视频文件路径
   final Map<int, int> _videoDurations = {}; // 存储视频时长（毫秒）
@@ -134,100 +126,7 @@ class _PuzzleEditorScreenState extends ConsumerState<PuzzleEditorScreen>
       _selectedCellIndex = -1;
       _selectedBlockId = null;
       _editorState = EditorState.global;
-      _selectedGlobalTool = null;
     });
-  }
-
-  // 🔥 全局工具处理
-  void _handleGlobalTool(GlobalTool tool) {
-    setState(() {
-      _selectedGlobalTool = _selectedGlobalTool == tool ? null : tool;
-    });
-
-    switch (tool) {
-      case GlobalTool.layout:
-        // 布局工具已经通过底部面板展示
-        break;
-      case GlobalTool.filter:
-        // TODO: 显示滤镜面板
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('滤镜功能开发中')),
-        );
-        break;
-      case GlobalTool.adjust:
-        // TODO: 显示调节面板
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('调节功能开发中')),
-        );
-        break;
-      case GlobalTool.text:
-        // TODO: 添加文字
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('文字功能开发中')),
-        );
-        break;
-    }
-  }
-
-  // 🔥 单图工具处理
-  void _handleSingleTool(SingleTool tool) {
-    if (_selectedCellIndex < 0) return;
-
-    setState(() {
-      _selectedSingleTool = _selectedSingleTool == tool ? null : tool;
-    });
-
-    switch (tool) {
-      case SingleTool.filter:
-        // TODO: 显示滤镜面板（仅应用到选中图片）
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('单图滤镜功能开发中')),
-        );
-        break;
-      case SingleTool.adjust:
-        // TODO: 显示调节面板（仅应用到选中图片）
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('单图调节功能开发中')),
-        );
-        break;
-      case SingleTool.replace:
-        // TODO: 替换图片
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('替换图片功能开发中')),
-        );
-        break;
-      case SingleTool.rotate:
-        _rotateImage90();
-        break;
-      case SingleTool.flipH:
-        _flipImageHorizontal();
-        break;
-      case SingleTool.flipV:
-        _flipImageVertical();
-        break;
-    }
-  }
-
-  void _rotateImage90() {
-    if (_selectedCellIndex < 0) return;
-    // TODO: 在新画布系统中实现旋转
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('旋转功能开发中')),
-    );
-  }
-
-  void _flipImageHorizontal() {
-    // TODO: 实现水平翻转
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('水平翻转功能开发中')),
-    );
-  }
-
-  void _flipImageVertical() {
-    // TODO: 实现垂直翻转
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('垂直翻转功能开发中')),
-    );
   }
 
 
@@ -388,25 +287,18 @@ class _PuzzleEditorScreenState extends ConsumerState<PuzzleEditorScreen>
 
                 // 工具栏/布局面板（帧选择器弹出时隐藏）
                 if (!_isPlayingLivePuzzle && !hasVideoReady)
-                  _editorState == EditorState.global
-                      ? SizedBox(
-                          height: 280,
-                          child: LayoutSelectionPanel(
-                            photoCount: _selectedPhotos.length,
-                            selectedLayoutId: _currentLayout?.id,
-                            selectedRatio: _canvasConfig.ratio,
-                            onLayoutSelected: (canvas, template) {
-                              applyLayout(canvas, template);
-                            },
-                          ),
-                        )
-                      : DynamicToolbar(
-                          editorState: _editorState,
-                          selectedGlobalTool: _selectedGlobalTool,
-                          selectedSingleTool: _selectedSingleTool,
-                          onGlobalToolTap: _handleGlobalTool,
-                          onSingleToolTap: _handleSingleTool,
-                        ),
+                  if (_editorState == EditorState.global)
+                    SizedBox(
+                      height: 280,
+                      child: LayoutSelectionPanel(
+                        photoCount: _selectedPhotos.length,
+                        selectedLayoutId: _currentLayout?.id,
+                        selectedRatio: _canvasConfig.ratio,
+                        onLayoutSelected: (canvas, template) {
+                          applyLayout(canvas, template);
+                        },
+                      ),
+                    ),
               ],
             ),
 

@@ -23,20 +23,6 @@ class LivePhotoBridge {
     });
   }
 
-  /// 创建 Live Photo 并保存到图库
-  static Future<bool> createLivePhoto(List<String> frameImagePaths, int coverFrameIndex) async {
-    try {
-      final result = await _channel.invokeMethod('createLivePhoto', {
-        'frameImagePaths': frameImagePaths,
-        'coverFrameIndex': coverFrameIndex,
-      });
-      return result == true;
-    } catch (e) {
-      print('❌ 创建 Live Photo 失败: $e');
-      return false;
-    }
-  }
-
   /// 获取 Live Photo 视频时长（毫秒）
   static Future<int> getVideoDuration(String assetId) async {
     try {

@@ -1,6 +1,4 @@
-import UIKit
 import AVFoundation
-import Photos
 import CoreImage
 
 /// 硬件加速视频合成器 v5
@@ -676,37 +674,19 @@ final class BlockVideoCompositor: NSObject, AVVideoCompositing {
 // MARK: - Errors
 
 enum CompositorError: Error {
-    case metalNotAvailable
-    case bufferPoolCreationFailed
     case compositionFailed
-    case encoderNotReady
     case encodingFailed
     case noVideoTrack
     case readerStartFailed
-    case coverExtractionFailed
-    case exportSessionFailed
     case exportFailed
 
     var localizedDescription: String {
         switch self {
-        case .metalNotAvailable: return "Metal GPU not available"
-        case .bufferPoolCreationFailed: return "Failed to create pixel buffer pool"
         case .compositionFailed: return "Frame composition failed"
-        case .encoderNotReady: return "Hardware encoder not ready"
         case .encodingFailed: return "Video encoding failed"
         case .noVideoTrack: return "No video track found"
         case .readerStartFailed: return "Failed to start asset reader"
-        case .coverExtractionFailed: return "Failed to extract cover frame"
-        case .exportSessionFailed: return "Failed to create export session"
         case .exportFailed: return "Export failed"
         }
-    }
-}
-
-// MARK: - Int extension
-
-extension Int {
-    func clamped(to range: ClosedRange<Int>) -> Int {
-        return Swift.min(Swift.max(self, range.lowerBound), range.upperBound)
     }
 }

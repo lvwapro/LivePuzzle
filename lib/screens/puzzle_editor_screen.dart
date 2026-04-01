@@ -22,13 +22,9 @@ import 'package:live_puzzle/models/canvas_config.dart';
 import 'package:live_puzzle/models/layout_template.dart';
 import 'package:live_puzzle/models/image_block.dart';
 import 'package:live_puzzle/services/layout_engine.dart';
-import 'package:live_puzzle/models/image_transform.dart';
-
 // 导入拆分的组件
 import 'puzzle_editor/editor_header_widget.dart';
-import 'puzzle_editor/puzzle_grid_widget.dart';
 import 'puzzle_editor/video_frame_selector_widget.dart';
-import 'puzzle_editor/image_action_menu.dart';
 import 'puzzle_editor/dynamic_toolbar.dart';
 import 'puzzle_editor/layout_selection_panel.dart';
 import 'puzzle_editor/data_driven_canvas.dart';
@@ -60,10 +56,6 @@ class _PuzzleEditorScreenState extends ConsumerState<PuzzleEditorScreen>
   LayoutTemplate? _currentLayout; // 当前布局模板
   List<ImageBlock> _imageBlocks = []; // 图片块列表（使用相对坐标0-1）
   String? _selectedBlockId; // 选中的图片块ID
-  bool _useNewCanvas = true; // 切换开关，true 使用新画布
-
-  // 🔥 布局管理（旧系统，废弃）
-  final Map<int, ImageTransform> _imageTransforms = {};
 
   // 🔥 旧的frame-by-frame方式(保留用于播放和保存)
   final Map<int, int> _selectedFrames = {}; // 当前选中的帧索引
@@ -400,7 +392,7 @@ class _PuzzleEditorScreenState extends ConsumerState<PuzzleEditorScreen>
       final frameIndex =
           (progress * (frames.length - 1)).round().clamp(0, frames.length - 1);
       final frameData = frames[frameIndex];
-      if (mounted && frameData != null && i < _imageBlocks.length) {
+      if (mounted && i < _imageBlocks.length) {
         setState(() {
           _coverFrames[i] = frameData;
           _currentDisplayImages[i] = frameData;
@@ -483,120 +475,6 @@ class _PuzzleEditorScreenState extends ConsumerState<PuzzleEditorScreen>
     }
 
     return null;
-  }
-
-  // 🔥 交换两张图片的位置
-  void _reorderImages(int fromIndex, int toIndex) {
-    if (fromIndex == toIndex) return;
-    if (fromIndex >= _selectedPhotos.length ||
-        toIndex >= _selectedPhotos.length) return;
-
-    debugPrint('🔄 交换图片: $fromIndex ↔️ $toIndex');
-
-    setState(() {
-      // 交换 AssetEntity
-      final tempPhoto = _selectedPhotos[fromIndex];
-      _selectedPhotos[fromIndex] = _selectedPhotos[toIndex];
-      _selectedPhotos[toIndex] = tempPhoto;
-
-      // 交换缩略图
-      final tempThumbnail = _photoThumbnails[fromIndex];
-      _photoThumbnails[fromIndex] = _photoThumbnails[toIndex];
-      _photoThumbnails[toIndex] = tempThumbnail;
-
-      // 交换封面帧
-      final tempCoverFrame = _coverFrames[fromIndex];
-      _coverFrames[fromIndex] = _coverFrames[toIndex];
-      _coverFrames[toIndex] = tempCoverFrame;
-
-      // 交换封面帧时间
-      final tempCoverTime = _coverFrameTime[fromIndex];
-      _coverFrameTime[fromIndex] = _coverFrameTime[toIndex];
-      _coverFrameTime[toIndex] = tempCoverTime;
-
-      // 交换视频帧（如果已提取）- 处理 null 安全
-      final tempVideoFrames = _videoFrames[fromIndex];
-      final toVideoFrames = _videoFrames[toIndex];
-
-      if (toVideoFrames != null) {
-        _videoFrames[fromIndex] = toVideoFrames;
-      } else {
-        _videoFrames.remove(fromIndex);
-      }
-
-      if (tempVideoFrames != null) {
-        _videoFrames[toIndex] = tempVideoFrames;
-      } else {
-        _videoFrames.remove(toIndex);
-      }
-
-      // 交换视频时长 - 处理 null 安全
-      final tempDuration = _videoDurations[fromIndex];
-      final toDuration = _videoDurations[toIndex];
-
-      if (toDuration != null) {
-        _videoDurations[fromIndex] = toDuration;
-      } else {
-        _videoDurations.remove(fromIndex);
-      }
-
-      if (tempDuration != null) {
-        _videoDurations[toIndex] = tempDuration;
-      } else {
-        _videoDurations.remove(toIndex);
-      }
-
-      // 交换视频控制器
-      final tempController = _videoControllers[fromIndex];
-      _videoControllers[fromIndex] = _videoControllers[toIndex];
-      _videoControllers[toIndex] = tempController;
-
-      // 交换视频路径
-      final tempPath = _videoPaths[fromIndex];
-      _videoPaths[fromIndex] = _videoPaths[toIndex];
-      _videoPaths[toIndex] = tempPath;
-
-      // 交换选中帧索引 - 处理 null 安全
-      final tempSelectedFrame = _selectedFrames[fromIndex];
-      final toSelectedFrame = _selectedFrames[toIndex];
-
-      if (toSelectedFrame != null) {
-        _selectedFrames[fromIndex] = toSelectedFrame;
-      } else {
-        _selectedFrames.remove(fromIndex);
-      }
-
-      if (tempSelectedFrame != null) {
-        _selectedFrames[toIndex] = tempSelectedFrame;
-      } else {
-        _selectedFrames.remove(toIndex);
-      }
-
-      // 交换当前显示图片
-      final tempDisplayImage = _currentDisplayImages[fromIndex];
-      _currentDisplayImages[fromIndex] = _currentDisplayImages[toIndex];
-      _currentDisplayImages[toIndex] = tempDisplayImage;
-
-      // 如果交换的是当前选中的图片，更新选中索引
-      if (_selectedCellIndex == fromIndex) {
-        _selectedCellIndex = toIndex;
-      } else if (_selectedCellIndex == toIndex) {
-        _selectedCellIndex = fromIndex;
-      }
-    });
-  }
-
-  // 🔥 状态切换逻辑
-  void _handleImageTap(int index) {
-    setState(() {
-      _selectedCellIndex = index;
-      _editorState = EditorState.single; // 切换到单图编辑状态
-      _selectedSingleTool = null; // 清空工具选择
-    });
-
-    if (!_videoFrames.containsKey(index)) {
-      _extractVideoFrames(index);
-    }
   }
 
   void _handleCanvasTap() {
@@ -706,7 +584,6 @@ class _PuzzleEditorScreenState extends ConsumerState<PuzzleEditorScreen>
           await _calculateLongImageCanvasAndBlocks(template, images);
       if (!mounted) return;
       setState(() {
-        _useNewCanvas = true;
         _canvasConfig = longCanvas;
         _currentLayout = template;
         _imageBlocks = longBlocks;
@@ -736,7 +613,6 @@ class _PuzzleEditorScreenState extends ConsumerState<PuzzleEditorScreen>
     }
 
     setState(() {
-      _useNewCanvas = true;
       _canvasConfig = canvas;
       _currentLayout = template;
 
@@ -905,13 +781,10 @@ class _PuzzleEditorScreenState extends ConsumerState<PuzzleEditorScreen>
 
   void _rotateImage90() {
     if (_selectedCellIndex < 0) return;
-    setState(() {
-      final transform =
-          _imageTransforms[_selectedCellIndex] ?? ImageTransform();
-      _imageTransforms[_selectedCellIndex] = transform.copyWith(
-        rotation: transform.rotation + 1.5708, // 90度
-      );
-    });
+    // TODO: 在新画布系统中实现旋转
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('旋转功能开发中')),
+    );
   }
 
   void _flipImageHorizontal() {
@@ -925,160 +798,6 @@ class _PuzzleEditorScreenState extends ConsumerState<PuzzleEditorScreen>
     // TODO: 实现垂直翻转
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('垂直翻转功能开发中')),
-    );
-  }
-
-  // 🔥 关键帧操作
-  // 🔥 新增：图片操作方法
-  void _handleImageTransformChanged(int index, ImageTransform transform) {
-    setState(() {
-      _imageTransforms[index] = transform;
-    });
-  }
-
-  void _handleImageLongPress(int index) {
-    ImageActionMenu.show(
-      context,
-      onReplace: () {
-        // TODO: 实现替换图片功能
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('替换图片功能开发中')),
-        );
-      },
-      onDelete: () {
-        _deleteImage(index);
-      },
-      onBringToFront: () {
-        _bringImageToFront(index);
-      },
-      onSendToBack: () {
-        _sendImageToBack(index);
-      },
-    );
-  }
-
-  void _deleteImage(int index) {
-    setState(() {
-      _selectedPhotos.removeAt(index);
-      _photoThumbnails.remove(index);
-      _coverFrames.remove(index);
-      _coverFrameTime.remove(index);
-      _videoFrames.remove(index);
-      _videoDurations.remove(index);
-      _videoControllers[index]?.dispose();
-      _videoControllers.remove(index);
-      _videoPaths.remove(index);
-      _selectedFrames.remove(index);
-      _currentDisplayImages.remove(index);
-      _imageTransforms.remove(index);
-
-      // 重新索引
-      final newThumbnails = <int, Uint8List?>{};
-      final newCoverFrames = <int, Uint8List?>{};
-      final newCoverFrameTime = <int, int?>{};
-      final newVideoFrames = <int, List<Uint8List>>{};
-      final newVideoDurations = <int, int>{};
-      final newVideoControllers = <int, VideoPlayerController?>{};
-      final newVideoPaths = <int, String?>{};
-      final newSelectedFrames = <int, int>{};
-      final newDisplayImages = <int, Uint8List?>{};
-      final newTransforms = <int, ImageTransform>{};
-
-      for (int i = 0; i < _selectedPhotos.length; i++) {
-        final oldIndex = i >= index ? i + 1 : i;
-        if (_photoThumbnails.containsKey(oldIndex)) {
-          newThumbnails[i] = _photoThumbnails[oldIndex];
-        }
-        if (_coverFrames.containsKey(oldIndex)) {
-          newCoverFrames[i] = _coverFrames[oldIndex];
-        }
-        if (_coverFrameTime.containsKey(oldIndex)) {
-          newCoverFrameTime[i] = _coverFrameTime[oldIndex];
-        }
-        if (_videoFrames.containsKey(oldIndex)) {
-          newVideoFrames[i] = _videoFrames[oldIndex]!;
-        }
-        if (_videoDurations.containsKey(oldIndex)) {
-          newVideoDurations[i] = _videoDurations[oldIndex]!;
-        }
-        if (_videoControllers.containsKey(oldIndex)) {
-          newVideoControllers[i] = _videoControllers[oldIndex];
-        }
-        if (_videoPaths.containsKey(oldIndex)) {
-          newVideoPaths[i] = _videoPaths[oldIndex];
-        }
-        if (_selectedFrames.containsKey(oldIndex)) {
-          newSelectedFrames[i] = _selectedFrames[oldIndex]!;
-        }
-        if (_currentDisplayImages.containsKey(oldIndex)) {
-          newDisplayImages[i] = _currentDisplayImages[oldIndex];
-        }
-        if (_imageTransforms.containsKey(oldIndex)) {
-          newTransforms[i] = _imageTransforms[oldIndex]!;
-        }
-      }
-
-      _photoThumbnails.clear();
-      _photoThumbnails.addAll(newThumbnails);
-      _coverFrames.clear();
-      _coverFrames.addAll(newCoverFrames);
-      _coverFrameTime.clear();
-      _coverFrameTime.addAll(newCoverFrameTime);
-      _videoFrames.clear();
-      _videoFrames.addAll(newVideoFrames);
-      _videoDurations.clear();
-      _videoDurations.addAll(newVideoDurations);
-      _videoControllers.clear();
-      _videoControllers.addAll(newVideoControllers);
-      _videoPaths.clear();
-      _videoPaths.addAll(newVideoPaths);
-      _selectedFrames.clear();
-      _selectedFrames.addAll(newSelectedFrames);
-      _currentDisplayImages.clear();
-      _currentDisplayImages.addAll(newDisplayImages);
-      _imageTransforms.clear();
-      _imageTransforms.addAll(newTransforms);
-
-      // 更新选中索引
-      if (_selectedCellIndex == index) {
-        _selectedCellIndex = -1;
-      } else if (_selectedCellIndex > index) {
-        _selectedCellIndex--;
-      }
-    });
-  }
-
-  void _bringImageToFront(int index) {
-    setState(() {
-      final maxZ = _imageTransforms.values
-          .map((t) => t.zIndex)
-          .fold(0, (a, b) => a > b ? a : b);
-      _imageTransforms[index] =
-          _imageTransforms[index]!.copyWith(zIndex: maxZ + 1);
-    });
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('已置于顶层'),
-        duration: Duration(seconds: 1),
-      ),
-    );
-  }
-
-  void _sendImageToBack(int index) {
-    setState(() {
-      final minZ = _imageTransforms.values
-          .map((t) => t.zIndex)
-          .fold(0, (a, b) => a < b ? a : b);
-      _imageTransforms[index] =
-          _imageTransforms[index]!.copyWith(zIndex: minZ - 1);
-    });
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('已置于底层'),
-        duration: Duration(seconds: 1),
-      ),
     );
   }
 
@@ -1153,7 +872,7 @@ class _PuzzleEditorScreenState extends ConsumerState<PuzzleEditorScreen>
 
   // 🔥 动画帧回调：实时更新新画布中 imageBlocks 的图片
   void _onAnimationTick() {
-    if (!_isPlayingLivePuzzle || !_useNewCanvas) return;
+    if (!_isPlayingLivePuzzle) return;
     if (_animation == null) return;
 
     final progress = _animation!.value.clamp(0.0, 1.0);
@@ -1367,7 +1086,7 @@ class _PuzzleEditorScreenState extends ConsumerState<PuzzleEditorScreen>
       final sw = Stopwatch()..start();
 
       // 🚀 使用硬件加速合成（无需提取和渲染所有帧）
-      if (_useNewCanvas && _imageBlocks.isNotEmpty) {
+      if (_imageBlocks.isNotEmpty) {
         debugPrint('🚀 使用硬件加速模式导出...');
         
         messageNotifier.value = AppLocalizations.of(context)!.loadingVideoResources;
@@ -1709,159 +1428,6 @@ class _PuzzleEditorScreenState extends ConsumerState<PuzzleEditorScreen>
     finalImage.dispose();
   }
 
-  /// 🔥 按当前布局渲染一帧到文件（接受已解码的图片，避免重复解码）
-  Future<void> _renderLayoutFrameFast(List<ui.Image> decodedImages, int outW,
-      int outH, String outputPath) async {
-    if (decodedImages.isEmpty || _imageBlocks.isEmpty) return;
-
-    final cw = _canvasConfig.width;
-    final ch = _canvasConfig.height;
-
-    final recorder = ui.PictureRecorder();
-    final canvas = Canvas(recorder);
-    final paint = Paint()..filterQuality = FilterQuality.high;
-
-    // 白色背景
-    canvas.drawRect(
-      Rect.fromLTWH(0, 0, outW.toDouble(), outH.toDouble()),
-      Paint()..color = const Color(0xFFFFFFFF),
-    );
-
-    // 按 imageBlocks 的位置绘制每张图（BoxFit.cover 模式）
-    for (int i = 0; i < _imageBlocks.length && i < decodedImages.length; i++) {
-      final block = _imageBlocks[i];
-      final img = decodedImages[i];
-
-      final dx = block.x * outW;
-      final dy = block.y * outH;
-      final dw = block.width * outW;
-      final dh = block.height * outH;
-      final dstRect = Rect.fromLTWH(dx, dy, dw, dh);
-
-      canvas.save();
-      canvas.clipRect(dstRect);
-
-      // BoxFit.cover
-      final imgW = img.width.toDouble();
-      final imgH = img.height.toDouble();
-      final dstAspect = dw / dh;
-      final srcAspect = imgW / imgH;
-
-      double srcX, srcY, srcW, srcH;
-      if (srcAspect > dstAspect) {
-        srcH = imgH;
-        srcW = imgH * dstAspect;
-        srcX = (imgW - srcW) / 2;
-        srcY = 0;
-      } else {
-        srcW = imgW;
-        srcH = imgW / dstAspect;
-        srcX = 0;
-        srcY = (imgH - srcH) / 2;
-      }
-
-      // 应用用户的缩放和偏移
-      if (block.scale > 1.0 || block.offsetX != 0 || block.offsetY != 0) {
-        final zoomedW = srcW / block.scale;
-        final zoomedH = srcH / block.scale;
-        final oxRatio = block.offsetX / (cw * block.width);
-        final oyRatio = block.offsetY / (ch * block.height);
-        final cx = srcX + srcW / 2 - oxRatio * zoomedW;
-        final cy = srcY + srcH / 2 - oyRatio * zoomedH;
-        srcX = (cx - zoomedW / 2).clamp(0, imgW - zoomedW);
-        srcY = (cy - zoomedH / 2).clamp(0, imgH - zoomedH);
-        srcW = zoomedW;
-        srcH = zoomedH;
-      }
-
-      canvas.drawImageRect(
-          img, Rect.fromLTWH(srcX, srcY, srcW, srcH), dstRect, paint);
-      canvas.restore();
-    }
-
-    final picture = recorder.endRecording();
-    final finalImage = await picture.toImage(outW, outH);
-    final byteData =
-        await finalImage.toByteData(format: ui.ImageByteFormat.png);
-    await File(outputPath).writeAsBytes(byteData!.buffer.asUint8List());
-    finalImage.dispose();
-  }
-
-  /// 解码 Uint8List → ui.Image
-  Future<ui.Image> _decodeImage(Uint8List data) async {
-    final codec = await ui.instantiateImageCodec(data);
-    final frame = await codec.getNextFrame();
-    return frame.image;
-  }
-
-  Uint8List? _getCurrentFrameImage() {
-    if (_selectedCellIndex >= _selectedPhotos.length) return null;
-
-    final frames = _videoFrames[_selectedCellIndex];
-    if (frames == null || frames.isEmpty) {
-      return _photoThumbnails[_selectedCellIndex];
-    }
-
-    final frameIndex = _selectedFrames[_selectedCellIndex] ?? 0;
-
-    // 🔥 如果 frameIndex 是 -1，表示使用原始封面
-    if (frameIndex == -1) {
-      return _photoThumbnails[_selectedCellIndex];
-    }
-
-    if (frameIndex >= 0 && frameIndex < frames.length) {
-      return frames[frameIndex];
-    }
-
-    return _photoThumbnails[_selectedCellIndex];
-  }
-
-  Map<int, Uint8List?> _getCellImages() {
-    final cellImages = <int, Uint8List?>{};
-
-    for (int i = 0; i < _selectedPhotos.length; i++) {
-      final frames = _videoFrames[i];
-
-      if (_isPlayingLivePuzzle &&
-          _animation != null &&
-          frames != null &&
-          frames.isNotEmpty) {
-        // 🔥 播放模式：根据该 Live Photo 的时长决定是否定格
-        final progress = _animation!.value.clamp(0.0, 1.0);
-        final currentTimeMs = progress * _maxDurationMs;
-        final videoDurationMs = _videoDurations[i] ?? 2000;
-
-        if (currentTimeMs >= videoDurationMs) {
-          // 🔥 当前时间已超过该视频时长，定格到封面
-          final coverFrameData = _coverFrames[i];
-          if (coverFrameData != null) {
-            // 使用自定义封面
-            cellImages[i] = coverFrameData;
-          } else {
-            // 使用原始封面（缩略图）
-            cellImages[i] = _photoThumbnails[i];
-          }
-        } else {
-          // 🔥 还在播放时间内，正常播放
-          final videoProgress =
-              (currentTimeMs / videoDurationMs).clamp(0.0, 1.0);
-          final frameIndex = (videoProgress * (frames.length - 1))
-              .round()
-              .clamp(0, frames.length - 1);
-          cellImages[i] = frames[frameIndex];
-        }
-      } else {
-        // 🔥 静态显示模式：优先显示自定义封面
-        if (_coverFrames[i] != null) {
-          cellImages[i] = _coverFrames[i];
-        } else {
-          cellImages[i] = _photoThumbnails[i];
-        }
-      }
-    }
-
-    return cellImages;
-  }
 
   // 🔥 构建新画布（自由交互）
   Widget _buildNewCanvas() {
@@ -1963,63 +1529,6 @@ class _PuzzleEditorScreenState extends ConsumerState<PuzzleEditorScreen>
     );
   }
 
-  // 🔥 构建旧画布（列表布局）
-  Widget _buildOldCanvas() {
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: () {
-        if (!_isPlayingLivePuzzle) {
-          _handleCanvasTap(); // 使用新的状态切换逻辑
-        }
-      },
-      child: InteractiveViewer(
-        minScale: 0.01,
-        maxScale: 10.0,
-        boundaryMargin: const EdgeInsets.all(double.infinity),
-        constrained: false,
-        child: Builder(
-          builder: (context) {
-            if (_isPlayingLivePuzzle && _animation != null) {
-              return AnimatedBuilder(
-                animation: _animation!,
-                builder: (context, child) {
-                  return PuzzleGridWidget(
-                    selectedCellIndex: _selectedCellIndex,
-                    cellImages: _getCellImages(),
-                    photoCount: _selectedPhotos.length,
-                    onCellTap: (index) async {},
-                    onBackgroundTap: () {},
-                    onReorder: null,
-                  );
-                },
-              );
-            } else {
-              return PuzzleGridWidget(
-                selectedCellIndex: _selectedCellIndex,
-                cellImages: _getCellImages(),
-                photoCount: _selectedPhotos.length,
-                onCellTap: (index) async {
-                  if (_isPlayingLivePuzzle) return;
-                  _handleImageTap(index); // 使用新的状态切换逻辑
-                },
-                onBackgroundTap: () {
-                  if (!_isPlayingLivePuzzle) {
-                    _handleCanvasTap(); // 使用新的状态切换逻辑
-                  }
-                },
-                onReorder: (fromIndex, toIndex) {
-                  if (!_isPlayingLivePuzzle) {
-                    _reorderImages(fromIndex, toIndex);
-                  }
-                },
-              );
-            }
-          },
-        ),
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     // 判断是否有可用的帧选择器
@@ -2061,8 +1570,7 @@ class _PuzzleEditorScreenState extends ConsumerState<PuzzleEditorScreen>
                 Expanded(
                   child: Container(
                     color: const Color(0xFFF5F5F5),
-                    child:
-                        _useNewCanvas ? _buildNewCanvas() : _buildOldCanvas(),
+                    child: _buildNewCanvas(),
                   ),
                 ),
 

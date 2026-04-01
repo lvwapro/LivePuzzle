@@ -5,8 +5,6 @@ import AVFoundation
 import ImageIO
 
 public class LivePhotoBridgePlugin: NSObject, FlutterPlugin {
-  private let imageManager = PHCachingImageManager()
-  
   public static func register(with registrar: FlutterPluginRegistrar) {
     let channel = FlutterMethodChannel(name: "live_photo_bridge", binaryMessenger: registrar.messenger())
     let instance = LivePhotoBridgePlugin()
@@ -329,22 +327,6 @@ public class LivePhotoBridgePlugin: NSObject, FlutterPlugin {
         }
       }
     }
-  }
-  
-  // 调整图片大小（仅在 createLivePhoto 封面压缩时使用）
-  private func resizeImage(image: UIImage, targetSize: CGSize) -> UIImage {
-    let size = image.size
-    let widthRatio  = targetSize.width  / size.width
-    let heightRatio = targetSize.height / size.height
-    let ratio = min(widthRatio, heightRatio)
-    let newSize = CGSize(width: size.width * ratio, height: size.height * ratio)
-    
-    UIGraphicsBeginImageContextWithOptions(newSize, false, 1.0)
-    image.draw(in: CGRect(origin: .zero, size: newSize))
-    let newImage = UIGraphicsGetImageFromCurrentImageContext()
-    UIGraphicsEndImageContext()
-    
-    return newImage ?? image
   }
   
   // 🔥 创建 Live Photo 并保存到图库

@@ -2,7 +2,6 @@ import 'dart:typed_data';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:photo_manager/photo_manager.dart';
-import 'package:live_puzzle/models/live_photo.dart';
 import 'package:live_photo_bridge/live_photo_bridge.dart';
 
 /// Live Photo管理器
@@ -382,92 +381,4 @@ class LivePhotoManager {
     }
   }
 
-  /// Android特殊设备检测
-  static Future<String> getAndroidDeviceType() async {
-    if (!Platform.isAndroid) return 'not_android';
-    return 'generic';
-  }
-
-  /// 获取所有Live Photo（已弃用，使用 getAllPhotos 替代）
-  static Future<List<LivePhoto>> getAllLivePhotos() async {
-    debugPrint('📸 开始加载照片...');
-
-    try {
-      final List<AssetPathEntity> albums = await PhotoManager.getAssetPathList(
-        type: RequestType.image,
-        hasAll: true,
-      );
-
-      debugPrint('📁 找到 ${albums.length} 个相册');
-
-      final List<LivePhoto> livePhotos = [];
-
-      for (final album in albums) {
-        if (album.isAll) {
-          final assetCount = await album.assetCountAsync;
-          debugPrint('📁 相册: ${album.name}, 照片数: $assetCount');
-
-          final maxCount = assetCount > 50 ? 50 : assetCount;
-          final assets = await album.getAssetListRange(
-            start: 0,
-            end: maxCount,
-          );
-
-          debugPrint('📸 正在处理最近的 ${assets.length} 张照片...');
-
-          for (final asset in assets) {
-            try {
-              livePhotos.add(LivePhoto(
-                id: asset.id,
-                imagePath: asset.id,
-                videoPath: '',
-                duration: const Duration(seconds: 3),
-                createdAt: asset.createDateTime,
-                frameCount: 30,
-                imageFile: null,
-                videoFile: null,
-              ));
-
-              if (livePhotos.length % 10 == 0) {
-                debugPrint('✅ 已加载 ${livePhotos.length} 张照片...');
-              }
-            } catch (e) {
-              debugPrint('⚠️ 处理照片失败: ${asset.id}, 错误: $e');
-            }
-          }
-
-          debugPrint('✅ 总共加载了 ${livePhotos.length} 张照片');
-          break;
-        }
-      }
-
-      return livePhotos;
-    } catch (e, stack) {
-      debugPrint('❌ 加载照片失败: $e');
-      debugPrint('Stack trace: $stack');
-      rethrow;
-    }
-  }
-
-  /// 获取指定Live Photo的详细信息
-  static Future<LivePhoto?> getLivePhotoById(String id) async {
-    try {
-      final asset = await AssetEntity.fromId(id);
-      if (asset == null) return null;
-
-      return LivePhoto(
-        id: asset.id,
-        imagePath: asset.id,
-        videoPath: '',
-        duration: const Duration(seconds: 3),
-        createdAt: asset.createDateTime,
-        frameCount: 30,
-        imageFile: null,
-        videoFile: null,
-      );
-    } catch (e) {
-      debugPrint('❌ 获取照片详情失败: $e');
-      return null;
-    }
-  }
 }

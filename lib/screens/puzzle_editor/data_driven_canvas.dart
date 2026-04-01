@@ -161,14 +161,14 @@ class _DataDrivenCanvasState extends State<DataDrivenCanvas> {
   }
 
   void _onPointerDown(PointerDownEvent e) {
-    _pointers[e.pointer] = e.position;
+    _pointers[e.pointer] = e.localPosition;
     _lastMidpoint = _getMidpoint();
     if (_pointers.length >= 2) _lastPointerDistance = _getPointerDistance();
     _hasMoved = false;
 
     // 检查是否点在共享边上
     if (_pointers.length == 1) {
-      final edge = _findEdgeAtScreenPos(e.position);
+      final edge = _findEdgeAtScreenPos(e.localPosition);
       if (edge != null) {
         _draggingEdge = edge;
         _edgeDragDelta = 0;
@@ -193,7 +193,7 @@ class _DataDrivenCanvasState extends State<DataDrivenCanvas> {
   }
 
   void _onPointerMove(PointerMoveEvent e) {
-    _pointers[e.pointer] = e.position;
+    _pointers[e.pointer] = e.localPosition;
     final mid = _getMidpoint();
 
     if (!_hasMoved && _lastMidpoint != null) {
@@ -244,19 +244,40 @@ class _DataDrivenCanvasState extends State<DataDrivenCanvas> {
     _lastMidpoint = mid;
   }
 
+  /// 将本地坐标转为画布坐标
+  Offset _localToCanvas(Offset local) {
+    return Offset(
+      (local.dx - _translation.dx) / _scale,
+      (local.dy - _translation.dy) / _scale,
+    );
+  }
+
   void _onPointerUp(PointerUpEvent e) {
     final wasMoving = _isMovingImage;
     final movingId = _movingBlockId;
     final wasDraggingEdge = _isDraggingEdge;
     final draggedEdge = _draggingEdge;
+    final upLocal = e.localPosition;
 
     _pointers.remove(e.pointer);
     if (_pointers.isEmpty) {
       _lastMidpoint = null;
       _lastPointerDistance = null;
 
+      if (!_hasMoved) {
+        // ━━━ 点击（无移动）━━━ 手动 hit-test，不依赖 Transform
+        final canvas = _localToCanvas(upLocal);
+        final tappedId = _findBlockAtCanvasPos(canvas.dx, canvas.dy);
+        if (tappedId != null) {
+          widget.onBlockTap(tappedId);
+        } else {
+          widget.onCanvasTap();
+        }
+        _cleanupPointerState();
+        return;
+      }
+
       if (wasDraggingEdge && draggedEdge != null) {
-        // ━━━ 提交边缘拖动 ━━━
         _commitEdgeDrag(draggedEdge, _edgeDragDelta);
         setState(() {
           _isDraggingEdge = false;
@@ -273,10 +294,10 @@ class _DataDrivenCanvasState extends State<DataDrivenCanvas> {
 
           if (_isDeltaWithinBounds()) {
             final (overflowX, overflowY) = calcCoverOverflow(abs);
-                            final maxOx =
-                                overflowX * block.scale + abs.width * (block.scale - 1) / 2;
-                            final maxOy =
-                                overflowY * block.scale + abs.height * (block.scale - 1) / 2;
+            final maxOx =
+                overflowX * block.scale + abs.width * (block.scale - 1) / 2;
+            final maxOy =
+                overflowY * block.scale + abs.height * (block.scale - 1) / 2;
             final newOx = (block.offsetX + _moveDeltaX).clamp(-maxOx, maxOx);
             final newOy = (block.offsetY + _moveDeltaY).clamp(-maxOy, maxOy);
             widget.onBlockChanged(
@@ -291,17 +312,24 @@ class _DataDrivenCanvasState extends State<DataDrivenCanvas> {
             }
           }
         }
-        setState(() {
-          _moveDeltaX = 0;
-          _moveDeltaY = 0;
-          _isMovingImage = false;
-          _movingBlockId = null;
-        });
+        _cleanupPointerState();
       }
     } else {
       _lastMidpoint = _getMidpoint();
       if (_pointers.length >= 2) _lastPointerDistance = _getPointerDistance();
     }
+  }
+
+  void _cleanupPointerState() {
+    setState(() {
+      _moveDeltaX = 0;
+      _moveDeltaY = 0;
+      _isMovingImage = false;
+      _movingBlockId = null;
+      _isDraggingEdge = false;
+      _draggingEdge = null;
+      _edgeDragDelta = 0;
+    });
   }
 
   void _onPointerCancel(PointerCancelEvent e) {
@@ -378,9 +406,6 @@ class _DataDrivenCanvasState extends State<DataDrivenCanvas> {
               children: [
                 Positioned.fill(
                   child: GestureDetector(
-                    onTap: () {
-                      if (!_hasMoved) widget.onCanvasTap();
-                    },
                     onDoubleTap: _resetView,
                     behavior: HitTestBehavior.opaque,
                     child: Container(color: const Color(0xFFF5F5F5)),
@@ -430,9 +455,6 @@ class _DataDrivenCanvasState extends State<DataDrivenCanvas> {
                                     isMoving ? _isDeltaWithinBounds() : true,
                                 moveDeltaX: _moveDeltaX,
                                 moveDeltaY: _moveDeltaY,
-                                hasMoved: _hasMoved,
-                                isMovingImage: _isMovingImage,
-                                onBlockTap: widget.onBlockTap,
                                 isPlaying: widget.isPlaying,
                                 videoController:
                                     widget.isPlaying && widget.videoControllers != null

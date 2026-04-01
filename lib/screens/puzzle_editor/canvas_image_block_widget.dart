@@ -24,9 +24,6 @@ class CanvasImageBlockWidget extends StatelessWidget {
   final bool withinBounds;
   final double moveDeltaX;
   final double moveDeltaY;
-  final bool hasMoved;
-  final bool isMovingImage;
-  final void Function(String blockId) onBlockTap;
   final VideoPlayerController? videoController;
   final bool isPlaying;
 
@@ -39,9 +36,6 @@ class CanvasImageBlockWidget extends StatelessWidget {
     required this.withinBounds,
     required this.moveDeltaX,
     required this.moveDeltaY,
-    required this.hasMoved,
-    required this.isMovingImage,
-    required this.onBlockTap,
     this.videoController,
     this.isPlaying = false,
   });
@@ -172,17 +166,9 @@ class CanvasImageBlockWidget extends StatelessWidget {
     return Positioned(
       left: posX,
       top: posY,
-      child: GestureDetector(
-        onTap: () {
-          if (!hasMoved && !isMovingImage) {
-            onBlockTap(block.id);
-          }
-        },
-        behavior: HitTestBehavior.opaque,
-        child: Opacity(
-          opacity: isMoving && !withinBounds ? 0.8 : 1.0,
-          child: content,
-        ),
+      child: Opacity(
+        opacity: isMoving && !withinBounds ? 0.8 : 1.0,
+        child: content,
       ),
     );
   }

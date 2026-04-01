@@ -4,6 +4,7 @@ import 'package:live_puzzle/providers/puzzle_history_provider.dart';
 import 'package:live_puzzle/providers/locale_provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:live_puzzle/l10n/app_localizations.dart';
+import 'package:live_puzzle/screens/legal_text_screen.dart';
 
 /// 设置页面
 class SettingsScreen extends ConsumerWidget {
@@ -154,6 +155,47 @@ class SettingsScreen extends ConsumerWidget {
                       onTap: () {
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(content: Text(l10n.thanksForSupport)),
+                        );
+                      },
+                    ),
+
+                    const SizedBox(height: 32),
+
+                    // 法律条款
+                    _buildSectionTitle(l10n.legal),
+                    const SizedBox(height: 12),
+                    _buildSettingCard(
+                      context,
+                      icon: Icons.shield_outlined,
+                      title: l10n.privacyPolicy,
+                      subtitle: l10n.privacyPolicyDesc,
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => LegalTextScreen(
+                              title: l10n.privacyPolicy,
+                              content: l10n.privacyPolicyContent,
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                    const SizedBox(height: 12),
+                    _buildSettingCard(
+                      context,
+                      icon: Icons.description_outlined,
+                      title: l10n.termsOfService,
+                      subtitle: l10n.termsOfServiceDesc,
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => LegalTextScreen(
+                              title: l10n.termsOfService,
+                              content: l10n.termsOfServiceContent,
+                            ),
+                          ),
                         );
                       },
                     ),

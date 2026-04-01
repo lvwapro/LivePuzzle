@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import 'package:video_player/video_player.dart';
 import '../../models/canvas_config.dart';
 import '../../models/image_block.dart';
 import 'canvas_shared_edge.dart';
@@ -16,6 +17,8 @@ class DataDrivenCanvas extends StatefulWidget {
   final Function(String sourceId, String targetId) onBlockSwap;
   final Function(List<ImageBlock> updatedBlocks) onBlocksResized;
   final VoidCallback onCanvasTap;
+  final bool isPlaying;
+  final Map<int, VideoPlayerController?>? videoControllers;
 
   const DataDrivenCanvas({
     super.key,
@@ -27,6 +30,8 @@ class DataDrivenCanvas extends StatefulWidget {
     required this.onBlockSwap,
     required this.onBlocksResized,
     required this.onCanvasTap,
+    this.isPlaying = false,
+    this.videoControllers,
   });
 
   @override
@@ -413,6 +418,8 @@ class _DataDrivenCanvasState extends State<DataDrivenCanvas> {
                               final abs = block.toAbsolute(cw, ch);
                               final isMoving =
                                   _isMovingImage && _movingBlockId == block.id;
+                              final blockIdx = widget.imageBlocks
+                                  .indexWhere((b) => b.id == block.id);
                               return CanvasImageBlockWidget(
                                 key: ValueKey(block.id),
                                 block: block,
@@ -426,6 +433,11 @@ class _DataDrivenCanvasState extends State<DataDrivenCanvas> {
                                 hasMoved: _hasMoved,
                                 isMovingImage: _isMovingImage,
                                 onBlockTap: widget.onBlockTap,
+                                isPlaying: widget.isPlaying,
+                                videoController:
+                                    widget.isPlaying && widget.videoControllers != null
+                                        ? widget.videoControllers![blockIdx]
+                                        : null,
                               );
                             }),
                             // 共享边拖动条（实时预览）

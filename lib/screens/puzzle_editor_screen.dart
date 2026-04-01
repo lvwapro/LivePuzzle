@@ -78,7 +78,6 @@ class _PuzzleEditorScreenState extends ConsumerState<PuzzleEditorScreen>
 
   // 🔥 Live 拼图播放
   AnimationController? _animationController;
-  Animation<double>? _animation;
   bool _isPlayingLivePuzzle = false;
 
   // 🔥 当前显示的图片（用于网格显示）
@@ -87,6 +86,7 @@ class _PuzzleEditorScreenState extends ConsumerState<PuzzleEditorScreen>
   // 🔥 帧编辑：进入帧选择时保存原始图片，取消时恢复
   final Map<int, Uint8List?> _preEditImageData = {};
   Timer? _frameExtractTimer;
+  Timer? _playbackTimer;
 
   /// 从首页历史进入时传入，用于恢复上次布局与封面帧（用后即清）
   PuzzleHistory? _restoreHistory;
@@ -100,13 +100,6 @@ class _PuzzleEditorScreenState extends ConsumerState<PuzzleEditorScreen>
       duration: const Duration(milliseconds: 2000),
       vsync: this,
     );
-
-    // 🔥 创建线性动画，从0到1 - 使用 AnimatedBuilder，不需要手动 setState
-    _animation = CurvedAnimation(
-      parent: _animationController!,
-      curve: Curves.linear,
-    );
-
     _animationController!.addListener(onAnimationTick);
     attachAnimationCompletionListener();
 
@@ -128,8 +121,8 @@ class _PuzzleEditorScreenState extends ConsumerState<PuzzleEditorScreen>
   @override
   void dispose() {
     _frameExtractTimer?.cancel();
+    _playbackTimer?.cancel();
     _animationController?.dispose();
-    // 🔥 释放所有视频播放器
     for (final controller in _videoControllers.values) {
       controller?.dispose();
     }
@@ -257,11 +250,12 @@ class _PuzzleEditorScreenState extends ConsumerState<PuzzleEditorScreen>
       );
     }
 
-    // 使用新的数据驱动画布
     return DataDrivenCanvas(
       canvasConfig: _canvasConfig,
       imageBlocks: _imageBlocks,
       selectedBlockId: _selectedBlockId,
+      isPlaying: _isPlayingLivePuzzle,
+      videoControllers: _isPlayingLivePuzzle ? _videoControllers : null,
       onBlockTap: (blockId) {
         if (_isPlayingLivePuzzle) return;
         final blockIndex = _imageBlocks.indexWhere((b) => b.id == blockId);

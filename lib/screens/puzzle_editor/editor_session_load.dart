@@ -130,12 +130,6 @@ extension _EditorSessionLoad on _PuzzleEditorScreenState {
             duration: Duration(milliseconds: maxDurationMs),
             vsync: this,
           );
-
-          _animation = CurvedAnimation(
-            parent: _animationController!,
-            curve: Curves.linear,
-          );
-
           _animationController!.addListener(onAnimationTick);
           attachAnimationCompletionListener();
         }
@@ -172,7 +166,7 @@ extension _EditorSessionLoad on _PuzzleEditorScreenState {
             restoreCoverFramesFromSavedTimes();
           }
 
-          preExtractAllVideoFrames();
+          preInitAllVideoPlayers();
         }
       }
     });

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:video_player/video_player.dart';
 import '../../models/image_block.dart';
 
 /// 计算 cover 模式下图片溢出量
@@ -26,6 +27,8 @@ class CanvasImageBlockWidget extends StatelessWidget {
   final bool hasMoved;
   final bool isMovingImage;
   final void Function(String blockId) onBlockTap;
+  final VideoPlayerController? videoController;
+  final bool isPlaying;
 
   const CanvasImageBlockWidget({
     super.key,
@@ -39,6 +42,8 @@ class CanvasImageBlockWidget extends StatelessWidget {
     required this.hasMoved,
     required this.isMovingImage,
     required this.onBlockTap,
+    this.videoController,
+    this.isPlaying = false,
   });
 
   @override
@@ -56,23 +61,43 @@ class CanvasImageBlockWidget extends StatelessWidget {
       previewOy = (block.offsetY + moveDeltaY).clamp(-maxOy, maxOy);
     }
 
+    final useVideo = isPlaying &&
+        videoController != null &&
+        videoController!.value.isInitialized;
+
+    final double contentAR;
+    if (useVideo) {
+      final vs = videoController!.value.size;
+      contentAR = (vs.width > 0 && vs.height > 0) ? vs.width / vs.height : 1.0;
+    } else {
+      contentAR = abs.imageAspectRatio;
+    }
+
     Widget imageContent;
-    if (abs.imageData != null && abs.imageAspectRatio > 0) {
+    if ((useVideo || abs.imageData != null) && contentAR > 0) {
       final frameAR = abs.width / abs.height;
-      final imgAR = abs.imageAspectRatio;
       double coverW, coverH;
-      if (imgAR > frameAR) {
+      if (contentAR > frameAR) {
         coverH = abs.height;
-        coverW = abs.height * imgAR;
+        coverW = abs.height * contentAR;
       } else {
         coverW = abs.width;
-        coverH = abs.width / imgAR;
+        coverH = abs.width / contentAR;
       }
       coverW *= block.scale;
       coverH *= block.scale;
 
       final left = (abs.width - coverW) / 2 + previewOx;
       final top = (abs.height - coverH) / 2 + previewOy;
+
+      final Widget child = useVideo
+          ? VideoPlayer(videoController!)
+          : Image.memory(
+              abs.imageData!,
+              fit: BoxFit.fill,
+              gaplessPlayback: true,
+              filterQuality: FilterQuality.high,
+            );
 
       imageContent = SizedBox(
         width: abs.width,
@@ -86,12 +111,7 @@ class CanvasImageBlockWidget extends StatelessWidget {
                 top: top,
                 width: coverW,
                 height: coverH,
-                child: Image.memory(
-                  abs.imageData!,
-                  fit: BoxFit.fill,
-                  gaplessPlayback: true,
-                  filterQuality: FilterQuality.high,
-                ),
+                child: child,
               ),
             ],
           ),

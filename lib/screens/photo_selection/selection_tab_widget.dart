@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:photo_manager/photo_manager.dart' as photo_manager;
-import 'album_name_localization.dart';
+import '../../l10n/album_name_localization.dart';
 import 'package:live_puzzle/l10n/app_localizations.dart';
 
 class SelectionTab extends StatelessWidget {

@@ -12,7 +12,6 @@ import 'package:live_puzzle/screens/completion_screen.dart';
 import 'package:live_puzzle/services/live_photo_manager.dart';
 import 'package:photo_manager/photo_manager.dart';
 import 'package:live_photo_bridge/live_photo_bridge.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:video_player/video_player.dart';
 
 // 🔥 新增：数据模型和引擎

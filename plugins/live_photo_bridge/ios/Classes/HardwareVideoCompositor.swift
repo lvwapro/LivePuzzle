@@ -78,8 +78,7 @@ class HardwareVideoCompositor {
             w = (canvasW * scale / 2).rounded() * 2
             h = (canvasH * scale / 2).rounded() * 2
         } else {
-            // 标准模式：长边 1080px（与原来行为一致）
-            let maxSide: CGFloat = 1080
+            let maxSide: CGFloat = 1920
             let aspect = canvasW / canvasH
             if aspect >= 1.0 {
                 let raw_w = maxSide

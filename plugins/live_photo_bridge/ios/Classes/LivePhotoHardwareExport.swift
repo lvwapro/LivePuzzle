@@ -204,10 +204,28 @@ extension LivePhotoBridgePlugin {
   // MARK: - Static Video Generation
 
   func createStaticVideoFromImage(image: UIImage, outputURL: URL, durationSeconds: Int = 3) throws -> AVAsset {
-    let videoSize = image.size
+    let maxSide: CGFloat = 2048
+    let videoSize: CGSize
+    if max(image.size.width, image.size.height) > maxSide {
+      let scale = maxSide / max(image.size.width, image.size.height)
+      videoSize = CGSize(
+        width: (image.size.width * scale / 2).rounded() * 2,
+        height: (image.size.height * scale / 2).rounded() * 2
+      )
+    } else {
+      videoSize = CGSize(
+        width: (image.size.width / 2).rounded() * 2,
+        height: (image.size.height / 2).rounded() * 2
+      )
+    }
+
     let fps: Int32 = 30
     let frameCount = Int64(durationSeconds) * Int64(fps)
     let frameDuration = CMTime(value: 1, timescale: fps)
+
+    let basePixels: Double = 1080 * 1920
+    let outPixels = Double(videoSize.width) * Double(videoSize.height)
+    let bitrate = Int(12_000_000 * min(outPixels / basePixels, 4.0))
 
     try? FileManager.default.removeItem(at: outputURL)
 
@@ -217,7 +235,7 @@ extension LivePhotoBridgePlugin {
       AVVideoWidthKey: Int(videoSize.width),
       AVVideoHeightKey: Int(videoSize.height),
       AVVideoCompressionPropertiesKey: [
-        AVVideoAverageBitRateKey: 6_000_000,
+        AVVideoAverageBitRateKey: bitrate,
         AVVideoProfileLevelKey: AVVideoProfileLevelH264HighAutoLevel
       ]
     ]
@@ -239,7 +257,17 @@ extension LivePhotoBridgePlugin {
     writer.startWriting()
     writer.startSession(atSourceTime: .zero)
 
-    guard let pixelBuf = pixelBuffer(from: image, size: videoSize) else {
+    let scaledImage: UIImage
+    if videoSize != image.size {
+      UIGraphicsBeginImageContextWithOptions(videoSize, true, 1.0)
+      image.draw(in: CGRect(origin: .zero, size: videoSize))
+      scaledImage = UIGraphicsGetImageFromCurrentImageContext() ?? image
+      UIGraphicsEndImageContext()
+    } else {
+      scaledImage = image
+    }
+
+    guard let pixelBuf = pixelBuffer(from: scaledImage, size: videoSize) else {
       throw NSError(domain: "LivePhotoBridge", code: -11,
                     userInfo: [NSLocalizedDescriptionKey: "Failed to create pixel buffer from image"])
     }

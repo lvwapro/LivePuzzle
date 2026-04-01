@@ -534,4 +534,17 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get loadingVideoResources => '正在加载视频资源...';
+
+  @override
+  String get imageSplit => '切图';
+
+  @override
+  String splitSaveButton(int count) {
+    return '保存 $count 张到相册';
+  }
+
+  @override
+  String splitSavedCount(int count) {
+    return '$count 张切图已保存到相册';
+  }
 }

@@ -539,4 +539,17 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get loadingVideoResources => 'Loading video resources...';
+
+  @override
+  String get imageSplit => 'Image Split';
+
+  @override
+  String splitSaveButton(int count) {
+    return 'Save $count pieces to album';
+  }
+
+  @override
+  String splitSavedCount(int count) {
+    return '$count pieces saved to album';
+  }
 }

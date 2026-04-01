@@ -782,5 +782,28 @@
   "loadingVideoResources": "Loading video resources...",
   "@loadingVideoResources": {
     "description": "正在加载视频资源"
+  },
+
+  "imageSplit": "Image Split",
+  "@imageSplit": {
+    "description": "切图功能标题"
+  },
+  "splitSaveButton": "Save {count} pieces to album",
+  "@splitSaveButton": {
+    "description": "切图保存按钮",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "splitSavedCount": "{count} pieces saved to album",
+  "@splitSavedCount": {
+    "description": "切图保存成功",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   }
 }

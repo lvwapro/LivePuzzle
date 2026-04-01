@@ -8,6 +8,7 @@ import 'package:live_puzzle/providers/puzzle_history_provider.dart';
 import 'package:live_puzzle/providers/photo_provider.dart';
 import 'package:photo_manager/photo_manager.dart';
 import 'package:live_puzzle/l10n/app_localizations.dart';
+import 'package:live_puzzle/screens/image_split_screen.dart';
 import 'home/home_history_card.dart';
 
 /// 主页面 - 可爱粉色风格
@@ -81,149 +82,28 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   children: [
                     const SizedBox(height: 20), // 增加顶部间距
 
-                    // Start New Puzzle - 3D Button with decorations
+                    // 功能入口：新拼图 + 切图
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 24),
-                      child: Stack(
-                        clipBehavior: Clip.none,
+                      child: Row(
                         children: [
-                          // 3D shadow layer
-                          Positioned(
-                            top: 8,
-                            left: 0,
-                            right: 0,
-                            child: Container(
-                              height: 200,
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFE66A85),
-                                borderRadius: BorderRadius.circular(48),
-                              ),
+                          Expanded(
+                            child: _FeatureCard(
+                              icon: Icons.photo_camera,
+                              label: l10n.newPuzzle,
+                              color: const Color(0xFFFF85A2),
+                              shadowColor: const Color(0xFFE66A85),
+                              onTap: _isLoading ? null : _startCreating,
                             ),
                           ),
-                          // Main Button
-                          ClipRRect(
-                            borderRadius: BorderRadius.circular(48),
-                            child: Container(
-                              width: double.infinity,
-                              height: 200,
-                              child: Material(
-                                color: const Color(0xFFFF85A2),
-                                child: InkWell(
-                                  onTap: _isLoading ? null : _startCreating,
-                                  child: Stack(
-                                    children: [
-                                      // Decorative circles
-                                      Positioned(
-                                        top: -24,
-                                        left: -24,
-                                        child: Container(
-                                          width: 96,
-                                          height: 96,
-                                          decoration: BoxDecoration(
-                                            shape: BoxShape.circle,
-                                            color:
-                                                Colors.white.withOpacity(0.2),
-                                          ),
-                                        ),
-                                      ),
-                                      Positioned(
-                                        bottom: -40,
-                                        right: -24,
-                                        child: Container(
-                                          width: 128,
-                                          height: 128,
-                                          decoration: BoxDecoration(
-                                            shape: BoxShape.circle,
-                                            color:
-                                                Colors.white.withOpacity(0.1),
-                                          ),
-                                        ),
-                                      ),
-                                      // Main content
-                                      Center(
-                                        child: Column(
-                                          mainAxisAlignment:
-                                              MainAxisAlignment.center,
-                                          children: [
-                                            // Camera icon in white circle
-                                            Container(
-                                              width: 64,
-                                              height: 64,
-                                              decoration: BoxDecoration(
-                                                color: Colors.white,
-                                                shape: BoxShape.circle,
-                                                boxShadow: [
-                                                  BoxShadow(
-                                                    color: Colors.black
-                                                        .withOpacity(0.15),
-                                                    blurRadius: 12,
-                                                    offset: const Offset(0, 4),
-                                                  ),
-                                                ],
-                                              ),
-                                              child: const Icon(
-                                                Icons.photo_camera,
-                                                color: Color(0xFFFF85A2),
-                                                size: 32,
-                                              ),
-                                            ),
-                                            const SizedBox(height: 16),
-                                            Row(
-                                              mainAxisSize: MainAxisSize.min,
-                                              children: [
-                                                const Icon(
-                                                  Icons.add,
-                                                  color: Colors.white,
-                                                  size: 24,
-                                                ),
-                                                const SizedBox(width: 8),
-                                                Text(
-                                                  l10n.newPuzzle,
-                                                  style: TextStyle(
-                                                    fontFamily: 'Fredoka',
-                                                    fontSize: 20,
-                                                    fontWeight: FontWeight.w700,
-                                                    color: Colors.white,
-                                                    letterSpacing: 0,
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                          // Heart decoration - 最外层，不会被裁剪
-                          Positioned(
-                            top: -12,
-                            right: 8,
-                            child: Transform.rotate(
-                              angle: 0.3,
-                              child: Container(
-                                width: 40,
-                                height: 40,
-                                decoration: BoxDecoration(
-                                  color: Colors.white,
-                                  borderRadius: BorderRadius.circular(16),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.black.withOpacity(0.1),
-                                      blurRadius: 8,
-                                      offset: const Offset(0, 2),
-                                    ),
-                                  ],
-                                ),
-                                child: const Icon(
-                                  Icons.favorite,
-                                  color: Color(0xFFFF85A2),
-                                  size: 24,
-                                ),
-                              ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: _FeatureCard(
+                              icon: Icons.grid_view_rounded,
+                              label: l10n.imageSplit,
+                              color: const Color(0xFF85C1E9),
+                              shadowColor: const Color(0xFF5DADE2),
+                              onTap: _isLoading ? null : _startSplitting,
                             ),
                           ),
                         ],
@@ -380,6 +260,35 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     }
   }
 
+  Future<void> _startSplitting() async {
+    setState(() => _isLoading = true);
+    final hasPermission = await PermissionHelper.requestAllPermissions();
+    setState(() => _isLoading = false);
+
+    if (!hasPermission) {
+      if (!mounted) return;
+      _showPermissionDialog(
+        onGranted: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const ImageSplitScreen(),
+            ),
+          );
+        },
+      );
+      return;
+    }
+
+    if (!mounted) return;
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const ImageSplitScreen(),
+      ),
+    );
+  }
+
   Future<void> _startCreating() async {
     setState(() {
       _isLoading = true;
@@ -394,49 +303,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
     if (!hasPermission) {
       if (!mounted) return;
-
-      // 显示权限说明对话框
-      showDialog(
-        context: context,
-        builder: (context) => AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-          ),
-          title: const Text('需要相册权限'),
-          content: const Text(
-            '此应用需要访问您的照片库来选择Live Photo。\n\n'
-            '请点击"允许"按钮授予权限，或点击"去设置"在设置中手动开启。',
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('取消'),
+      _showPermissionDialog(
+        onGranted: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const PhotoSelectionScreen(),
             ),
-            TextButton(
-              onPressed: () async {
-                Navigator.pop(context);
-                final granted =
-                    await PermissionHelper.requestPhotoLibraryPermission();
-                if (granted && mounted) {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const PhotoSelectionScreen(),
-                    ),
-                  );
-                }
-              },
-              child: const Text('允许'),
-            ),
-            TextButton(
-              onPressed: () async {
-                Navigator.pop(context);
-                await PermissionHelper.openSettings();
-              },
-              child: const Text('去设置'),
-            ),
-          ],
-        ),
+          );
+        },
       );
       return;
     }
@@ -447,6 +322,158 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       MaterialPageRoute(
         builder: (context) => const PhotoSelectionScreen(),
       ),
+    );
+  }
+
+  void _showPermissionDialog({required VoidCallback onGranted}) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+        ),
+        title: const Text('需要相册权限'),
+        content: const Text(
+          '此应用需要访问您的照片库来选择照片。\n\n'
+          '请点击"允许"按钮授予权限，或点击"去设置"在设置中手动开启。',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('取消'),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(context);
+              final granted =
+                  await PermissionHelper.requestPhotoLibraryPermission();
+              if (granted && mounted) onGranted();
+            },
+            child: const Text('允许'),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(context);
+              await PermissionHelper.openSettings();
+            },
+            child: const Text('去设置'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// 首页功能入口卡片
+class _FeatureCard extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final Color color;
+  final Color shadowColor;
+  final VoidCallback? onTap;
+
+  const _FeatureCard({
+    required this.icon,
+    required this.label,
+    required this.color,
+    required this.shadowColor,
+    this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        // 3D 阴影层
+        Positioned(
+          top: 6,
+          left: 0,
+          right: 0,
+          child: Container(
+            height: 160,
+            decoration: BoxDecoration(
+              color: shadowColor,
+              borderRadius: BorderRadius.circular(32),
+            ),
+          ),
+        ),
+        // 主按钮
+        ClipRRect(
+          borderRadius: BorderRadius.circular(32),
+          child: SizedBox(
+            width: double.infinity,
+            height: 160,
+            child: Material(
+              color: color,
+              child: InkWell(
+                onTap: onTap,
+                child: Stack(
+                  children: [
+                    Positioned(
+                      top: -16,
+                      left: -16,
+                      child: Container(
+                        width: 64,
+                        height: 64,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: Colors.white.withOpacity(0.18),
+                        ),
+                      ),
+                    ),
+                    Positioned(
+                      bottom: -28,
+                      right: -16,
+                      child: Container(
+                        width: 80,
+                        height: 80,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: Colors.white.withOpacity(0.1),
+                        ),
+                      ),
+                    ),
+                    Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Container(
+                            width: 52,
+                            height: 52,
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              shape: BoxShape.circle,
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.12),
+                                  blurRadius: 10,
+                                  offset: const Offset(0, 3),
+                                ),
+                              ],
+                            ),
+                            child: Icon(icon, color: color, size: 26),
+                          ),
+                          const SizedBox(height: 12),
+                          Text(
+                            label,
+                            style: const TextStyle(
+                              fontFamily: 'Fredoka',
+                              fontSize: 16,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

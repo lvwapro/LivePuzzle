@@ -1099,6 +1099,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Loading video resources...'**
   String get loadingVideoResources;
+
+  /// 切图功能标题
+  ///
+  /// In en, this message translates to:
+  /// **'Image Split'**
+  String get imageSplit;
+
+  /// 切图保存按钮
+  ///
+  /// In en, this message translates to:
+  /// **'Save {count} pieces to album'**
+  String splitSaveButton(int count);
+
+  /// 切图保存成功
+  ///
+  /// In en, this message translates to:
+  /// **'{count} pieces saved to album'**
+  String splitSavedCount(int count);
 }
 
 class _AppLocalizationsDelegate

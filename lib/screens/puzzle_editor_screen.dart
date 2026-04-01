@@ -30,6 +30,10 @@ import 'puzzle_editor/layout_selection_panel.dart';
 import 'puzzle_editor/data_driven_canvas.dart';
 import 'package:live_puzzle/l10n/app_localizations.dart';
 
+part 'puzzle_editor/editor_export_logic.dart';
+part 'puzzle_editor/editor_playback_logic.dart';
+part 'puzzle_editor/editor_cover_logic.dart';
+
 /// 拼图编辑器页面 - Seamless Puzzle风格
 class PuzzleEditorScreen extends ConsumerStatefulWidget {
   const PuzzleEditorScreen({super.key});
@@ -104,7 +108,7 @@ class _PuzzleEditorScreenState extends ConsumerState<PuzzleEditorScreen>
     );
 
     // 🔥 监听动画帧更新 → 实时更新新画布中的图片
-    _animationController!.addListener(_onAnimationTick);
+    _animationController!.addListener(onAnimationTick);
 
     // 🔥 监听动画完成
     _animationController!.addStatusListener((status) {
@@ -123,7 +127,7 @@ class _PuzzleEditorScreenState extends ConsumerState<PuzzleEditorScreen>
               }
             }
             // 🔥 同步恢复新画布 imageBlocks
-            _restoreImageBlocksToCovers();
+            restoreImageBlocksToCovers();
           });
           _animationController?.reset();
         }
@@ -316,7 +320,7 @@ class _PuzzleEditorScreenState extends ConsumerState<PuzzleEditorScreen>
           );
 
           // 重新添加监听器
-          _animationController!.addListener(_onAnimationTick);
+          _animationController!.addListener(onAnimationTick);
           _animationController!.addStatusListener((status) {
             if (status == AnimationStatus.completed) {
               if (mounted) {
@@ -331,7 +335,7 @@ class _PuzzleEditorScreenState extends ConsumerState<PuzzleEditorScreen>
                       _currentDisplayImages[i] = _photoThumbnails[i];
                     }
                   }
-                  _restoreImageBlocksToCovers();
+                  restoreImageBlocksToCovers();
                 });
                 _animationController?.reset();
               }
@@ -368,164 +372,24 @@ class _PuzzleEditorScreenState extends ConsumerState<PuzzleEditorScreen>
               .any((i) =>
                   _coverFrameTime[i] != null && _coverFrameTime[i]! >= 0);
           if (mounted && hasCoverTimes) {
-            _restoreCoverFramesFromSavedTimes();
+            restoreCoverFramesFromSavedTimes();
           }
 
           // 后台预提取所有视频帧（不阻塞UI）
-          _preExtractAllVideoFrames();
+          preExtractAllVideoFrames();
         }
       }
     });
   }
 
-  /// 根据已保存的 _coverFrameTime 拉取视频帧并设为封面（从历史恢复时调用）
-  Future<void> _restoreCoverFramesFromSavedTimes() async {
-    for (int i = 0; i < _selectedPhotos.length; i++) {
-      final timeMs = _coverFrameTime[i];
-      if (timeMs == null || timeMs < 0) continue;
-      await _extractVideoFrames(i);
-      if (!mounted) return;
-      final frames = _videoFrames[i];
-      if (frames == null || frames.isEmpty) continue;
-      final durationMs = _videoDurations[i] ?? 2000;
-      final progress = (timeMs / durationMs).clamp(0.0, 1.0);
-      final frameIndex =
-          (progress * (frames.length - 1)).round().clamp(0, frames.length - 1);
-      final frameData = frames[frameIndex];
-      if (mounted && i < _imageBlocks.length) {
-        setState(() {
-          _coverFrames[i] = frameData;
-          _currentDisplayImages[i] = frameData;
-          _imageBlocks[i] = _imageBlocks[i].copyWith(imageData: frameData);
-        });
-      }
-    }
-  }
-
-  // 🔥 初始化视频播放器用于帧选择
-  Future<void> _initVideoPlayer(int cellIndex) async {
-    if (cellIndex >= _selectedPhotos.length) return;
-    if (_videoControllers[cellIndex] != null) return; // 已初始化
-
-    final asset = _selectedPhotos[cellIndex];
-
-    try {
-      final isLive = await LivePhotoManager.isLivePhoto(asset);
-      if (!isLive) return;
-
-      final videoPath = await LivePhotoBridge.getVideoPath(asset.id);
-      if (videoPath == null || videoPath.isEmpty) return;
-
-      final videoFile = File(videoPath);
-      if (!await videoFile.exists()) return;
-
-      // 存储视频路径
-      if (mounted) {
-        setState(() {
-          _videoPaths[cellIndex] = videoPath;
-        });
-      }
-
-      // 初始化视频播放器
-      final controller = VideoPlayerController.file(videoFile);
-      await controller.initialize();
-      await controller.setLooping(false);
-      await controller.pause();
-      await controller.seekTo(Duration.zero);
-
-      if (mounted) {
-        setState(() {
-          _videoControllers[cellIndex] = controller;
-        });
-      }
-    } catch (e) {
-      debugPrint('⚠️ 初始化视频播放器失败: $e');
-    }
-  }
-
-  // 🔥 截取当前视频帧作为封面
-  Future<Uint8List?> _captureVideoFrame(int cellIndex) async {
-    final videoPath = _videoPaths[cellIndex];
-    if (videoPath == null) return null;
-
-    final controller = _videoControllers[cellIndex];
-    if (controller == null || !controller.value.isInitialized) return null;
-
-    try {
-      // 优先用滑块记录的时间，避免 seekTo 异步未完成导致读到错误位置
-      final timeMs = _currentSliderTimeMs[cellIndex] ??
-          controller.value.position.inMilliseconds;
-      debugPrint('🎞️ 截帧: cell=$cellIndex, time=${timeMs}ms');
-      final framePath = await LivePhotoBridge.extractFrame(videoPath, timeMs);
-
-      if (framePath != null) {
-        final frameFile = File(framePath);
-        if (await frameFile.exists()) {
-          final frameData = await frameFile.readAsBytes();
-          try {
-            await frameFile.delete();
-          } catch (e) {
-            debugPrint('⚠️ 删除临时帧文件失败: $e');
-          }
-          return frameData;
-        }
-      }
-    } catch (e) {
-      debugPrint('⚠️ 截取视频帧失败: $e');
-    }
-
-    return null;
-  }
-
   void _handleCanvasTap() {
-    // 取消选中时恢复原始图片（如果有未确认的帧编辑）
-    _revertFrameEdit();
+    revertFrameEdit();
     setState(() {
       _selectedCellIndex = -1;
       _selectedBlockId = null;
       _editorState = EditorState.global;
       _selectedGlobalTool = null;
     });
-  }
-
-  /// 恢复帧编辑前的图片（取消时调用）
-  void _revertFrameEdit() {
-    _frameExtractTimer?.cancel();
-    if (_selectedCellIndex >= 0 &&
-        _preEditImageData.containsKey(_selectedCellIndex)) {
-      final originalData = _preEditImageData[_selectedCellIndex];
-      if (originalData != null && _selectedCellIndex < _imageBlocks.length) {
-        setState(() {
-          _imageBlocks[_selectedCellIndex] =
-              _imageBlocks[_selectedCellIndex].copyWith(
-            imageData: originalData,
-          );
-        });
-      }
-      _preEditImageData.remove(_selectedCellIndex);
-    }
-  }
-
-  /// 拖动 Slider 时使用已提取的帧做即时预览（零延迟），避免原生 extractFrame 的磁盘 I/O 卡顿
-  void _throttledExtractFrame(int cellIndex, int timeMs) {
-    if (!mounted || cellIndex < 0 || cellIndex >= _imageBlocks.length) return;
-
-    // 记录滑块选中时间，供 _handleSetCover 使用（不依赖 seekTo 异步结果）
-    _currentSliderTimeMs[cellIndex] = timeMs;
-
-    final frames = _videoFrames[cellIndex];
-    if (frames != null && frames.isNotEmpty) {
-      // 用预提取帧做即时预览
-      final durationMs = _videoDurations[cellIndex] ?? 2000;
-      final progress = (timeMs / durationMs).clamp(0.0, 1.0);
-      final frameIndex =
-          (progress * (frames.length - 1)).round().clamp(0, frames.length - 1);
-      setState(() {
-        _imageBlocks[cellIndex] = _imageBlocks[cellIndex].copyWith(
-          imageData: frames[frameIndex],
-        );
-      });
-    }
   }
 
   // 🔥 全局工具处理
@@ -801,633 +665,6 @@ class _PuzzleEditorScreenState extends ConsumerState<PuzzleEditorScreen>
     );
   }
 
-  /// 页面加载后在后台逐个预提取所有视频帧，避免点击 Live/帧选择时等待
-  Future<void> _preExtractAllVideoFrames() async {
-    for (int i = 0; i < _selectedPhotos.length; i++) {
-      if (!mounted) return;
-      if (_videoFrames.containsKey(i)) continue;
-      await _extractVideoFrames(i);
-    }
-    if (mounted) {
-      debugPrint('✅ 所有视频帧预提取完成 (${_videoFrames.length}/${_selectedPhotos.length})');
-    }
-  }
-
-  Future<void> _extractVideoFrames(int cellIndex) async {
-    // 先初始化视频播放器（用于交互选择）
-    await _initVideoPlayer(cellIndex);
-
-    // 🔥 同时提取帧（用于播放和保存）
-    if (_videoFrames.containsKey(cellIndex)) return; // 已提取
-
-    final asset = _selectedPhotos[cellIndex];
-    try {
-      final isLive = await LivePhotoManager.isLivePhoto(asset);
-      if (!isLive) return;
-
-      // 🔥 获取视频路径
-      final videoPath = _videoPaths[cellIndex];
-      if (videoPath == null || videoPath.isEmpty) {
-        debugPrint('⚠️ 视频路径为空，无法提取帧');
-        return;
-      }
-
-      final videoDurationMs = _videoDurations[cellIndex] ?? 2000;
-      debugPrint('🎞️ 开始提取 Live Photo 帧: $cellIndex, 时长: ${videoDurationMs}ms');
-
-      // 🔥 均匀采样30帧，覆盖整个视频时长（从0到videoDurationMs）
-      final frames = <Uint8List>[];
-      for (int i = 0; i < kTotalFrames; i++) {
-        final progress = i / (kTotalFrames - 1);
-        final timeMs = (progress * videoDurationMs).round();
-
-        try {
-          final framePath =
-              await LivePhotoBridge.extractFrame(videoPath, timeMs);
-          if (framePath != null) {
-            final file = File(framePath);
-            if (await file.exists()) {
-              final bytes = await file.readAsBytes();
-              frames.add(bytes);
-              await file.delete();
-            }
-          }
-        } catch (e) {
-          debugPrint('⚠️ 提取帧 $i (${timeMs}ms) 失败: $e');
-        }
-      }
-
-      if (frames.isNotEmpty) {
-        if (mounted) {
-          setState(() {
-            _videoFrames[cellIndex] = frames;
-          });
-          debugPrint('✅ Live Photo $cellIndex 提取了 ${frames.length} 帧');
-        }
-      }
-    } catch (e) {
-      debugPrint('❌ 提取 Live Photo 帧失败: $e');
-    }
-  }
-
-  // 🔥 动画帧回调：实时更新新画布中 imageBlocks 的图片
-  void _onAnimationTick() {
-    if (!_isPlayingLivePuzzle) return;
-    if (_animation == null) return;
-
-    final progress = _animation!.value.clamp(0.0, 1.0);
-    final currentTimeMs = progress * _maxDurationMs;
-
-    bool changed = false;
-    for (int i = 0;
-        i < _imageBlocks.length && i < _selectedPhotos.length;
-        i++) {
-      final frames = _videoFrames[i];
-      Uint8List? newData;
-
-      if (frames != null && frames.isNotEmpty) {
-        final videoDurationMs = _videoDurations[i] ?? 2000;
-        if (currentTimeMs >= videoDurationMs) {
-          // 超过该视频时长 → 定格到封面
-          newData = _coverFrames[i] ?? _photoThumbnails[i];
-        } else {
-          // 正常播放
-          final videoProgress =
-              (currentTimeMs / videoDurationMs).clamp(0.0, 1.0);
-          final frameIndex = (videoProgress * (frames.length - 1))
-              .round()
-              .clamp(0, frames.length - 1);
-          newData = frames[frameIndex];
-        }
-      } else {
-        newData = _coverFrames[i] ?? _photoThumbnails[i];
-      }
-
-      if (newData != null && newData != _imageBlocks[i].imageData) {
-        _imageBlocks[i] = _imageBlocks[i].copyWith(imageData: newData);
-        changed = true;
-      }
-    }
-
-    if (changed && mounted) setState(() {});
-  }
-
-  // 🔥 恢复 imageBlocks 到封面帧
-  void _restoreImageBlocksToCovers() {
-    for (int i = 0;
-        i < _imageBlocks.length && i < _selectedPhotos.length;
-        i++) {
-      final coverData = _coverFrames[i] ?? _photoThumbnails[i];
-      if (coverData != null) {
-        _imageBlocks[i] = _imageBlocks[i].copyWith(imageData: coverData);
-      }
-    }
-  }
-
-  Future<void> _playLivePuzzle() async {
-    if (_animationController == null || _animation == null) return;
-
-    if (_isPlayingLivePuzzle) {
-      // 🔥 停止播放，恢复到各自的封面帧
-      debugPrint('⏸️ 停止播放 Live Puzzle');
-      setState(() {
-        _isPlayingLivePuzzle = false;
-        _restoreImageBlocksToCovers();
-      });
-      _animationController?.stop();
-      _animationController?.reset();
-      return;
-    }
-
-    // 确保所有照片的帧都已加载
-    bool needsLoading = false;
-    for (int i = 0; i < _selectedPhotos.length; i++) {
-      if (!_videoFrames.containsKey(i)) {
-        needsLoading = true;
-        debugPrint('⚠️ 格子 $i 的视频帧尚未提取');
-      }
-    }
-
-    if (needsLoading) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('正在准备视频帧，请稍候...'),
-            duration: Duration(seconds: 2),
-            behavior: SnackBarBehavior.floating,
-            backgroundColor: Color(0xFFFF4D7D),
-          ),
-        );
-      }
-
-      debugPrint('🎞️ 开始提取所有视频帧...');
-      await Future.wait(
-        List.generate(_selectedPhotos.length, (i) {
-          if (!_videoFrames.containsKey(i)) {
-            return _extractVideoFrames(i);
-          }
-          return Future.value();
-        }),
-      );
-
-      // 检查提取是否成功
-      int successCount = 0;
-      for (int i = 0; i < _selectedPhotos.length; i++) {
-        if (_videoFrames.containsKey(i) && _videoFrames[i]!.isNotEmpty) {
-          successCount++;
-        }
-      }
-      debugPrint('✅ 提取完成: $successCount/${_selectedPhotos.length} 个视频');
-
-      if (successCount == 0) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('视频帧提取失败，无法播放'),
-              duration: Duration(seconds: 2),
-              backgroundColor: Colors.red,
-            ),
-          );
-        }
-        return;
-      }
-    }
-
-    debugPrint('▶️ 开始播放 Live Puzzle');
-    setState(() {
-      _isPlayingLivePuzzle = true;
-    });
-
-    _animationController?.forward(from: 0.0);
-  }
-
-  // 🔥 保存拼图到图库（Live Photo 格式）- 🚀 硬件加速版本
-  Future<void> _savePuzzleToGallery() async {
-    if (_selectedPhotos.isEmpty) return;
-
-    // 创建进度通知器
-    final progressNotifier = ValueNotifier<double>(0.0);
-    final messageNotifier = ValueNotifier<String>('准备中...');
-
-    try {
-      // 显示进度对话框
-      if (!mounted) return;
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (context) => PopScope(
-          canPop: false,
-          child: Center(
-            child: Container(
-              margin: const EdgeInsets.symmetric(horizontal: 40),
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // 进度条
-                  ValueListenableBuilder<double>(
-                    valueListenable: progressNotifier,
-                    builder: (context, progress, child) {
-                      return Column(
-                        children: [
-                          ClipRRect(
-                            borderRadius: BorderRadius.circular(4),
-                            child: LinearProgressIndicator(
-                              value: progress,
-                              minHeight: 6,
-                              backgroundColor: const Color(0xFFFFE0E8),
-                              valueColor: const AlwaysStoppedAnimation<Color>(
-                                Color(0xFFFF4D80),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 12),
-                          Text(
-                            '${(progress * 100).toInt()}%',
-                            style: const TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              color: Color(0xFFFF4D80),
-                              decoration: TextDecoration.none,
-                            ),
-                          ),
-                        ],
-                      );
-                    },
-                  ),
-                  const SizedBox(height: 16),
-                  // 状态文本
-                  ValueListenableBuilder<String>(
-                    valueListenable: messageNotifier,
-                    builder: (context, message, child) {
-                      return Text(
-                        message,
-                        style: const TextStyle(
-                          fontSize: 14,
-                          color: Color(0xFF666666),
-                          fontWeight: FontWeight.w500,
-                          decoration: TextDecoration.none,
-                        ),
-                        textAlign: TextAlign.center,
-                      );
-                    },
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      );
-
-      final sw = Stopwatch()..start();
-
-      // 🚀 使用硬件加速合成（无需提取和渲染所有帧）
-      if (_imageBlocks.isNotEmpty) {
-        debugPrint('🚀 使用硬件加速模式导出...');
-        
-        messageNotifier.value = AppLocalizations.of(context)!.loadingVideoResources;
-        progressNotifier.value = 0.05;
-        
-        // 等待一小段时间，确保UI更新
-        await Future.delayed(const Duration(milliseconds: 100));
-        
-        messageNotifier.value = AppLocalizations.of(context)!.preparingLayout;
-        progressNotifier.value = 0.1;
-
-        // 准备布局配置
-        final isLongImageLayout = _currentLayout?.id == 'long_horizontal' ||
-            _currentLayout?.id == 'long_vertical';
-        final layoutConfig = {
-          'canvasWidth': _canvasConfig.width,
-          'canvasHeight': _canvasConfig.height,
-          'isLongImage': isLongImageLayout,
-          'blocks': _imageBlocks.map((block) => {
-            'x': block.x,
-            'y': block.y,
-            'width': block.width,
-            'height': block.height,
-            'scale': block.scale,
-            'offsetX': block.offsetX,
-            'offsetY': block.offsetY,
-          }).toList(),
-        };
-
-        // 诊断日志
-        final canvasH = _canvasConfig.height;
-        final canvasW = _canvasConfig.width;
-        debugPrint('🔍 画布: ${canvasW}×${canvasH} ratio=${_canvasConfig.ratio} 高>宽=${canvasH > canvasW}');
-        for (int i = 0; i < _imageBlocks.length; i++) {
-          final b = _imageBlocks[i];
-          debugPrint('🔍 Block[$i]: x=${b.x.toStringAsFixed(3)} y=${b.y.toStringAsFixed(3)} w=${b.width.toStringAsFixed(3)} h=${b.height.toStringAsFixed(3)} scale=${b.scale} offsetX=${b.offsetX} offsetY=${b.offsetY}');
-        }
-
-        // 准备封面时间
-        final coverTimes = List<int>.generate(
-          _selectedPhotos.length,
-          (i) => _coverFrameTime[i] ?? 0,
-        );
-
-        // 准备 asset IDs
-        final assetIds = _selectedPhotos.map((p) => p.id).toList();
-
-        messageNotifier.value = AppLocalizations.of(context)!.hardwareEncoding;
-        progressNotifier.value = 0.2;
-
-        // 调用硬件加速方法
-        final success = await LivePhotoBridge.createLivePhotoHardware(
-          assetIds: assetIds,
-          layoutConfig: layoutConfig,
-          coverTimes: coverTimes,
-        );
-
-        progressNotifier.value = 1.0;
-        messageNotifier.value = AppLocalizations.of(context)!.completed;
-
-        debugPrint('⏱️ 硬件加速导出完成，总耗时 ${sw.elapsedMilliseconds}ms');
-
-        if (mounted) {
-          // 关闭加载对话框
-          Navigator.of(context, rootNavigator: true).pop();
-
-          if (success) {
-            // 准备缩略图（合成画布全图）
-            final puzzleThumbnail =
-                await _buildCompositeThumbnail() ?? _photoThumbnails[0];
-
-            // 保存历史记录
-            final photoIds = _selectedPhotos.map((p) => p.id).toList();
-            final coverMs = List<int>.generate(
-              _selectedPhotos.length,
-              (i) => _coverFrameTime[i] ?? -1,
-            );
-            final history = PuzzleHistory(
-              id: DateTime.now().millisecondsSinceEpoch.toString(),
-              photoIds: photoIds,
-              createdAt: DateTime.now(),
-              thumbnail: puzzleThumbnail,
-              photoCount: _selectedPhotos.length,
-              lastLayoutId: _currentLayout?.id,
-              lastRatio: _canvasConfig.ratio,
-              lastCoverFrameTimeMs: coverMs,
-            );
-            await ref.read(puzzleHistoryProvider.notifier).addHistory(history);
-
-            // 跳转到完成页面
-            Navigator.of(context).pushReplacement(
-              MaterialPageRoute(
-                builder: (context) => CompletionScreen(
-                  thumbnail: puzzleThumbnail,
-                  photoCount: _selectedPhotos.length,
-                  imageAspectRatio: _canvasConfig.width / _canvasConfig.height,
-                ),
-              ),
-            );
-          } else {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('保存失败，请重试'),
-                duration: Duration(seconds: 2),
-                behavior: SnackBarBehavior.floating,
-                backgroundColor: Colors.red,
-              ),
-            );
-          }
-        }
-        return;
-      }
-
-      // 旧版软编码逻辑（作为备用，仅在未使用新画布时）
-      debugPrint('⚠️ 使用旧版软编码模式（较慢）');
-      messageNotifier.value = '正在加载视频帧...';
-      
-      // [保留原有的软编码逻辑作为备用...]
-      for (int i = 0; i < _selectedPhotos.length; i++) {
-        if (!_videoFrames.containsKey(i)) {
-          await _extractVideoFrames(i);
-        }
-        progressNotifier.value = 0.1 * (i + 1) / _selectedPhotos.length;
-      }
-
-      final tempDir = await getTemporaryDirectory();
-      final timestamp = DateTime.now().millisecondsSinceEpoch;
-      final frameImagePaths = <String>[];
-
-      // 简化的旧版逻辑（纵向拼接）
-      List<Uint8List> getFrameCellData(int frameIdx) {
-        final cellFrames = <Uint8List>[];
-        for (int i = 0; i < _selectedPhotos.length; i++) {
-          if (frameIdx == 0) {
-            final coverData = _coverFrames[i] ?? _photoThumbnails[i];
-            if (coverData != null) cellFrames.add(coverData);
-          } else {
-            final frames = _videoFrames[i];
-            if (frames != null && frames.isNotEmpty) {
-              final progress = frameIdx / (kTotalFrames - 1);
-              final currentTimeMs = progress * _maxDurationMs;
-              final videoDurationMs = _videoDurations[i] ?? 3000; // Apple标准3秒
-              if (currentTimeMs >= videoDurationMs) {
-                final coverData = _coverFrames[i] ?? _photoThumbnails[i];
-                if (coverData != null) cellFrames.add(coverData);
-              } else {
-                final videoProgress =
-                    (currentTimeMs / videoDurationMs).clamp(0.0, 1.0);
-                final fi = (videoProgress * (frames.length - 1))
-                    .round()
-                    .clamp(0, frames.length - 1);
-                cellFrames.add(frames[fi]);
-              }
-            } else if (_photoThumbnails[i] != null) {
-              cellFrames.add(_photoThumbnails[i]!);
-            }
-          }
-        }
-        return cellFrames;
-      }
-
-      messageNotifier.value = '正在渲染帧...';
-      for (int frameIdx = 0; frameIdx < kTotalFrames; frameIdx++) {
-        final cellData = getFrameCellData(frameIdx);
-        final framePath =
-            '${tempDir.path}/puzzle_frame_${timestamp}_$frameIdx.jpg';
-        await _stitchImages(cellData, framePath);
-        frameImagePaths.add(framePath);
-        progressNotifier.value = 0.1 + 0.7 * (frameIdx + 1) / kTotalFrames;
-      }
-
-      debugPrint('⏱️ 软编码渲染完成，耗时 ${sw.elapsedMilliseconds}ms');
-
-      messageNotifier.value = '正在保存到相册...';
-      progressNotifier.value = 0.85;
-
-      final success =
-          await LivePhotoBridge.createLivePhoto(frameImagePaths, 0);
-
-      progressNotifier.value = 1.0;
-      messageNotifier.value = AppLocalizations.of(context)!.completed;
-
-      if (mounted) {
-        Navigator.of(context, rootNavigator: true).pop();
-
-        if (success) {
-          // 生成合成缩略图
-          final puzzleThumbnail =
-              await _buildCompositeThumbnail() ?? _photoThumbnails[0];
-
-          final photoIds = _selectedPhotos.map((p) => p.id).toList();
-          final coverMs = List<int>.generate(
-            _selectedPhotos.length,
-            (i) => _coverFrameTime[i] ?? -1,
-          );
-          final history = PuzzleHistory(
-            id: DateTime.now().millisecondsSinceEpoch.toString(),
-            photoIds: photoIds,
-            createdAt: DateTime.now(),
-            thumbnail: puzzleThumbnail,
-            photoCount: _selectedPhotos.length,
-            lastLayoutId: _currentLayout?.id,
-            lastRatio: _canvasConfig.ratio,
-            lastCoverFrameTimeMs: coverMs,
-          );
-          await ref.read(puzzleHistoryProvider.notifier).addHistory(history);
-
-          Navigator.of(context).pushReplacement(
-            MaterialPageRoute(
-              builder: (context) => CompletionScreen(
-                thumbnail: puzzleThumbnail,
-                photoCount: _selectedPhotos.length,
-                imageAspectRatio: 3 / 4, // 默认比例
-              ),
-            ),
-          );
-        } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('保存失败，请重试'),
-              duration: Duration(seconds: 2),
-              behavior: SnackBarBehavior.floating,
-              backgroundColor: Colors.red,
-            ),
-          );
-        }
-      }
-
-      // 清理临时文件
-      for (final path in frameImagePaths) {
-        try {
-          await File(path).delete();
-        } catch (e) {
-          debugPrint('清理临时文件失败: $e');
-        }
-      }
-    } catch (e) {
-      debugPrint('保存拼图失败: $e');
-      if (mounted) {
-        Navigator.of(context, rootNavigator: true).pop();
-        ScaffoldMessenger.of(context).clearSnackBars();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('保存失败: $e'),
-            duration: const Duration(seconds: 3),
-            behavior: SnackBarBehavior.floating,
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    } finally {
-      progressNotifier.dispose();
-      messageNotifier.dispose();
-    }
-  }
-
-  // 🔥 拼接多张图片为一张竖向长图（高清版本）
-  Future<void> _stitchImages(
-      List<Uint8List> imageDataList, String outputPath) async {
-    if (imageDataList.isEmpty) return;
-
-    // 🔥 解码所有图片，保持原始分辨率
-    final images = <ui.Image>[];
-    for (final imageData in imageDataList) {
-      // 不限制分辨率，保持原始大小
-      final codec = await ui.instantiateImageCodec(
-        imageData,
-        targetWidth: null, // 不缩放
-        targetHeight: null, // 不缩放
-      );
-      final frame = await codec.getNextFrame();
-      images.add(frame.image);
-    }
-
-    // 计算拼接后的总高度和统一宽度
-    int maxWidth = 0;
-    int totalHeight = 0;
-
-    for (final image in images) {
-      if (image.width > maxWidth) {
-        maxWidth = image.width;
-      }
-    }
-
-    // 🔥 限制最大宽度，避免图片过大
-    const int MAX_WIDTH = 2000;
-    if (maxWidth > MAX_WIDTH) {
-      debugPrint('⚠️ 图片宽度 $maxWidth 超过限制，缩放到 $MAX_WIDTH');
-      maxWidth = MAX_WIDTH;
-    }
-
-    // 计算每张图片按统一宽度缩放后的高度
-    for (final image in images) {
-      final aspectRatio = image.height / image.width;
-      final scaledHeight = (maxWidth * aspectRatio).round();
-      totalHeight += scaledHeight;
-    }
-
-    debugPrint('🖼️ 拼接图片尺寸: ${maxWidth}x$totalHeight');
-
-    // 创建画布（高质量）
-    final recorder = ui.PictureRecorder();
-    final canvas = Canvas(recorder);
-    final paint = Paint()..filterQuality = FilterQuality.high; // 🔥 使用高质量过滤
-
-    int currentY = 0;
-
-    // 绘制每张图片
-    for (final image in images) {
-      final aspectRatio = image.height / image.width;
-      final scaledHeight = (maxWidth * aspectRatio).round();
-
-      final srcRect =
-          Rect.fromLTWH(0, 0, image.width.toDouble(), image.height.toDouble());
-      final dstRect = Rect.fromLTWH(
-          0, currentY.toDouble(), maxWidth.toDouble(), scaledHeight.toDouble());
-
-      canvas.drawImageRect(image, srcRect, dstRect, paint);
-      currentY += scaledHeight;
-    }
-
-    // 转换为图片（保持原始分辨率）
-    final picture = recorder.endRecording();
-    final finalImage = await picture.toImage(maxWidth, totalHeight);
-    final byteData =
-        await finalImage.toByteData(format: ui.ImageByteFormat.png);
-    final pngBytes = byteData!.buffer.asUint8List();
-
-    // 保存到文件
-    await File(outputPath).writeAsBytes(pngBytes);
-
-    debugPrint(
-        '✅ 拼接完成: ${(pngBytes.length / 1024 / 1024).toStringAsFixed(2)} MB');
-
-    // 清理资源
-    for (final image in images) {
-      image.dispose();
-    }
-    finalImage.dispose();
-  }
-
 
   // 🔥 构建新画布（自由交互）
   Widget _buildNewCanvas() {
@@ -1461,7 +698,7 @@ class _PuzzleEditorScreenState extends ConsumerState<PuzzleEditorScreen>
           return;
 
         // 先恢复上一张的帧编辑（如果有）
-        _revertFrameEdit();
+        revertFrameEdit();
 
         // 保存当前图片数据，用于取消时恢复
         if (blockIndex >= 0 && blockIndex < _imageBlocks.length) {
@@ -1473,7 +710,7 @@ class _PuzzleEditorScreenState extends ConsumerState<PuzzleEditorScreen>
           _editorState = EditorState.single;
           if (blockIndex >= 0) {
             _selectedCellIndex = blockIndex;
-            _initVideoPlayer(blockIndex);
+            initVideoPlayer(blockIndex);
           }
         });
       },
@@ -1560,9 +797,9 @@ class _PuzzleEditorScreenState extends ConsumerState<PuzzleEditorScreen>
                     ref.read(selectedLivePhotoIdsProvider.notifier).clear();
                     Navigator.pop(context);
                   },
-                  onDone: _savePuzzleToGallery,
+                  onDone: savePuzzleToGallery,
                   onPlayLive:
-                      _selectedPhotos.isNotEmpty ? _playLivePuzzle : null,
+                      _selectedPhotos.isNotEmpty ? playLivePuzzle : null,
                   isPlayingLive: _isPlayingLivePuzzle,
                 ),
 
@@ -1614,12 +851,12 @@ class _PuzzleEditorScreenState extends ConsumerState<PuzzleEditorScreen>
                     scrollController: scrollController,
                     onFrameTimeChanged: (timeMs) {
                       // 节流提取帧并实时更新画布
-                      _throttledExtractFrame(_selectedCellIndex, timeMs);
+                      throttledExtractFrame(_selectedCellIndex, timeMs);
                     },
-                    onConfirm: () => _handleSetCover(_selectedCellIndex),
+                    onConfirm: () => handleSetCover(_selectedCellIndex),
                     onCancel: () {
                       // 取消：恢复原图并取消选中
-                      _revertFrameEdit();
+                      revertFrameEdit();
                       setState(() {
                         _selectedCellIndex = -1;
                         _selectedBlockId = null;
@@ -1635,129 +872,4 @@ class _PuzzleEditorScreenState extends ConsumerState<PuzzleEditorScreen>
     ); // WillPopScope
   }
 
-  /// 生成拼图画布的合成缩略图（用于完成页展示）
-  Future<Uint8List?> _buildCompositeThumbnail() async {
-    if (_imageBlocks.isEmpty) return null;
-    const double maxSide = 800.0;
-    final ratio = _canvasConfig.width / _canvasConfig.height;
-    final double canvasW = ratio >= 1.0 ? maxSide : maxSide * ratio;
-    final double canvasH = ratio >= 1.0 ? maxSide / ratio : maxSide;
-
-    final recorder = ui.PictureRecorder();
-    final canvas = Canvas(recorder, Rect.fromLTWH(0, 0, canvasW, canvasH));
-    canvas.drawRect(
-      Rect.fromLTWH(0, 0, canvasW, canvasH),
-      Paint()..color = const Color(0xFF000000),
-    );
-
-    for (int i = 0; i < _imageBlocks.length; i++) {
-      final block = _imageBlocks[i];
-      final imageData = _coverFrames[i] ?? _photoThumbnails[i];
-      if (imageData == null) continue;
-      try {
-        final codec = await ui.instantiateImageCodec(imageData);
-        final frame = await codec.getNextFrame();
-        final image = frame.image;
-
-        final dstRect = Rect.fromLTWH(
-          block.x * canvasW,
-          block.y * canvasH,
-          block.width * canvasW,
-          block.height * canvasH,
-        );
-        final srcW = image.width.toDouble();
-        final srcH = image.height.toDouble();
-        final srcAspect = srcW / srcH;
-        final dstAspect = dstRect.width / dstRect.height;
-
-        Rect srcRect;
-        if (srcAspect > dstAspect) {
-          final cropW = srcH * dstAspect;
-          final offsetX = (block.offsetX / _canvasConfig.width) * srcW;
-          final cropX = ((srcW - cropW) / 2 - offsetX).clamp(0.0, srcW - cropW);
-          srcRect = Rect.fromLTWH(cropX, 0, cropW, srcH);
-        } else {
-          final cropH = srcW / dstAspect;
-          final offsetY = (block.offsetY / _canvasConfig.height) * srcH;
-          final cropY = ((srcH - cropH) / 2 - offsetY).clamp(0.0, srcH - cropH);
-          srcRect = Rect.fromLTWH(0, cropY, srcW, cropH);
-        }
-
-        canvas.save();
-        canvas.clipRect(dstRect);
-        canvas.drawImageRect(
-          image,
-          srcRect,
-          dstRect,
-          Paint()..filterQuality = FilterQuality.medium,
-        );
-        canvas.restore();
-        image.dispose();
-      } catch (e) {
-        debugPrint('⚠️ 合成缩略图 block[$i] 失败: $e');
-      }
-    }
-
-    final picture = recorder.endRecording();
-    final finalImage = await picture.toImage(canvasW.round(), canvasH.round());
-    final byteData = await finalImage.toByteData(format: ui.ImageByteFormat.png);
-    finalImage.dispose();
-    return byteData?.buffer.asUint8List();
-  }
-
-  /// 设置封面帧（确定时调用）
-  Future<void> _handleSetCover(int cellIndex) async {
-    _frameExtractTimer?.cancel();
-    final frameData = await _captureVideoFrame(cellIndex);
-
-    if (frameData != null) {
-      final controller = _videoControllers[cellIndex];
-      // 优先用滑块记录的时间，避免 seekTo 异步未完成导致读到错误位置
-      final timeMs = _currentSliderTimeMs[cellIndex] ??
-          controller?.value.position.inMilliseconds ??
-          0;
-      debugPrint('📸 设置封面: cell=$cellIndex, time=${timeMs}ms (slider=${_currentSliderTimeMs[cellIndex]}, ctrl=${controller?.value.position.inMilliseconds})');
-
-      setState(() {
-        _coverFrames[cellIndex] = frameData;
-        _coverFrameTime[cellIndex] = timeMs;
-        _currentDisplayImages[cellIndex] = frameData;
-        // 更新画布图片为确认的封面帧
-        if (cellIndex < _imageBlocks.length) {
-          _imageBlocks[cellIndex] = _imageBlocks[cellIndex].copyWith(
-            imageData: frameData,
-          );
-        }
-      });
-
-      // 确认后清除预编辑数据（这样取消选中不会恢复）
-      _preEditImageData.remove(cellIndex);
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              '${AppLocalizations.of(context)!.frameSetSuccess} (${(timeMs / 1000).toStringAsFixed(2)}s)',
-            ),
-            duration: const Duration(seconds: 2),
-            behavior: SnackBarBehavior.floating,
-            backgroundColor: const Color(0xFFFF4D7D),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-          ),
-        );
-      }
-    } else {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(AppLocalizations.of(context)!.frameSetFailed),
-            duration: const Duration(seconds: 2),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    }
-  }
 }

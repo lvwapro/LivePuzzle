@@ -108,25 +108,25 @@ extension _EditorExportLogic on _PuzzleEditorScreenState {
         }
       });
 
-      final success = await LivePhotoBridge.createLivePhotoHardware(
+      // 并行：导出 + 预构建缩略图
+      final exportFuture = LivePhotoBridge.createLivePhotoHardware(
         assetIds: assetIds,
         layoutConfig: layoutConfig,
         coverTimes: coverTimes,
       );
+      final thumbnailFuture = _buildCompositeThumbnail();
+
+      final results = await Future.wait([exportFuture, thumbnailFuture]);
+      final success = results[0] as bool;
+      final puzzleThumbnail = (results[1] as Uint8List?) ?? _photoThumbnails[0];
 
       progressTimer.cancel();
-      progressNotifier.value = 1.0;
       debugPrint('⏱️ 导出完成，总耗时 ${sw.elapsedMilliseconds}ms');
-
-      await Future.delayed(const Duration(milliseconds: 400));
 
       if (mounted) {
         Navigator.of(context, rootNavigator: true).pop();
 
         if (success) {
-          final puzzleThumbnail =
-              await _buildCompositeThumbnail() ?? _photoThumbnails[0];
-
           final photoIds = _selectedPhotos.map((p) => p.id).toList();
           final coverMs = List<int>.generate(
             _selectedPhotos.length,
@@ -142,9 +142,8 @@ extension _EditorExportLogic on _PuzzleEditorScreenState {
             lastRatio: _canvasConfig.ratio,
             lastCoverFrameTimeMs: coverMs,
           );
-          await ref
-              .read(puzzleHistoryProvider.notifier)
-              .addHistory(history);
+          // 不等待历史记录写入，立即跳转
+          ref.read(puzzleHistoryProvider.notifier).addHistory(history);
 
           Navigator.of(context).pushReplacement(
             MaterialPageRoute(

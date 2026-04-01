@@ -25,7 +25,6 @@ class CanvasImageBlockWidget extends StatelessWidget {
   final double moveDeltaX;
   final double moveDeltaY;
   final VideoPlayerController? videoController;
-  final bool isPlaying;
 
   const CanvasImageBlockWidget({
     super.key,
@@ -37,7 +36,6 @@ class CanvasImageBlockWidget extends StatelessWidget {
     required this.moveDeltaX,
     required this.moveDeltaY,
     this.videoController,
-    this.isPlaying = false,
   });
 
   @override
@@ -55,9 +53,8 @@ class CanvasImageBlockWidget extends StatelessWidget {
       previewOy = (block.offsetY + moveDeltaY).clamp(-maxOy, maxOy);
     }
 
-    final useVideo = isPlaying &&
-        videoController != null &&
-        videoController!.value.isInitialized;
+    final useVideo =
+        videoController != null && videoController!.value.isInitialized;
 
     final double contentAR;
     if (useVideo) {

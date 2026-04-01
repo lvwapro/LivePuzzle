@@ -66,6 +66,11 @@ extension _EditorCoverLogic on _PuzzleEditorScreenState {
       final controller = VideoPlayerController.file(videoFile);
       await controller.initialize();
       if (mounted) {
+        // 如果有已保存的封面帧时间，seek 到该位置
+        final savedMs = _coverFrameTime[cellIndex];
+        if (savedMs != null && savedMs >= 0) {
+          await controller.seekTo(Duration(milliseconds: savedMs));
+        }
         setState(() {
           _videoControllers[cellIndex] = controller;
         });
@@ -116,52 +121,6 @@ extension _EditorCoverLogic on _PuzzleEditorScreenState {
       }
       _preEditImageData.remove(_selectedCellIndex);
     }
-  }
-
-  void throttledExtractFrame(int cellIndex, int timeMs) {
-    if (!mounted || cellIndex < 0 || cellIndex >= _imageBlocks.length) return;
-
-    _currentSliderTimeMs[cellIndex] = timeMs;
-
-    final frames = _videoFrames[cellIndex];
-    if (frames != null && frames.isNotEmpty) {
-      final videoDurationMs = _videoDurations[cellIndex] ?? 2000;
-      final videoProgress =
-          (timeMs / videoDurationMs).clamp(0.0, 1.0);
-      final frameIndex = (videoProgress * (frames.length - 1))
-          .round()
-          .clamp(0, frames.length - 1);
-
-      setState(() {
-        _imageBlocks[cellIndex] =
-            _imageBlocks[cellIndex].copyWith(imageData: frames[frameIndex]);
-      });
-      return;
-    }
-
-    _frameExtractTimer?.cancel();
-    _frameExtractTimer = Timer(const Duration(milliseconds: 80), () async {
-      if (!mounted || cellIndex >= _imageBlocks.length) return;
-      final videoPath = _videoPaths[cellIndex];
-      if (videoPath == null) return;
-      try {
-        final framePath =
-            await LivePhotoBridge.extractFrame(videoPath, timeMs);
-        if (framePath != null && mounted) {
-          final file = File(framePath);
-          if (await file.exists()) {
-            final bytes = await file.readAsBytes();
-            setState(() {
-              _imageBlocks[cellIndex] =
-                  _imageBlocks[cellIndex].copyWith(imageData: bytes);
-            });
-            await file.delete();
-          }
-        }
-      } catch (e) {
-        debugPrint('⚠️ 原生 extractFrame 失败: $e');
-      }
-    });
   }
 
   Future<void> handleSetCover(int cellIndex) async {

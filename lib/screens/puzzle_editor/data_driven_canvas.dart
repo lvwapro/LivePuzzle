@@ -19,6 +19,8 @@ class DataDrivenCanvas extends StatefulWidget {
   final VoidCallback onCanvasTap;
   final bool isPlaying;
   final Map<int, VideoPlayerController?>? videoControllers;
+  final int? frameEditingBlockIdx;
+  final VideoPlayerController? frameEditingController;
 
   const DataDrivenCanvas({
     super.key,
@@ -32,6 +34,8 @@ class DataDrivenCanvas extends StatefulWidget {
     required this.onCanvasTap,
     this.isPlaying = false,
     this.videoControllers,
+    this.frameEditingBlockIdx,
+    this.frameEditingController,
   });
 
   @override
@@ -445,6 +449,14 @@ class _DataDrivenCanvasState extends State<DataDrivenCanvas> {
                                   _isMovingImage && _movingBlockId == block.id;
                               final blockIdx = widget.imageBlocks
                                   .indexWhere((b) => b.id == block.id);
+                              VideoPlayerController? vc;
+                              if (widget.isPlaying &&
+                                  widget.videoControllers != null) {
+                                vc = widget.videoControllers![blockIdx];
+                              } else if (blockIdx ==
+                                  widget.frameEditingBlockIdx) {
+                                vc = widget.frameEditingController;
+                              }
                               return CanvasImageBlockWidget(
                                 key: ValueKey(block.id),
                                 block: block,
@@ -455,11 +467,7 @@ class _DataDrivenCanvasState extends State<DataDrivenCanvas> {
                                     isMoving ? _isDeltaWithinBounds() : true,
                                 moveDeltaX: _moveDeltaX,
                                 moveDeltaY: _moveDeltaY,
-                                isPlaying: widget.isPlaying,
-                                videoController:
-                                    widget.isPlaying && widget.videoControllers != null
-                                        ? widget.videoControllers![blockIdx]
-                                        : null,
+                                videoController: vc,
                               );
                             }),
                             // 共享边拖动条（实时预览）

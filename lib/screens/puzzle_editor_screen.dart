@@ -249,12 +249,21 @@ class _PuzzleEditorScreenState extends ConsumerState<PuzzleEditorScreen>
       );
     }
 
+    final isFrameEditing = _editorState == EditorState.single &&
+        _selectedCellIndex >= 0 &&
+        !_isPlayingLivePuzzle &&
+        _videoControllers.containsKey(_selectedCellIndex) &&
+        _videoControllers[_selectedCellIndex] != null;
+
     return DataDrivenCanvas(
       canvasConfig: _canvasConfig,
       imageBlocks: _imageBlocks,
       selectedBlockId: _selectedBlockId,
       isPlaying: _isPlayingLivePuzzle,
       videoControllers: _isPlayingLivePuzzle ? _videoControllers : null,
+      frameEditingBlockIdx: isFrameEditing ? _selectedCellIndex : null,
+      frameEditingController:
+          isFrameEditing ? _videoControllers[_selectedCellIndex] : null,
       onBlockTap: (blockId) {
         if (_isPlayingLivePuzzle) return;
         final blockIndex = _imageBlocks.indexWhere((b) => b.id == blockId);
@@ -416,8 +425,10 @@ class _PuzzleEditorScreenState extends ConsumerState<PuzzleEditorScreen>
                     isCover: _coverFrames[_selectedCellIndex] != null,
                     scrollController: scrollController,
                     onFrameTimeChanged: (timeMs) {
-                      // 节流提取帧并实时更新画布
-                      throttledExtractFrame(_selectedCellIndex, timeMs);
+                      _currentSliderTimeMs[_selectedCellIndex] = timeMs;
+                      _videoControllers[_selectedCellIndex]?.seekTo(
+                        Duration(milliseconds: timeMs),
+                      );
                     },
                     onConfirm: () => handleSetCover(_selectedCellIndex),
                     onCancel: () {

@@ -674,6 +674,77 @@ public class LivePhotoBridgePlugin: NSObject, FlutterPlugin {
     }
   }
   
+  /// 从单张静态图生成固定时长视频（用于非实况图片参与拼图导出）
+  /// - Parameters:
+  ///   - image: 源图
+  ///   - outputURL: 输出 MOV 路径
+  ///   - durationSeconds: 时长（秒），需与合成器 targetDuration 一致（3）
+  private func createStaticVideoFromImage(image: UIImage, outputURL: URL, durationSeconds: Int = 3) throws -> AVAsset {
+    let videoSize = image.size
+    let fps: Int32 = 30
+    let frameCount = Int64(durationSeconds) * Int64(fps)
+    let frameDuration = CMTime(value: 1, timescale: fps)
+
+    try? FileManager.default.removeItem(at: outputURL)
+
+    let writer = try AVAssetWriter(outputURL: outputURL, fileType: .mov)
+    let videoSettings: [String: Any] = [
+      AVVideoCodecKey: AVVideoCodecType.h264,
+      AVVideoWidthKey: Int(videoSize.width),
+      AVVideoHeightKey: Int(videoSize.height),
+      AVVideoCompressionPropertiesKey: [
+        AVVideoAverageBitRateKey: 6_000_000,
+        AVVideoProfileLevelKey: AVVideoProfileLevelH264HighAutoLevel
+      ]
+    ]
+    let writerInput = AVAssetWriterInput(mediaType: .video, outputSettings: videoSettings)
+    writerInput.expectsMediaDataInRealTime = false
+    let adaptor = AVAssetWriterInputPixelBufferAdaptor(
+      assetWriterInput: writerInput,
+      sourcePixelBufferAttributes: [
+        kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_32BGRA,
+        kCVPixelBufferWidthKey as String: Int(videoSize.width),
+        kCVPixelBufferHeightKey as String: Int(videoSize.height)
+      ]
+    )
+    guard writer.canAdd(writerInput) else {
+      throw NSError(domain: "LivePhotoBridge", code: -10,
+                    userInfo: [NSLocalizedDescriptionKey: "Cannot add video writer input for static image"])
+    }
+    writer.add(writerInput)
+    writer.startWriting()
+    writer.startSession(atSourceTime: .zero)
+
+    guard let pixelBuffer = pixelBuffer(from: image, size: videoSize) else {
+      throw NSError(domain: "LivePhotoBridge", code: -11,
+                    userInfo: [NSLocalizedDescriptionKey: "Failed to create pixel buffer from image"])
+    }
+
+    for i in 0..<frameCount {
+      while !writerInput.isReadyForMoreMediaData {
+        Thread.sleep(forTimeInterval: 0.01)
+      }
+      let presentationTime = CMTime(value: i, timescale: fps)
+      _ = adaptor.append(pixelBuffer, withPresentationTime: presentationTime)
+    }
+    writerInput.markAsFinished()
+
+    let semaphore = DispatchSemaphore(value: 0)
+    var finishError: Error?
+    writer.finishWriting {
+      finishError = writer.error
+      semaphore.signal()
+    }
+    semaphore.wait()
+    if let error = finishError { throw error }
+    if writer.status != .completed {
+      throw NSError(domain: "LivePhotoBridge", code: -12,
+                    userInfo: [NSLocalizedDescriptionKey: "Static video write failed: \(writer.status.rawValue)"])
+    }
+    print("✅ 静态图已生成为 \(durationSeconds)s 视频: \(Int(videoSize.width))×\(Int(videoSize.height))")
+    return AVURLAsset(url: outputURL)
+  }
+
   // 🔥 将 UIImage 转换为 CVPixelBuffer（使用 BGRA 格式，与 CG drawing 匹配）
   private func pixelBuffer(from image: UIImage, size: CGSize) -> CVPixelBuffer? {
     let attrs = [
@@ -763,24 +834,43 @@ public class LivePhotoBridgePlugin: NSObject, FlutterPlugin {
           isLongImage: isLongImage
         )
 
-        // 2. 获取视频 AVAsset（导出到临时文件）
+        // 2. 若全部为静态图则只导出合成后的静态照片，不生成 Live Photo 视频
+        let allStatic = assetIds.allSatisfy { !self.assetHasPairedVideo(assetId: $0) }
+        if allStatic {
+          print("📷 全部为静态图，仅导出合成静态照片")
+          guard let compositeImage = self.compositeHighResStill(assetIds: assetIds, videoAssets: [], config: config) else {
+            throw NSError(domain: "LivePhotoBridge", code: -8,
+                          userInfo: [NSLocalizedDescriptionKey: "Failed to composite still image"])
+          }
+          let imageURL = FileManager.default.temporaryDirectory.appendingPathComponent("static_export_\(UUID().uuidString).jpg")
+          try self.writeImageToFile(compositeImage, to: imageURL)
+          try self.saveStaticPhotoToLibrary(imageURL: imageURL)
+          try? FileManager.default.removeItem(at: imageURL)
+          DispatchQueue.main.async {
+            print("✅ 静态图导出完成！")
+            result(true)
+          }
+          return
+        }
+
+        // 3. 获取视频 AVAsset（实况或由静态图生成的 3s 视频）
         print("📥 获取 \(assetIds.count) 个视频资源...")
         let videoAssets = try self.fetchVideoAssetsSync(assetIds: assetIds)
 
-        // 3. 创建合成器
+        // 4. 创建合成器
         let compositor = try HardwareVideoCompositor(videoAssets: videoAssets, config: config)
 
-        // 4. 生成 Live Photo 唯一标识
+        // 5. 生成 Live Photo 唯一标识
         let assetIdentifier = UUID().uuidString
         print("🆔 Live Photo 标识符: \(assetIdentifier)")
 
-        // 5. 合成 + 注入元数据（输出到 videoURL）
+        // 6. 合成 + 注入元数据（输出到 videoURL）
         let tempDir = FileManager.default.temporaryDirectory
         let videoURL = tempDir.appendingPathComponent("lp_final_\(UUID().uuidString).mov")
         print("⚡ 开始硬件合成...")
         try compositor.compose(outputURL: videoURL, assetIdentifier: assetIdentifier)
 
-        // 6. 合成高分辨率封面（用户设置了自定义帧时从源视频提取，否则用原始静态图）
+        // 7. 合成高分辨率封面（用户设置了自定义帧时从源视频提取，否则用原始静态图）
         print("📸 合成高分辨率封面图片... coverTimes=\(coverTimes)")
         let coverTimeMs = coverTimes.first ?? 0
         let coverImage: UIImage
@@ -793,11 +883,11 @@ public class LivePhotoBridgePlugin: NSObject, FlutterPlugin {
         let coverImageURL = tempDir.appendingPathComponent("lp_cover_\(UUID().uuidString).jpg")
         try self.writeCoverImage(coverImage, to: coverImageURL, assetIdentifier: assetIdentifier, coverTimeMs: coverTimeMs)
 
-        // 7. 保存到相册
+        // 8. 保存到相册
         print("💾 保存到相册...")
         try self.saveLivePhotoToLibrary(videoURL: videoURL, imageURL: coverImageURL)
 
-        // 8. 清理
+        // 9. 清理
         try? FileManager.default.removeItem(at: videoURL)
         try? FileManager.default.removeItem(at: coverImageURL)
 
@@ -819,7 +909,15 @@ public class LivePhotoBridgePlugin: NSObject, FlutterPlugin {
     }
   }
 
-  /// 同步获取多个 Live Photo 的视频 AVAsset（写到临时文件）
+  /// 同步判断资源是否包含配对视频（实况）
+  private func assetHasPairedVideo(assetId: String) -> Bool {
+    let fetchResult = PHAsset.fetchAssets(withLocalIdentifiers: [assetId], options: nil)
+    guard let asset = fetchResult.firstObject else { return false }
+    let resources = PHAssetResource.assetResources(for: asset)
+    return resources.contains(where: { $0.type == .pairedVideo })
+  }
+
+  /// 同步获取多个资源的视频 AVAsset（实况用配对视频，非实况用静态图生成的 3s 视频）
   private func fetchVideoAssetsSync(assetIds: [String]) throws -> [AVAsset] {
     var videoAssets: [AVAsset] = []
 
@@ -831,64 +929,68 @@ public class LivePhotoBridgePlugin: NSObject, FlutterPlugin {
       }
 
       let resources = PHAssetResource.assetResources(for: asset)
-      guard let videoResource = resources.first(where: { $0.type == .pairedVideo }) else {
-        throw NSError(domain: "LivePhotoBridge", code: -2,
-                      userInfo: [NSLocalizedDescriptionKey: "No paired video for \(assetId)"])
-      }
+      let videoResource = resources.first(where: { $0.type == .pairedVideo })
 
-      let tempURL = FileManager.default.temporaryDirectory
-        .appendingPathComponent("src_video_\(UUID().uuidString).mov")
+      if let videoResource = videoResource {
+        // 实况：导出配对视频
+        let tempURL = FileManager.default.temporaryDirectory
+          .appendingPathComponent("src_video_\(UUID().uuidString).mov")
 
-      let semaphore = DispatchSemaphore(value: 0)
-      var fetchError: Error?
+        let semaphore = DispatchSemaphore(value: 0)
+        var fetchError: Error?
 
-      PHAssetResourceManager.default().writeData(
-        for: videoResource, toFile: tempURL, options: nil
-      ) { error in
-        fetchError = error
-        semaphore.signal()
-      }
-      
-      // 等待最多30秒
-      let timeout = DispatchTime.now() + .seconds(30)
-      let result = semaphore.wait(timeout: timeout)
-      
-      if result == .timedOut {
-        throw NSError(domain: "LivePhotoBridge", code: -3,
-                      userInfo: [NSLocalizedDescriptionKey: "Timeout loading video for \(assetId)"])
-      }
+        PHAssetResourceManager.default().writeData(
+          for: videoResource, toFile: tempURL, options: nil
+        ) { error in
+          fetchError = error
+          semaphore.signal()
+        }
 
-      if let error = fetchError { throw error }
-      
-      // 验证文件是否真的存在且有内容
-      guard FileManager.default.fileExists(atPath: tempURL.path) else {
-        throw NSError(domain: "LivePhotoBridge", code: -4,
-                      userInfo: [NSLocalizedDescriptionKey: "Video file not created for \(assetId)"])
+        let timeout = DispatchTime.now() + .seconds(30)
+        let result = semaphore.wait(timeout: timeout)
+
+        if result == .timedOut {
+          throw NSError(domain: "LivePhotoBridge", code: -3,
+                        userInfo: [NSLocalizedDescriptionKey: "Timeout loading video for \(assetId)"])
+        }
+        if let error = fetchError { throw error }
+
+        guard FileManager.default.fileExists(atPath: tempURL.path) else {
+          throw NSError(domain: "LivePhotoBridge", code: -4,
+                        userInfo: [NSLocalizedDescriptionKey: "Video file not created for \(assetId)"])
+        }
+
+        let avAsset = AVURLAsset(url: tempURL)
+        let tracks = avAsset.tracks(withMediaType: .video)
+        guard !tracks.isEmpty else {
+          throw NSError(domain: "LivePhotoBridge", code: -5,
+                        userInfo: [NSLocalizedDescriptionKey: "No video track in \(assetId)"])
+        }
+
+        let generator = AVAssetImageGenerator(asset: avAsset)
+        generator.appliesPreferredTrackTransform = true
+        let testTime = CMTime(value: 0, timescale: 1)
+        do {
+          _ = try generator.copyCGImage(at: testTime, actualTime: nil)
+          print("✅ 视频资源可解码验证通过: \(assetId.prefix(8))…")
+        } catch {
+          throw NSError(domain: "LivePhotoBridge", code: -6,
+                        userInfo: [NSLocalizedDescriptionKey: "Video not decodable: \(error)"])
+        }
+        print("📥 视频资源已导出并验证: \(assetId.prefix(8))… (\(tracks.count) tracks)")
+        videoAssets.append(avAsset)
+      } else {
+        // 非实况图片：用静态图生成 3 秒视频（与合成 targetDuration 一致）
+        guard let image = fetchStillImage(assetId: assetId) else {
+          throw NSError(domain: "LivePhotoBridge", code: -7,
+                        userInfo: [NSLocalizedDescriptionKey: "Cannot load image for non-Live asset \(assetId)"])
+        }
+        let tempURL = FileManager.default.temporaryDirectory
+          .appendingPathComponent("static_video_\(UUID().uuidString).mov")
+        let avAsset = try createStaticVideoFromImage(image: image, outputURL: tempURL, durationSeconds: 3)
+        print("📥 非实况图片已生成为静态视频: \(assetId.prefix(8))…")
+        videoAssets.append(avAsset)
       }
-      
-      let avAsset = AVURLAsset(url: tempURL)
-      
-      // 验证视频轨道是否可用（同步加载）
-      let tracks = avAsset.tracks(withMediaType: .video)
-      guard !tracks.isEmpty else {
-        throw NSError(domain: "LivePhotoBridge", code: -5,
-                      userInfo: [NSLocalizedDescriptionKey: "No video track in \(assetId)"])
-      }
-      
-      // 验证视频可解码性
-      let generator = AVAssetImageGenerator(asset: avAsset)
-      generator.appliesPreferredTrackTransform = true
-      let testTime = CMTime(value: 0, timescale: 1)
-      do {
-        _ = try generator.copyCGImage(at: testTime, actualTime: nil)
-        print("✅ 视频资源可解码验证通过: \(assetId.prefix(8))…")
-      } catch {
-        throw NSError(domain: "LivePhotoBridge", code: -6,
-                      userInfo: [NSLocalizedDescriptionKey: "Video not decodable: \(error)"])
-      }
-      
-      print("📥 视频资源已导出并验证: \(assetId.prefix(8))… (\(tracks.count) tracks)")
-      videoAssets.append(avAsset)
     }
 
     return videoAssets
@@ -1034,6 +1136,15 @@ public class LivePhotoBridgePlugin: NSObject, FlutterPlugin {
     return UIImage(cgImage: cgImage)
   }
 
+  /// 将图片写入为普通 JPEG 文件（无 Live Photo 元数据，用于纯静态图导出）
+  private func writeImageToFile(_ image: UIImage, to url: URL) throws {
+    guard let jpegData = image.jpegData(compressionQuality: 0.95) else {
+      throw NSError(domain: "LivePhotoBridge", code: -13,
+                    userInfo: [NSLocalizedDescriptionKey: "Failed to encode image as JPEG"])
+    }
+    try jpegData.write(to: url)
+  }
+
   /// 将封面图写入文件，并嵌入 MakerApple 元数据（Live Photo 配对必须）
   private func writeCoverImage(
     _ image: UIImage,
@@ -1061,6 +1172,22 @@ public class LivePhotoBridgePlugin: NSObject, FlutterPlugin {
       throw NSError(domain: "LivePhotoBridge", code: -6,
                     userInfo: [NSLocalizedDescriptionKey: "Failed to write cover image"])
     }
+  }
+
+  /// 仅保存静态照片到相册（无配对视频）
+  private func saveStaticPhotoToLibrary(imageURL: URL) throws {
+    let semaphore = DispatchSemaphore(value: 0)
+    var saveError: Error?
+    PHPhotoLibrary.shared().performChanges({
+      let request = PHAssetCreationRequest.forAsset()
+      request.addResource(with: .photo, fileURL: imageURL, options: nil)
+    }) { success, error in
+      saveError = success ? nil : (error ?? NSError(domain: "LivePhotoBridge", code: -1,
+                                                     userInfo: [NSLocalizedDescriptionKey: "Save failed"]))
+      semaphore.signal()
+    }
+    semaphore.wait()
+    if let error = saveError { throw error }
   }
 
   /// 保存 Live Photo（视频 + 封面图）到相册

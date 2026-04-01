@@ -44,7 +44,7 @@ extension _EditorLayoutLogic on _PuzzleEditorScreenState {
   }
 
   /// 应用布局（使用新的数据驱动系统）
-  void applyLayout(CanvasConfig canvas, LayoutTemplate template) async {
+  Future<void> applyLayout(CanvasConfig canvas, LayoutTemplate template) async {
     if (_selectedPhotos.isEmpty) return;
 
     final List<Uint8List> images = [];

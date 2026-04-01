@@ -44,6 +44,7 @@ class PuzzleEditorScreen extends ConsumerStatefulWidget {
 class _PuzzleEditorScreenState extends ConsumerState<PuzzleEditorScreen>
     with TickerProviderStateMixin {
   // 🔥 基础状态
+  bool _isInitialLoading = true;
   int _selectedCellIndex = -1; // -1 表示未选中任何图片
   List<AssetEntity> _selectedPhotos = [];
   final Map<int, Uint8List?> _photoThumbnails = {};
@@ -132,18 +133,11 @@ class _PuzzleEditorScreenState extends ConsumerState<PuzzleEditorScreen>
 
   // 🔥 构建新画布（自由交互）
   Widget _buildNewCanvas() {
-    if (_selectedPhotos.isEmpty) {
+    if (_isInitialLoading || _selectedPhotos.isEmpty || _imageBlocks.isEmpty) {
       return const Center(
-        child: Text('请选择照片'),
-      );
-    }
-
-    // 如果还没有应用布局，显示提示
-    if (_imageBlocks.isEmpty) {
-      return const Center(
-        child: Text(
-          '请从下方选择画布比例和布局',
-          style: TextStyle(color: Colors.white70, fontSize: 16),
+        child: CircularProgressIndicator(
+          color: Color(0xFFFF85A2),
+          strokeWidth: 3,
         ),
       );
     }
@@ -285,8 +279,8 @@ class _PuzzleEditorScreenState extends ConsumerState<PuzzleEditorScreen>
                   ),
                 ),
 
-                // 工具栏/布局面板（帧选择器弹出时隐藏）
-                if (!_isPlayingLivePuzzle && !hasVideoReady)
+                // 工具栏/布局面板（加载中/帧选择器弹出时隐藏）
+                if (!_isInitialLoading && !_isPlayingLivePuzzle && !hasVideoReady)
                   if (_editorState == EditorState.global)
                     SizedBox(
                       height: 280,

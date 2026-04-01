@@ -80,25 +80,24 @@ extension _EditorSessionLoad on _PuzzleEditorScreenState {
           template = initial.$2;
         }
 
-        setState(() {
-          _selectedPhotos = selectedAssets;
-          _canvasConfig = canvas;
-          _currentLayout = template;
+        // 先赋值但不触发 setState，避免中间态闪烁
+        _selectedPhotos = selectedAssets;
+        _canvasConfig = canvas;
+        _currentLayout = template;
 
-          for (int i = 0; i < selectedAssets.length; i++) {
-            if (!_coverFrames.containsKey(i)) {
-              _coverFrames[i] = null;
-            }
-            if (useRestore &&
-                restore.lastCoverFrameTimeMs != null &&
-                i < restore.lastCoverFrameTimeMs!.length &&
-                restore.lastCoverFrameTimeMs![i] >= 0) {
-              _coverFrameTime[i] = restore.lastCoverFrameTimeMs![i];
-            } else {
-              _coverFrameTime[i] = null;
-            }
+        for (int i = 0; i < selectedAssets.length; i++) {
+          if (!_coverFrames.containsKey(i)) {
+            _coverFrames[i] = null;
           }
-        });
+          if (useRestore &&
+              restore.lastCoverFrameTimeMs != null &&
+              i < restore.lastCoverFrameTimeMs!.length &&
+              restore.lastCoverFrameTimeMs![i] >= 0) {
+            _coverFrameTime[i] = restore.lastCoverFrameTimeMs![i];
+          } else {
+            _coverFrameTime[i] = null;
+          }
+        }
 
         int maxDurationMs = 2000;
         for (int i = 0; i < selectedAssets.length; i++) {
@@ -148,28 +147,34 @@ extension _EditorSessionLoad on _PuzzleEditorScreenState {
           }
         }
 
-        if (mounted && loadedThumbnails.isNotEmpty) {
-          setState(() {}); // 批量刷新一次
-        }
-
         if (mounted &&
             loadedThumbnails.isNotEmpty &&
             _currentLayout != null) {
-          applyLayout(_canvasConfig, _currentLayout!);
+          await applyLayout(_canvasConfig, _currentLayout!);
 
           // 恢复区块变换（位移/缩放/槽位交换）
           if (useRestore && restore.lastBlockTransforms != null) {
             _restoreBlockTransforms(restore.lastBlockTransforms!);
           }
 
-          final hasCoverTimes =
-              List.generate(_selectedPhotos.length, (i) => i).any((i) =>
-                  _coverFrameTime[i] != null && _coverFrameTime[i]! >= 0);
-          if (mounted && hasCoverTimes) {
-            restoreCoverFramesFromSavedTimes();
-          }
+          // 先初始化播放器（获取 _videoPaths），再恢复封面帧
+          await preInitAllVideoPlayers();
 
-          preInitAllVideoPlayers();
+          final coverTimesToRestore = List<int>.generate(
+            _selectedPhotos.length,
+            (i) => _coverFrameTime[i] ?? -1,
+          );
+          final hasCoverTimes = coverTimesToRestore.any((t) => t >= 0);
+          if (mounted && hasCoverTimes) {
+            await restoreCoverFramesFromSavedTimes(coverTimesToRestore);
+          }
+        }
+
+        // 所有初始化完成，一次性显示最终画面
+        if (mounted) {
+          setState(() {
+            _isInitialLoading = false;
+          });
         }
       }
     });

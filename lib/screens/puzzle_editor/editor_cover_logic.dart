@@ -2,10 +2,8 @@ part of '../puzzle_editor_screen.dart';
 
 /// 封面帧和视频播放器相关逻辑
 extension _EditorCoverLogic on _PuzzleEditorScreenState {
-  Future<void> restoreCoverFramesFromSavedTimes() async {
-    if (_restoreHistory == null) return;
-    final coverMs = _restoreHistory!.lastCoverFrameTimeMs;
-    if (coverMs == null || coverMs.isEmpty) return;
+  Future<void> restoreCoverFramesFromSavedTimes(List<int> coverMs) async {
+    if (coverMs.isEmpty) return;
 
     for (int i = 0; i < coverMs.length && i < _selectedPhotos.length; i++) {
       final timeMs = coverMs[i];

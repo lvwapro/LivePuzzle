@@ -1,10 +1,8 @@
 import 'dart:async';
-import 'dart:typed_data';
 import 'dart:io';
 import 'dart:ui' as ui;
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:live_puzzle/providers/photo_provider.dart';
 import 'package:live_puzzle/providers/puzzle_history_provider.dart';

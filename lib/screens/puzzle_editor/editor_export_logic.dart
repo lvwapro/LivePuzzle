@@ -119,7 +119,7 @@ extension _EditorExportLogic on _PuzzleEditorScreenState {
         final canvasH = _canvasConfig.height;
         final canvasW = _canvasConfig.width;
         debugPrint(
-            '🔍 画布: ${canvasW}×${canvasH} ratio=${_canvasConfig.ratio} 高>宽=${canvasH > canvasW}');
+            '🔍 画布: $canvasW×$canvasH ratio=${_canvasConfig.ratio} 高>宽=${canvasH > canvasW}');
         for (int i = 0; i < _imageBlocks.length; i++) {
           final b = _imageBlocks[i];
           debugPrint(

@@ -2,17 +2,16 @@ part of '../puzzle_editor_screen.dart';
 
 /// 导出/保存相关逻辑
 extension _EditorExportLogic on _PuzzleEditorScreenState {
-  // 🔥 保存拼图到图库（Live Photo 格式）- 🚀 硬件加速版本
   Future<void> savePuzzleToGallery() async {
-    if (_selectedPhotos.isEmpty) return;
+    if (_selectedPhotos.isEmpty || _imageBlocks.isEmpty) return;
 
-    // 创建进度通知器
     final progressNotifier = ValueNotifier<double>(0.0);
-    final messageNotifier = ValueNotifier<String>('准备中...');
+    Timer? progressTimer;
 
     try {
-      // 显示进度对话框
       if (!mounted) return;
+
+      final l10n = AppLocalizations.of(context)!;
       showDialog(
         context: context,
         barrierDismissible: false,
@@ -26,56 +25,48 @@ extension _EditorExportLogic on _PuzzleEditorScreenState {
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(16),
               ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  ValueListenableBuilder<double>(
-                    valueListenable: progressNotifier,
-                    builder: (context, progress, child) {
-                      return Column(
-                        children: [
-                          ClipRRect(
-                            borderRadius: BorderRadius.circular(4),
-                            child: LinearProgressIndicator(
-                              value: progress,
-                              minHeight: 6,
-                              backgroundColor: const Color(0xFFFFE0E8),
-                              valueColor: const AlwaysStoppedAnimation<Color>(
-                                Color(0xFFFF4D80),
-                              ),
-                            ),
+              child: ValueListenableBuilder<double>(
+                valueListenable: progressNotifier,
+                builder: (context, progress, child) {
+                  return Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(4),
+                        child: LinearProgressIndicator(
+                          value: progress,
+                          minHeight: 6,
+                          backgroundColor: const Color(0xFFFFE0E8),
+                          valueColor: const AlwaysStoppedAnimation<Color>(
+                            Color(0xFFFF4D80),
                           ),
-                          const SizedBox(height: 12),
-                          Text(
-                            '${(progress * 100).toInt()}%',
-                            style: const TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              color: Color(0xFFFF4D80),
-                              decoration: TextDecoration.none,
-                            ),
-                          ),
-                        ],
-                      );
-                    },
-                  ),
-                  const SizedBox(height: 16),
-                  ValueListenableBuilder<String>(
-                    valueListenable: messageNotifier,
-                    builder: (context, message, child) {
-                      return Text(
-                        message,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        '${(progress * 100).toInt()}%',
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFFFF4D80),
+                          decoration: TextDecoration.none,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        progress < 1.0
+                            ? l10n.exportingLivePhoto
+                            : l10n.completed,
                         style: const TextStyle(
                           fontSize: 14,
                           color: Color(0xFF666666),
                           fontWeight: FontWeight.w500,
                           decoration: TextDecoration.none,
                         ),
-                        textAlign: TextAlign.center,
-                      );
-                    },
-                  ),
-                ],
+                      ),
+                    ],
+                  );
+                },
               ),
             ),
           ),
@@ -84,119 +75,97 @@ extension _EditorExportLogic on _PuzzleEditorScreenState {
 
       final sw = Stopwatch()..start();
 
-      if (_imageBlocks.isNotEmpty) {
-        debugPrint('🚀 使用硬件加速模式导出...');
+      final isLongImageLayout = _currentLayout?.id == 'long_horizontal' ||
+          _currentLayout?.id == 'long_vertical';
+      final layoutConfig = {
+        'canvasWidth': _canvasConfig.width,
+        'canvasHeight': _canvasConfig.height,
+        'isLongImage': isLongImageLayout,
+        'blocks': _imageBlocks
+            .map((block) => {
+                  'x': block.x,
+                  'y': block.y,
+                  'width': block.width,
+                  'height': block.height,
+                  'scale': block.scale,
+                  'offsetX': block.offsetX,
+                  'offsetY': block.offsetY,
+                })
+            .toList(),
+      };
 
-        messageNotifier.value =
-            AppLocalizations.of(context)!.loadingVideoResources;
-        progressNotifier.value = 0.05;
+      final coverTimes = List<int>.generate(
+        _selectedPhotos.length,
+        (i) => _coverFrameTime[i] ?? 0,
+      );
+      final assetIds = _selectedPhotos.map((p) => p.id).toList();
 
-        await Future.delayed(const Duration(milliseconds: 100));
-
-        messageNotifier.value =
-            AppLocalizations.of(context)!.preparingLayout;
-        progressNotifier.value = 0.1;
-
-        final isLongImageLayout = _currentLayout?.id == 'long_horizontal' ||
-            _currentLayout?.id == 'long_vertical';
-        final layoutConfig = {
-          'canvasWidth': _canvasConfig.width,
-          'canvasHeight': _canvasConfig.height,
-          'isLongImage': isLongImageLayout,
-          'blocks': _imageBlocks
-              .map((block) => {
-                    'x': block.x,
-                    'y': block.y,
-                    'width': block.width,
-                    'height': block.height,
-                    'scale': block.scale,
-                    'offsetX': block.offsetX,
-                    'offsetY': block.offsetY,
-                  })
-              .toList(),
-        };
-
-        final canvasH = _canvasConfig.height;
-        final canvasW = _canvasConfig.width;
-        debugPrint(
-            '🔍 画布: $canvasW×$canvasH ratio=${_canvasConfig.ratio} 高>宽=${canvasH > canvasW}');
-        for (int i = 0; i < _imageBlocks.length; i++) {
-          final b = _imageBlocks[i];
-          debugPrint(
-              '🔍 Block[$i]: x=${b.x.toStringAsFixed(3)} y=${b.y.toStringAsFixed(3)} w=${b.width.toStringAsFixed(3)} h=${b.height.toStringAsFixed(3)} scale=${b.scale} offsetX=${b.offsetX} offsetY=${b.offsetY}');
+      // 平滑渐进动画：每 200ms 递增，逐步逼近 90%
+      progressTimer = Timer.periodic(const Duration(milliseconds: 200), (_) {
+        final current = progressNotifier.value;
+        if (current < 0.9) {
+          progressNotifier.value = current + (0.9 - current) * 0.06;
         }
+      });
 
-        final coverTimes = List<int>.generate(
-          _selectedPhotos.length,
-          (i) => _coverFrameTime[i] ?? 0,
-        );
+      final success = await LivePhotoBridge.createLivePhotoHardware(
+        assetIds: assetIds,
+        layoutConfig: layoutConfig,
+        coverTimes: coverTimes,
+      );
 
-        final assetIds = _selectedPhotos.map((p) => p.id).toList();
+      progressTimer.cancel();
+      progressNotifier.value = 1.0;
+      debugPrint('⏱️ 导出完成，总耗时 ${sw.elapsedMilliseconds}ms');
 
-        messageNotifier.value =
-            AppLocalizations.of(context)!.hardwareEncoding;
-        progressNotifier.value = 0.2;
+      await Future.delayed(const Duration(milliseconds: 400));
 
-        final success = await LivePhotoBridge.createLivePhotoHardware(
-          assetIds: assetIds,
-          layoutConfig: layoutConfig,
-          coverTimes: coverTimes,
-        );
+      if (mounted) {
+        Navigator.of(context, rootNavigator: true).pop();
 
-        progressNotifier.value = 1.0;
-        messageNotifier.value = AppLocalizations.of(context)!.completed;
+        if (success) {
+          final puzzleThumbnail =
+              await _buildCompositeThumbnail() ?? _photoThumbnails[0];
 
-        debugPrint(
-            '⏱️ 硬件加速导出完成，总耗时 ${sw.elapsedMilliseconds}ms');
+          final photoIds = _selectedPhotos.map((p) => p.id).toList();
+          final coverMs = List<int>.generate(
+            _selectedPhotos.length,
+            (i) => _coverFrameTime[i] ?? -1,
+          );
+          final history = PuzzleHistory(
+            id: DateTime.now().millisecondsSinceEpoch.toString(),
+            photoIds: photoIds,
+            createdAt: DateTime.now(),
+            thumbnail: puzzleThumbnail,
+            photoCount: _selectedPhotos.length,
+            lastLayoutId: _currentLayout?.id,
+            lastRatio: _canvasConfig.ratio,
+            lastCoverFrameTimeMs: coverMs,
+          );
+          await ref
+              .read(puzzleHistoryProvider.notifier)
+              .addHistory(history);
 
-        if (mounted) {
-          Navigator.of(context, rootNavigator: true).pop();
-
-          if (success) {
-            final puzzleThumbnail =
-                await _buildCompositeThumbnail() ?? _photoThumbnails[0];
-
-            final photoIds = _selectedPhotos.map((p) => p.id).toList();
-            final coverMs = List<int>.generate(
-              _selectedPhotos.length,
-              (i) => _coverFrameTime[i] ?? -1,
-            );
-            final history = PuzzleHistory(
-              id: DateTime.now().millisecondsSinceEpoch.toString(),
-              photoIds: photoIds,
-              createdAt: DateTime.now(),
-              thumbnail: puzzleThumbnail,
-              photoCount: _selectedPhotos.length,
-              lastLayoutId: _currentLayout?.id,
-              lastRatio: _canvasConfig.ratio,
-              lastCoverFrameTimeMs: coverMs,
-            );
-            await ref
-                .read(puzzleHistoryProvider.notifier)
-                .addHistory(history);
-
-            Navigator.of(context).pushReplacement(
-              MaterialPageRoute(
-                builder: (context) => CompletionScreen(
-                  thumbnail: puzzleThumbnail,
-                  photoCount: _selectedPhotos.length,
-                  imageAspectRatio:
-                      _canvasConfig.width / _canvasConfig.height,
-                ),
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(
+              builder: (context) => CompletionScreen(
+                thumbnail: puzzleThumbnail,
+                photoCount: _selectedPhotos.length,
+                imageAspectRatio:
+                    _canvasConfig.width / _canvasConfig.height,
               ),
-            );
-          } else {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('保存失败，请重试'),
-                duration: Duration(seconds: 2),
-                behavior: SnackBarBehavior.floating,
-                backgroundColor: Colors.red,
-              ),
-            );
-          }
+            ),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('保存失败，请重试'),
+              duration: Duration(seconds: 2),
+              behavior: SnackBarBehavior.floating,
+              backgroundColor: Colors.red,
+            ),
+          );
         }
-        return;
       }
     } catch (e) {
       debugPrint('保存拼图失败: $e');
@@ -213,8 +182,8 @@ extension _EditorExportLogic on _PuzzleEditorScreenState {
         );
       }
     } finally {
+      progressTimer?.cancel();
       progressNotifier.dispose();
-      messageNotifier.dispose();
     }
   }
 

@@ -4,9 +4,8 @@ import 'package:photo_manager/photo_manager.dart' as photo_manager;
 import 'package:live_puzzle/providers/photo_provider.dart';
 import 'package:live_puzzle/screens/puzzle_editor_screen.dart';
 import 'package:live_puzzle/l10n/app_localizations.dart';
-import 'photo_selection/fullscreen_gallery.dart';
-import 'photo_selection/live_photo_preview_dialog.dart';
-import 'photo_selection/photo_thumbnail_widget.dart';
+import 'photo_selection/photo_grid_item.dart';
+import 'photo_selection/selection_tab_widget.dart';
 
 /// Live Photo选择页面 - Pick Moments风格
 /// 支持iOS Live Photo和Android Motion Photo
@@ -248,9 +247,17 @@ class _PhotoSelectionScreenState extends ConsumerState<PhotoSelectionScreen> {
                     padding: const EdgeInsets.fromLTRB(32, 0, 32, 12),
                     child: Row(
                       children: [
-                        _buildTab(AppLocalizations.of(context)!.tabAll, 0),
+                        SelectionTab(
+                          label: AppLocalizations.of(context)!.tabAll,
+                          isActive: _selectedTabIndex == 0,
+                          onTap: () => _onTabChanged(0),
+                        ),
                         const SizedBox(width: 24),
-                        _buildTab(AppLocalizations.of(context)!.tabLivePhotos, 1),
+                        SelectionTab(
+                          label: AppLocalizations.of(context)!.tabLivePhotos,
+                          isActive: _selectedTabIndex == 1,
+                          onTap: () => _onTabChanged(1),
+                        ),
                       ],
                     ),
                   ),
@@ -267,7 +274,11 @@ class _PhotoSelectionScreenState extends ConsumerState<PhotoSelectionScreen> {
                           final album = _albums[index];
                           final isSelected = _selectedAlbumId == album.id ||
                               (_selectedAlbumId == null && album.isAll);
-                          return _buildAlbumChip(album, isSelected);
+                          return AlbumChip(
+                            album: album,
+                            isSelected: isSelected,
+                            onTap: () => _onAlbumSelected(album),
+                          );
                         },
                       ),
                     ),
@@ -383,13 +394,13 @@ class _PhotoSelectionScreenState extends ConsumerState<PhotoSelectionScreen> {
                           ? selectedAllPhotoIdsProvider
                           : selectedLivePhotoIdsProvider;
 
-                      return _buildPhotoItem(
-                        asset,
-                        isSelected,
-                        isLivePhoto,
-                        index,
-                        filteredAssets,
-                        selectionProvider, // 传入对应的provider
+                      return PhotoGridItem(
+                        asset: asset,
+                        isSelected: isSelected,
+                        isLivePhoto: isLivePhoto,
+                        index: index,
+                        allAssets: filteredAssets,
+                        selectionProvider: selectionProvider,
                       );
                     },
                   ),
@@ -487,310 +498,26 @@ class _PhotoSelectionScreenState extends ConsumerState<PhotoSelectionScreen> {
     ); // 🔥 WillPopScope 的结束
   }
 
-  Widget _buildTab(String label, int tabIndex) {
-    final isActive = _selectedTabIndex == tabIndex;
-    return GestureDetector(
-      onTap: () {
-        setState(() {
-          _selectedTabIndex = tabIndex;
-        });
-
-        // 根据标签切换，重新加载相册列表和照片
-        _loadAlbums(); // 🔥 重新加载相册列表以过滤没有照片的相册
-        
-        if (tabIndex == 0) {
-          // 全部照片
-          ref.read(livePhotoListProvider.notifier).loadPhotos(
-                filter: PhotoFilter.all,
-                albumId: _selectedAlbumId,
-              );
-        } else {
-          // 实况照片
-          ref.read(livePhotoListProvider.notifier).loadPhotos(
-                filter: PhotoFilter.live,
-                albumId: _selectedAlbumId,
-              );
-        }
-      },
-      child: Column(
-        children: [
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: isActive ? FontWeight.bold : FontWeight.w500,
-              color: isActive ? const Color(0xFFFF4D80) : Colors.grey.shade400,
-            ),
-          ),
-          const SizedBox(height: 4),
-          if (isActive)
-            Container(
-              width: 24,
-              height: 2,
-              decoration: BoxDecoration(
-                color: const Color(0xFFFF4D80),
-                borderRadius: BorderRadius.circular(1),
-              ),
-            ),
-        ],
-      ),
-    );
+  void _onTabChanged(int tabIndex) {
+    setState(() {
+      _selectedTabIndex = tabIndex;
+    });
+    _loadAlbums();
+    ref.read(livePhotoListProvider.notifier).loadPhotos(
+          filter: tabIndex == 0 ? PhotoFilter.all : PhotoFilter.live,
+          albumId: _selectedAlbumId,
+        );
   }
 
-  Widget _buildAlbumChip(photo_manager.AssetPathEntity album, bool isSelected) {
-    return GestureDetector(
-      onTap: () {
-        setState(() {
-          _selectedAlbumId = album.isAll ? null : album.id;
-        });
-        // 🔥 根据相册和Tab组合筛选照片
-        final albumId = album.isAll ? null : album.id;
-        ref.read(livePhotoListProvider.notifier).loadPhotos(
-              filter:
-                  _selectedTabIndex == 0 ? PhotoFilter.all : PhotoFilter.live,
-              albumId: albumId,
-            );
-      },
-      child: Container(
-        margin: const EdgeInsets.only(right: 10),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-        decoration: BoxDecoration(
-          color: isSelected ? const Color(0xFFFF4D80) : Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: isSelected ? const Color(0xFFFF4D80) : Colors.grey.shade300,
-            width: 1,
-          ),
-          boxShadow: isSelected
-              ? [
-                  BoxShadow(
-                    color: const Color(0xFFFF4D80).withOpacity(0.2),
-                    blurRadius: 4,
-                    offset: const Offset(0, 1),
-                  ),
-                ]
-              : null,
-        ),
-        child: Text(
-          _translateAlbumName(album.name),
-          style: TextStyle(
-            fontSize: 12,
-            fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-            color: isSelected ? Colors.white : const Color(0xFF2C2C2C), // 更深的颜色
-            letterSpacing: 0.2,
-          ),
-        ),
-      ),
-    );
-  }
-  
-  /// 翻译系统相册名称
-  String _translateAlbumName(String name) {
-    final l10n = AppLocalizations.of(context)!;
-    switch (name.toLowerCase()) {
-      case 'recents':
-      case '最近项目':
-      case '最近':
-        return l10n.recents;
-      case 'favorites':
-      case '个人收藏':
-      case '收藏':
-        return l10n.favorites;
-      case 'videos':
-      case '视频':
-        return l10n.videos;
-      case 'selfies':
-      case '自拍':
-        return l10n.selfies;
-      case 'live photos':
-      case '实况照片':
-        return l10n.livePhotos;
-      case 'portrait':
-      case 'portraits':
-      case '人像':
-        return l10n.portrait;
-      case 'long exposure':
-      case '长曝光':
-        return l10n.longExposure;
-      case 'panoramas':
-      case '全景':
-        return l10n.panoramas;
-      case 'time-lapse':
-      case 'timelapses':
-      case '延时摄影':
-        return l10n.timelapses;
-      case 'slo-mo':
-      case 'slomo':
-      case '慢动作':
-        return l10n.sloMo;
-      case 'bursts':
-      case '连拍快照':
-        return l10n.bursts;
-      case 'screenshots':
-      case '屏幕快照':
-        return l10n.screenshots;
-      case 'all photos':
-      case '所有照片':
-        return l10n.allPhotos;
-      default:
-        return name; // 保留原名称
-    }
-  }
-
-  /// 全屏查看图片，支持左右滑动
-  void _showFullScreenGallery(
-    BuildContext context,
-    List<photo_manager.AssetEntity> assets,
-    int initialIndex,
-  ) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => FullScreenGallery(
-          assets: assets,
-          initialIndex: initialIndex,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildPhotoItem(
-    photo_manager.AssetEntity asset,
-    bool isSelected,
-    bool isLivePhoto,
-    int index,
-    List<photo_manager.AssetEntity> allAssets,
-    StateNotifierProvider<SelectedPhotoIdsNotifier, List<String>>
-        selectionProvider, // 🔥 传入对应的选中状态provider
-  ) {
-    // 🔥 使用稳定的key，只基于asset.id，不包含选中状态
-    // 这样选中状态变化时不会导致整个Widget重建
-    final itemKey = ValueKey('photo_${asset.id}');
-    
-    return RepaintBoundary(
-      key: itemKey,
-      child: GestureDetector(
-        onTap: () {
-          // 🔥 使用传入的provider
-          ref.read(selectionProvider.notifier).toggle(asset.id);
-        },
-        onLongPress: isLivePhoto
-            ? () {
-                // 长按播放实况照片
-                _showLivePhotoPreview(asset);
-              }
-            : null,
-        child: AnimatedContainer(
-          // 使用 AnimatedContainer 让选中状态平滑过渡
-          duration: const Duration(milliseconds: 200),
-          curve: Curves.easeOutCubic,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(8),
-            color: const Color(0xFFFFF0F3),
-            boxShadow: isSelected
-                ? [
-                    const BoxShadow(
-                      color: Color(0xFFFF4D80),
-                      blurRadius: 0,
-                      spreadRadius: 3,
-                    ),
-                  ]
-                : null,
-          ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(8),
-            child: AspectRatio(
-              aspectRatio: 1, // 保持1:1正方形
-              child: Stack(
-                fit: StackFit.expand,
-                children: [
-                  // 🔥 Image - 使用独立的Widget避免重建
-                  PhotoThumbnail(
-                    key: ValueKey('thumb_${asset.id}'),
-                    asset: asset,
-                  ),
-                  // 实况照片标记（左上角）
-                  if (isLivePhoto)
-                    Positioned(
-                      top: 6,
-                      left: 6,
-                      child: Image.asset(
-                        'assets/images/live-icon.png',
-                        width: 24,
-                        height: 24,
-                      ),
-                    ),
-                  // 放大图标（右下角）
-                  Positioned(
-                    bottom: 4,
-                    right: 4,
-                    child: GestureDetector(
-                      onTap: () {
-                        // 全屏查看图片，支持左右滑动
-                        _showFullScreenGallery(context, allAssets, index);
-                      },
-                      child: Container(
-                        padding: const EdgeInsets.all(4),
-                        decoration: BoxDecoration(
-                          color: Colors.black.withOpacity(0.5),
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        child: const Icon(
-                          Icons.zoom_out_map,
-                          color: Colors.white,
-                          size: 16,
-                        ),
-                      ),
-                    ),
-                  ),
-                  // 选中标记（右上角）- 使用AnimatedOpacity平滑过渡
-                  if (isSelected)
-                    Positioned(
-                      top: 6,
-                      right: 6,
-                      child: AnimatedOpacity(
-                        duration: const Duration(milliseconds: 200),
-                        opacity: isSelected ? 1.0 : 0.0,
-                        child: Container(
-                          width: 24,
-                          height: 24,
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFFF4D80),
-                            shape: BoxShape.circle,
-                            border: Border.all(
-                              color: Colors.white,
-                              width: 2,
-                            ),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.2),
-                                blurRadius: 8,
-                                offset: const Offset(0, 2),
-                              ),
-                            ],
-                          ),
-                          child: const Icon(
-                            Icons.check,
-                            color: Colors.white,
-                            size: 14,
-                          ),
-                        ),
-                      ),
-                    ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  void _showLivePhotoPreview(photo_manager.AssetEntity asset) {
-    showDialog(
-      context: context,
-      builder: (context) => LivePhotoPreviewDialog(asset: asset),
-    );
+  void _onAlbumSelected(photo_manager.AssetPathEntity album) {
+    setState(() {
+      _selectedAlbumId = album.isAll ? null : album.id;
+    });
+    ref.read(livePhotoListProvider.notifier).loadPhotos(
+          filter:
+              _selectedTabIndex == 0 ? PhotoFilter.all : PhotoFilter.live,
+          albumId: album.isAll ? null : album.id,
+        );
   }
 }
 

@@ -8,6 +8,7 @@ import 'package:live_puzzle/providers/puzzle_history_provider.dart';
 import 'package:live_puzzle/providers/photo_provider.dart';
 import 'package:photo_manager/photo_manager.dart';
 import 'package:live_puzzle/l10n/app_localizations.dart';
+import 'home/home_history_card.dart';
 
 /// 主页面 - 可爱粉色风格
 class HomeScreen extends ConsumerStatefulWidget {
@@ -292,7 +293,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                             ),
                             const SizedBox(height: 16),
                             if (histories.isEmpty)
-                              _buildHistoryEmptyPlaceholder(context, l10n)
+                              const HomeHistoryEmptyPlaceholder()
                             else
                               Padding(
                                 padding:
@@ -311,7 +312,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                   itemBuilder: (context, index) {
                                     final history =
                                         histories.take(4).toList()[index];
-                                    return _buildHistoryCard(history);
+                                    return HomeHistoryCard(
+                                      history: history,
+                                      onTap: () => _openHistoryEditor(history),
+                                    );
                                   },
                                 ),
                               ),
@@ -325,125 +329,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               ),
             ),
           ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildHistoryEmptyPlaceholder(
-      BuildContext context, AppLocalizations l10n) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24),
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.symmetric(vertical: 48, horizontal: 24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              Icons.photo_library_outlined,
-              size: 56,
-              color: const Color(0xFFFF85A2).withOpacity(0.6),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              l10n.noHistoryTitle,
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-                color: Color(0xFF6B7280),
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              l10n.noHistorySubtitle,
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w500,
-                color: const Color(0xFF9CA3AF),
-              ),
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildHistoryCard(history) {
-    return GestureDetector(
-      onTap: () => _openHistoryEditor(history),
-      child: Container(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(32),
-          boxShadow: [
-            BoxShadow(
-              color: const Color(0xFFFF85A2).withOpacity(0.4),
-              blurRadius: 30,
-              offset: const Offset(0, 12),
-              spreadRadius: -10,
-            ),
-          ],
-        ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(32),
-          child: Stack(
-            children: [
-              // 背景图片或渐变
-              Container(
-                decoration: BoxDecoration(
-                  gradient: history.thumbnail == null
-                      ? LinearGradient(
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                          colors: [
-                            const Color(0xFFFFD1DC).withOpacity(0.3),
-                            const Color(0xFFFF85A2).withOpacity(0.2),
-                          ],
-                        )
-                      : null,
-                  image: history.thumbnail != null
-                      ? DecorationImage(
-                          image: MemoryImage(history.thumbnail!),
-                          fit: BoxFit.cover,
-                        )
-                      : null,
-                ),
-                child: history.thumbnail == null
-                    ? const Center(
-                        child: Icon(
-                          Icons.image,
-                          size: 48,
-                          color: Color(0xFFFF85A2),
-                        ),
-                      )
-                    : null,
-              ),
-
-              // 左下角时间标签
-              Positioned(
-                left: 12,
-                bottom: 12,
-                child: Text(
-                  history.getTimeAgo(context),
-                  style: const TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w900,
-                    color: Colors.white,
-                    letterSpacing: 0.5,
-                    shadows: [
-                      Shadow(
-                        color: Colors.black,
-                        blurRadius: 4,
-                        offset: Offset(0, 1),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
         ),
       ),
     );
@@ -493,89 +378,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         ),
       );
     }
-  }
-
-  Widget _buildRecentCard(String title, String timeAgo) {
-    return Container(
-      padding: const EdgeInsets.all(10),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(32),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFFFF85A2).withOpacity(0.4),
-            blurRadius: 30,
-            offset: const Offset(0, 12),
-            spreadRadius: -10,
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(
-            child: Container(
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(24),
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    const Color(0xFFFFD1DC).withOpacity(0.3),
-                    const Color(0xFFFF85A2).withOpacity(0.2),
-                  ],
-                ),
-              ),
-              child: const Center(
-                child: Icon(
-                  Icons.image,
-                  size: 48,
-                  color: Color(0xFFFF85A2),
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(height: 8),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 4),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700,
-                    color: Color(0xFF1F2937),
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 2),
-                Row(
-                  children: [
-                    Icon(
-                      Icons.schedule,
-                      size: 10,
-                      color: const Color(0xFFFF85A2),
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      timeAgo,
-                      style: TextStyle(
-                        fontSize: 9,
-                        fontWeight: FontWeight.w700,
-                        color: const Color(0xFF9CA3AF),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
   }
 
   Future<void> _startCreating() async {

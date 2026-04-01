@@ -79,10 +79,6 @@ class _PuzzleEditorScreenState extends ConsumerState<PuzzleEditorScreen>
   Timer? _frameExtractTimer;
   Timer? _playbackTimer;
 
-  // 🔥 撤销栈
-  static const int _maxUndoLevels = 20;
-  final List<_EditorSnapshot> _undoStack = [];
-
   /// 从首页历史进入时传入，用于恢复上次布局与封面帧（用后即清）
   PuzzleHistory? _restoreHistory;
 
@@ -123,37 +119,6 @@ class _PuzzleEditorScreenState extends ConsumerState<PuzzleEditorScreen>
     }
     super.dispose();
   }
-
-  void _pushUndo() {
-    _undoStack.add(_EditorSnapshot(
-      imageBlocks: _imageBlocks.map((b) => b.copyWith()).toList(),
-      coverFrames: Map<int, Uint8List?>.from(_coverFrames),
-      coverFrameTime: Map<int, int?>.from(_coverFrameTime),
-    ));
-    if (_undoStack.length > _maxUndoLevels) {
-      _undoStack.removeAt(0);
-    }
-  }
-
-  void _undo() {
-    if (_undoStack.isEmpty) return;
-    final snapshot = _undoStack.removeLast();
-    setState(() {
-      _imageBlocks = snapshot.imageBlocks;
-      _coverFrames
-        ..clear()
-        ..addAll(snapshot.coverFrames);
-      _coverFrameTime
-        ..clear()
-        ..addAll(snapshot.coverFrameTime);
-      for (int i = 0; i < _imageBlocks.length; i++) {
-        _currentDisplayImages[i] =
-            _coverFrames[i] ?? _photoThumbnails[i];
-      }
-    });
-  }
-
-  bool get _canUndo => _undoStack.isNotEmpty;
 
   void _handleCanvasTap() {
     revertFrameEdit();
@@ -224,7 +189,6 @@ class _PuzzleEditorScreenState extends ConsumerState<PuzzleEditorScreen>
         });
       },
       onBlockChanged: (blockId, updatedBlock) {
-        _pushUndo();
         setState(() {
           final index = _imageBlocks.indexWhere((b) => b.id == blockId);
           if (index >= 0) {
@@ -233,11 +197,11 @@ class _PuzzleEditorScreenState extends ConsumerState<PuzzleEditorScreen>
         });
       },
       onBlockSwap: (sourceId, targetId) {
+        // 位置互换：两个图片块交换 x/y/width/height/layoutBlockId
         final srcIdx = _imageBlocks.indexWhere((b) => b.id == sourceId);
         final tgtIdx = _imageBlocks.indexWhere((b) => b.id == targetId);
         if (srcIdx < 0 || tgtIdx < 0 || srcIdx == tgtIdx) return;
 
-        _pushUndo();
         setState(() {
           final src = _imageBlocks[srcIdx];
           final tgt = _imageBlocks[tgtIdx];
@@ -264,7 +228,6 @@ class _PuzzleEditorScreenState extends ConsumerState<PuzzleEditorScreen>
         });
       },
       onBlocksResized: (updatedBlocks) {
-        _pushUndo();
         setState(() {
           _imageBlocks = updatedBlocks;
         });
@@ -303,6 +266,7 @@ class _PuzzleEditorScreenState extends ConsumerState<PuzzleEditorScreen>
                 // 头部
                 EditorHeaderWidget(
                   onBack: () {
+                    // 🔥 返回时清空所有选中状态
                     ref.read(selectedAllPhotoIdsProvider.notifier).clear();
                     ref.read(selectedLivePhotoIdsProvider.notifier).clear();
                     Navigator.pop(context);
@@ -311,8 +275,6 @@ class _PuzzleEditorScreenState extends ConsumerState<PuzzleEditorScreen>
                   onPlayLive:
                       _selectedPhotos.isNotEmpty ? playLivePuzzle : null,
                   isPlayingLive: _isPlayingLivePuzzle,
-                  onUndo: _undo,
-                  canUndo: _canUndo,
                 ),
 
                 // 拼图预览画布
@@ -379,16 +341,4 @@ class _PuzzleEditorScreenState extends ConsumerState<PuzzleEditorScreen>
     ); // WillPopScope
   }
 
-}
-
-class _EditorSnapshot {
-  final List<ImageBlock> imageBlocks;
-  final Map<int, Uint8List?> coverFrames;
-  final Map<int, int?> coverFrameTime;
-
-  const _EditorSnapshot({
-    required this.imageBlocks,
-    required this.coverFrames,
-    required this.coverFrameTime,
-  });
 }

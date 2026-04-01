@@ -5,10 +5,8 @@ import 'package:live_puzzle/l10n/app_localizations.dart';
 class EditorHeaderWidget extends StatelessWidget {
   final VoidCallback onBack;
   final VoidCallback onDone;
-  final VoidCallback? onPlayLive;
-  final bool isPlayingLive;
-  final VoidCallback? onUndo;
-  final bool canUndo;
+  final VoidCallback? onPlayLive;  // 🔥 播放 Live 的回调
+  final bool isPlayingLive;  // 🔥 是否正在播放
 
   const EditorHeaderWidget({
     super.key,
@@ -16,8 +14,6 @@ class EditorHeaderWidget extends StatelessWidget {
     required this.onDone,
     this.onPlayLive,
     this.isPlayingLive = false,
-    this.onUndo,
-    this.canUndo = false,
   });
 
   @override
@@ -41,63 +37,32 @@ class EditorHeaderWidget extends StatelessWidget {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Row(
-                children: [
-                  Container(
-                    width: 40,
-                    height: 40,
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(20),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.05),
-                          blurRadius: 10,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                    child: IconButton(
-                      icon: const Icon(
-                        Icons.arrow_back_ios_new,
-                        size: 18,
-                        color: Color(0xFFFF4D80),
-                      ),
-                      onPressed: onBack,
-                      padding: EdgeInsets.zero,
-                    ),
-                  ),
-                  if (onUndo != null) ...[
-                    const SizedBox(width: 8),
-                    Container(
-                      width: 40,
-                      height: 40,
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(20),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.05),
-                            blurRadius: 10,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
-                      ),
-                      child: IconButton(
-                        icon: Icon(
-                          Icons.undo_rounded,
-                          size: 20,
-                          color: canUndo
-                              ? const Color(0xFFFF4D80)
-                              : Colors.grey.shade300,
-                        ),
-                        onPressed: canUndo ? onUndo : null,
-                        padding: EdgeInsets.zero,
-                      ),
+              // Back Button - 圆形白色背景样式（与选择页一致）
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.05),
+                      blurRadius: 10,
+                      offset: const Offset(0, 2),
                     ),
                   ],
-                ],
+                ),
+                child: IconButton(
+                  icon: const Icon(
+                    Icons.arrow_back_ios_new,
+                    size: 18,
+                    color: Color(0xFFFF4D80),
+                  ),
+                  onPressed: onBack,
+                  padding: EdgeInsets.zero,
+                ),
               ),
+              // Title / Live Play Button
               if (onPlayLive != null)
                 GestureDetector(
                   onTap: onPlayLive,

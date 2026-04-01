@@ -125,7 +125,6 @@ extension _EditorCoverLogic on _PuzzleEditorScreenState {
 
   Future<void> handleSetCover(int cellIndex) async {
     _frameExtractTimer?.cancel();
-    _pushUndo();
     final frameData = await captureVideoFrame(cellIndex);
 
     if (frameData != null) {

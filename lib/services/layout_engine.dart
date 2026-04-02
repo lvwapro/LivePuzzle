@@ -29,6 +29,8 @@ class LayoutEngine {
         return _calculateColumnLayout(canvas, template, images, imageCount, spacing);
       case LayoutTemplateType.free:
         return _calculateFreeLayout(canvas, template, images, imageCount);
+      case LayoutTemplateType.positioned:
+        return _calculatePositionedLayout(canvas, template, images, imageCount, spacing);
     }
   }
 
@@ -170,6 +172,43 @@ class LayoutEngine {
   ) {
     // TODO: 实现更复杂的分栏逻辑
     return _calculateGridLayout(canvas, template, images, imageCount, spacing);
+  }
+
+  /// 自定义定位布局：使用 LayoutBlock 中的显式坐标，按边缘检测应用间距
+  static List<ImageBlock> _calculatePositionedLayout(
+    CanvasConfig canvas,
+    LayoutTemplate template,
+    List<Uint8List> images,
+    int imageCount,
+    double spacing,
+  ) {
+    final half = spacing / 2.0;
+    final blocks = <ImageBlock>[];
+
+    for (int i = 0; i < imageCount; i++) {
+      final lb = template.blocks[i];
+      final bx = lb.relX ?? 0;
+      final by = lb.relY ?? 0;
+      final bw = lb.relWidth ?? 0.5;
+      final bh = lb.relHeight ?? 0.5;
+
+      final leftPad = bx > 0.001 ? half : 0.0;
+      final topPad = by > 0.001 ? half : 0.0;
+      final rightPad = (bx + bw) < 0.999 ? half : 0.0;
+      final bottomPad = (by + bh) < 0.999 ? half : 0.0;
+
+      blocks.add(ImageBlock(
+        id: 'block_$i',
+        layoutBlockId: '${template.id}_$i',
+        x: bx + leftPad,
+        y: by + topPad,
+        width: bw - leftPad - rightPad,
+        height: bh - topPad - bottomPad,
+        imageData: images[i],
+        zIndex: i,
+      ));
+    }
+    return blocks;
   }
 
   /// 自由型布局计算（保持用户自定义位置）

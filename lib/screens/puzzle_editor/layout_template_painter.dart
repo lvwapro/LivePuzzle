@@ -18,13 +18,16 @@ class LayoutTemplatePainter extends CustomPainter {
 
     switch (template.type) {
       case LayoutTemplateType.grid:
+      case LayoutTemplateType.column:
+      case LayoutTemplateType.free:
         _drawGrid(canvas, drawArea, padding);
         break;
       case LayoutTemplateType.hierarchy:
         _drawHierarchy(canvas, drawArea, padding);
         break;
-      default:
-        _drawGrid(canvas, drawArea, padding);
+      case LayoutTemplateType.positioned:
+        _drawPositioned(canvas, drawArea, padding);
+        break;
     }
   }
 
@@ -93,6 +96,30 @@ class LayoutTemplatePainter extends CustomPainter {
       );
       canvas.drawRRect(
         RRect.fromRectAndRadius(rect, const Radius.circular(3)),
+        fillPaint,
+      );
+    }
+  }
+
+  void _drawPositioned(Canvas canvas, Size drawArea, double padding) {
+    final fillPaint = Paint()
+      ..color = color
+      ..style = PaintingStyle.fill;
+    const gap = 2.0;
+
+    for (final block in template.blocks) {
+      final bx = block.relX ?? 0;
+      final by = block.relY ?? 0;
+      final bw = block.relWidth ?? 0.5;
+      final bh = block.relHeight ?? 0.5;
+      final rect = Rect.fromLTWH(
+        padding + bx * drawArea.width + gap / 2,
+        padding + by * drawArea.height + gap / 2,
+        bw * drawArea.width - gap,
+        bh * drawArea.height - gap,
+      );
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(rect, const Radius.circular(2)),
         fillPaint,
       );
     }

@@ -1,23 +1,33 @@
 /// 布局模板类型
 enum LayoutTemplateType {
-  grid,       // 网格型（等分）
-  hierarchy,  // 主次型（一大多小）
-  column,     // 分栏型（先分栏再分格）
-  free,       // 自由型（用户拖动）
+  grid,        // 网格型（等分）
+  hierarchy,   // 主次型（一大多小）
+  column,      // 分栏型（先分栏再分格）
+  free,        // 自由型（用户拖动）
+  positioned,  // 自定义定位型（显式坐标）
 }
 
 /// 布局块配置
 class LayoutBlock {
   final int row;            // 网格行（仅grid型）
   final int col;            // 网格列（仅grid型）
-  final double weight;      // 占比权重（主次型/分栏型，如大图0.7，小图0.3）
+  final double weight;      // 占比权重（主次型/分栏型）
   final BlockPosition position; // 相对位置（仅主次型）
+  // positioned 布局：显式相对坐标 (0-1)
+  final double? relX;
+  final double? relY;
+  final double? relWidth;
+  final double? relHeight;
 
   const LayoutBlock({
     this.row = 0,
     this.col = 0,
     this.weight = 1.0,
     this.position = BlockPosition.none,
+    this.relX,
+    this.relY,
+    this.relWidth,
+    this.relHeight,
   });
 }
 
@@ -192,6 +202,170 @@ class LayoutTemplate {
         LayoutBlock(row: 1, col: 1),
         LayoutBlock(row: 2, col: 0),
         LayoutBlock(row: 2, col: 1),
+      ],
+    ),
+
+    // ========== 3张 positioned ==========
+    const LayoutTemplate(
+      id: 'pos_3_left_2right',
+      type: LayoutTemplateType.positioned,
+      name: '左大右二',
+      imageCount: 3,
+      blocks: [
+        LayoutBlock(relX: 0, relY: 0, relWidth: 0.6, relHeight: 1.0),
+        LayoutBlock(relX: 0.6, relY: 0, relWidth: 0.4, relHeight: 0.5),
+        LayoutBlock(relX: 0.6, relY: 0.5, relWidth: 0.4, relHeight: 0.5),
+      ],
+    ),
+
+    // ========== 4张 positioned ==========
+    const LayoutTemplate(
+      id: 'pos_4_1left_3right',
+      type: LayoutTemplateType.positioned,
+      name: '左大右三',
+      imageCount: 4,
+      blocks: [
+        LayoutBlock(relX: 0, relY: 0, relWidth: 0.6, relHeight: 1.0),
+        LayoutBlock(relX: 0.6, relY: 0, relWidth: 0.4, relHeight: 1 / 3),
+        LayoutBlock(relX: 0.6, relY: 1 / 3, relWidth: 0.4, relHeight: 1 / 3),
+        LayoutBlock(relX: 0.6, relY: 2 / 3, relWidth: 0.4, relHeight: 1 / 3),
+      ],
+    ),
+    const LayoutTemplate(
+      id: 'pos_4_1top_3bottom',
+      type: LayoutTemplateType.positioned,
+      name: '上大下三',
+      imageCount: 4,
+      blocks: [
+        LayoutBlock(relX: 0, relY: 0, relWidth: 1.0, relHeight: 0.6),
+        LayoutBlock(relX: 0, relY: 0.6, relWidth: 1 / 3, relHeight: 0.4),
+        LayoutBlock(relX: 1 / 3, relY: 0.6, relWidth: 1 / 3, relHeight: 0.4),
+        LayoutBlock(relX: 2 / 3, relY: 0.6, relWidth: 1 / 3, relHeight: 0.4),
+      ],
+    ),
+
+    // ========== 5张图片布局 ==========
+    const LayoutTemplate(
+      id: 'pos_5_2top_3bottom',
+      type: LayoutTemplateType.positioned,
+      name: '上二下三',
+      imageCount: 5,
+      blocks: [
+        LayoutBlock(relX: 0, relY: 0, relWidth: 0.5, relHeight: 0.5),
+        LayoutBlock(relX: 0.5, relY: 0, relWidth: 0.5, relHeight: 0.5),
+        LayoutBlock(relX: 0, relY: 0.5, relWidth: 1 / 3, relHeight: 0.5),
+        LayoutBlock(relX: 1 / 3, relY: 0.5, relWidth: 1 / 3, relHeight: 0.5),
+        LayoutBlock(relX: 2 / 3, relY: 0.5, relWidth: 1 / 3, relHeight: 0.5),
+      ],
+    ),
+    const LayoutTemplate(
+      id: 'pos_5_3top_2bottom',
+      type: LayoutTemplateType.positioned,
+      name: '上三下二',
+      imageCount: 5,
+      blocks: [
+        LayoutBlock(relX: 0, relY: 0, relWidth: 1 / 3, relHeight: 0.5),
+        LayoutBlock(relX: 1 / 3, relY: 0, relWidth: 1 / 3, relHeight: 0.5),
+        LayoutBlock(relX: 2 / 3, relY: 0, relWidth: 1 / 3, relHeight: 0.5),
+        LayoutBlock(relX: 0, relY: 0.5, relWidth: 0.5, relHeight: 0.5),
+        LayoutBlock(relX: 0.5, relY: 0.5, relWidth: 0.5, relHeight: 0.5),
+      ],
+    ),
+    const LayoutTemplate(
+      id: 'pos_5_1big_4small',
+      type: LayoutTemplateType.positioned,
+      name: '一大四小',
+      imageCount: 5,
+      blocks: [
+        LayoutBlock(relX: 0, relY: 0, relWidth: 0.6, relHeight: 1.0),
+        LayoutBlock(relX: 0.6, relY: 0, relWidth: 0.4, relHeight: 0.25),
+        LayoutBlock(relX: 0.6, relY: 0.25, relWidth: 0.4, relHeight: 0.25),
+        LayoutBlock(relX: 0.6, relY: 0.5, relWidth: 0.4, relHeight: 0.25),
+        LayoutBlock(relX: 0.6, relY: 0.75, relWidth: 0.4, relHeight: 0.25),
+      ],
+    ),
+    const LayoutTemplate(
+      id: 'grid_1x5',
+      type: LayoutTemplateType.grid,
+      name: '一行五列',
+      imageCount: 5,
+      blocks: [
+        LayoutBlock(row: 0, col: 0),
+        LayoutBlock(row: 0, col: 1),
+        LayoutBlock(row: 0, col: 2),
+        LayoutBlock(row: 0, col: 3),
+        LayoutBlock(row: 0, col: 4),
+      ],
+    ),
+    const LayoutTemplate(
+      id: 'grid_5x1',
+      type: LayoutTemplateType.grid,
+      name: '五行一列',
+      imageCount: 5,
+      blocks: [
+        LayoutBlock(row: 0, col: 0),
+        LayoutBlock(row: 1, col: 0),
+        LayoutBlock(row: 2, col: 0),
+        LayoutBlock(row: 3, col: 0),
+        LayoutBlock(row: 4, col: 0),
+      ],
+    ),
+
+    // ========== 7张图片布局 ==========
+    const LayoutTemplate(
+      id: 'pos_7_3top_4bottom',
+      type: LayoutTemplateType.positioned,
+      name: '上三下四',
+      imageCount: 7,
+      blocks: [
+        LayoutBlock(relX: 0, relY: 0, relWidth: 1 / 3, relHeight: 0.5),
+        LayoutBlock(relX: 1 / 3, relY: 0, relWidth: 1 / 3, relHeight: 0.5),
+        LayoutBlock(relX: 2 / 3, relY: 0, relWidth: 1 / 3, relHeight: 0.5),
+        LayoutBlock(relX: 0, relY: 0.5, relWidth: 0.25, relHeight: 0.5),
+        LayoutBlock(relX: 0.25, relY: 0.5, relWidth: 0.25, relHeight: 0.5),
+        LayoutBlock(relX: 0.5, relY: 0.5, relWidth: 0.25, relHeight: 0.5),
+        LayoutBlock(relX: 0.75, relY: 0.5, relWidth: 0.25, relHeight: 0.5),
+      ],
+    ),
+    const LayoutTemplate(
+      id: 'pos_7_4top_3bottom',
+      type: LayoutTemplateType.positioned,
+      name: '上四下三',
+      imageCount: 7,
+      blocks: [
+        LayoutBlock(relX: 0, relY: 0, relWidth: 0.25, relHeight: 0.5),
+        LayoutBlock(relX: 0.25, relY: 0, relWidth: 0.25, relHeight: 0.5),
+        LayoutBlock(relX: 0.5, relY: 0, relWidth: 0.25, relHeight: 0.5),
+        LayoutBlock(relX: 0.75, relY: 0, relWidth: 0.25, relHeight: 0.5),
+        LayoutBlock(relX: 0, relY: 0.5, relWidth: 1 / 3, relHeight: 0.5),
+        LayoutBlock(relX: 1 / 3, relY: 0.5, relWidth: 1 / 3, relHeight: 0.5),
+        LayoutBlock(relX: 2 / 3, relY: 0.5, relWidth: 1 / 3, relHeight: 0.5),
+      ],
+    ),
+
+    // ========== 8张图片布局 ==========
+    const LayoutTemplate(
+      id: 'grid_4x2',
+      type: LayoutTemplateType.grid,
+      name: '4x2网格',
+      imageCount: 8,
+      blocks: [
+        LayoutBlock(row: 0, col: 0), LayoutBlock(row: 0, col: 1),
+        LayoutBlock(row: 0, col: 2), LayoutBlock(row: 0, col: 3),
+        LayoutBlock(row: 1, col: 0), LayoutBlock(row: 1, col: 1),
+        LayoutBlock(row: 1, col: 2), LayoutBlock(row: 1, col: 3),
+      ],
+    ),
+    const LayoutTemplate(
+      id: 'grid_2x4',
+      type: LayoutTemplateType.grid,
+      name: '2x4网格',
+      imageCount: 8,
+      blocks: [
+        LayoutBlock(row: 0, col: 0), LayoutBlock(row: 0, col: 1),
+        LayoutBlock(row: 1, col: 0), LayoutBlock(row: 1, col: 1),
+        LayoutBlock(row: 2, col: 0), LayoutBlock(row: 2, col: 1),
+        LayoutBlock(row: 3, col: 0), LayoutBlock(row: 3, col: 1),
       ],
     ),
 

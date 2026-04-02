@@ -274,7 +274,7 @@ class _PuzzleEditorScreenState extends ConsumerState<PuzzleEditorScreen>
                 // 拼图预览画布
                 Expanded(
                   child: Container(
-                    color: const Color(0xFFF5F5F5),
+                    color: const Color(0xFFE8E8E8),
                     child: _buildNewCanvas(),
                   ),
                 ),

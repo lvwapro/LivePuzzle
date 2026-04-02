@@ -91,6 +91,19 @@ class _LayoutSelectionPanelState extends State<LayoutSelectionPanel> {
     return CanvasConfig.fromRatio(_selectedRatio);
   }
 
+  /// 切换比例后，自动用当前布局重新 apply
+  void _applyCurrentLayoutWithNewRatio() {
+    if (_selectedLayoutId == null) return;
+    final layouts = _getCurrentLayouts();
+    final template = layouts.cast<LayoutTemplate?>().firstWhere(
+          (t) => t?.id == _selectedLayoutId,
+          orElse: () => null,
+        );
+    if (template != null) {
+      widget.onLayoutSelected(_getCurrentCanvas(), template);
+    }
+  }
+
   /// 根据当前标签和图片数量获取布局模板
   List<LayoutTemplate> _getCurrentLayouts() {
     switch (_selectedTab) {
@@ -167,9 +180,12 @@ class _LayoutSelectionPanelState extends State<LayoutSelectionPanel> {
                             padding: const EdgeInsets.only(right: 12),
                             child: GestureDetector(
                               onTap: () {
+                                final newRatio = ratio['ratio']!;
+                                if (newRatio == _selectedRatio) return;
                                 setState(() {
-                                  _selectedRatio = ratio['ratio']!;
+                                  _selectedRatio = newRatio;
                                 });
+                                _applyCurrentLayoutWithNewRatio();
                               },
                               child: Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),

@@ -76,7 +76,7 @@ class _DataDrivenCanvasState extends State<DataDrivenCanvas> {
     final cw = widget.canvasConfig.width;
     final ch = widget.canvasConfig.height;
     if (cw <= 0 || ch <= 0) return;
-    final s = math.min(vw / cw, vh / ch) * 0.9;
+    final s = math.min(vw / cw, vh / ch) * 0.95;
     _scale = s;
     _translation = Offset((vw - cw * s) / 2, (vh - ch * s) / 2);
   }
@@ -412,7 +412,7 @@ class _DataDrivenCanvasState extends State<DataDrivenCanvas> {
                   child: GestureDetector(
                     onDoubleTap: _resetView,
                     behavior: HitTestBehavior.opaque,
-                    child: Container(color: const Color(0xFFF5F5F5)),
+                    child: Container(color: const Color(0xFFE8E8E8)),
                   ),
                 ),
                 Positioned.fill(
@@ -428,7 +428,7 @@ class _DataDrivenCanvasState extends State<DataDrivenCanvas> {
                         width: cw,
                         height: ch,
                         decoration: BoxDecoration(
-                          color: Colors.white,
+                          color: Colors.black,
                           boxShadow: [
                             BoxShadow(
                               color: Colors.black.withValues(alpha: 0.15),

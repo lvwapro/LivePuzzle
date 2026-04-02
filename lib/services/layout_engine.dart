@@ -29,8 +29,6 @@ class LayoutEngine {
         return _calculateColumnLayout(canvas, template, images, imageCount, spacing);
       case LayoutTemplateType.free:
         return _calculateFreeLayout(canvas, template, images, imageCount);
-      default:
-        return [];
     }
   }
 
@@ -44,7 +42,6 @@ class LayoutEngine {
   ) {
     final blocks = <ImageBlock>[];
     
-    // 计算行列数
     int maxRows = 0;
     int maxCols = 0;
     for (final block in template.blocks) {
@@ -54,25 +51,27 @@ class LayoutEngine {
     maxRows += 1;
     maxCols += 1;
 
-    // 计算单个块的宽高（相对值）
     final totalSpacingX = spacing * (maxCols - 1);
     final totalSpacingY = spacing * (maxRows - 1);
     final blockWidth = (1.0 - totalSpacingX) / maxCols;
     final blockHeight = (1.0 - totalSpacingY) / maxRows;
 
-    // 为每个图片创建块
     for (int i = 0; i < imageCount; i++) {
       final block = template.blocks[i];
       final x = block.col * (blockWidth + spacing);
       final y = block.row * (blockHeight + spacing);
+
+      // 最后一列/行用 1.0 - pos 确保精确到边
+      final w = block.col == maxCols - 1 ? 1.0 - x : blockWidth;
+      final h = block.row == maxRows - 1 ? 1.0 - y : blockHeight;
 
       blocks.add(ImageBlock(
         id: 'block_$i',
         layoutBlockId: '${template.id}_$i',
         x: x,
         y: y,
-        width: blockWidth,
-        height: blockHeight,
+        width: w,
+        height: h,
         imageData: images[i],
         zIndex: i,
       ));
@@ -90,9 +89,8 @@ class LayoutEngine {
     double spacing,
   ) {
     final blocks = <ImageBlock>[];
-    final isVertical = canvas.isVertical; // 竖版画布
+    final isVertical = canvas.isVertical;
 
-    // 找出主图（权重最大的块）
     final sortedBlocks = List<LayoutBlock>.from(template.blocks)
       ..sort((a, b) => b.weight.compareTo(a.weight));
     
@@ -100,71 +98,61 @@ class LayoutEngine {
     final secondaryBlocks = sortedBlocks.skip(1).take(imageCount - 1).toList();
 
     if (isVertical) {
-      // 竖版：上下分布（主图占上，小图占下）
       final mainHeight = mainBlock.weight - spacing;
-      final secondaryHeight = (1.0 - mainBlock.weight - spacing);
+      final secondaryY = mainHeight + spacing * 2;
+      final secondaryHeight = 1.0 - secondaryY;
       
-      // 主图
       blocks.add(ImageBlock(
         id: 'block_0',
         layoutBlockId: '${template.id}_0',
-        x: 0,
-        y: 0,
-        width: 1.0,
-        height: mainHeight,
-        imageData: images[0],
-        zIndex: 0,
+        x: 0, y: 0,
+        width: 1.0, height: mainHeight,
+        imageData: images[0], zIndex: 0,
       ));
 
-      // 小图横向排列
       final secondaryCount = secondaryBlocks.length;
       final totalSpacing = spacing * (secondaryCount - 1);
       final secondaryWidth = (1.0 - totalSpacing) / secondaryCount;
       
       for (int i = 0; i < secondaryCount && i + 1 < imageCount; i++) {
+        final x = i * (secondaryWidth + spacing);
+        final isLast = i == secondaryCount - 1;
         blocks.add(ImageBlock(
           id: 'block_${i + 1}',
           layoutBlockId: '${template.id}_${i + 1}',
-          x: i * (secondaryWidth + spacing),
-          y: mainHeight + spacing * 2,
-          width: secondaryWidth,
+          x: x, y: secondaryY,
+          width: isLast ? 1.0 - x : secondaryWidth,
           height: secondaryHeight,
-          imageData: images[i + 1],
-          zIndex: i + 1,
+          imageData: images[i + 1], zIndex: i + 1,
         ));
       }
     } else {
-      // 横版：左右分布（主图占左，小图占右）
       final mainWidth = mainBlock.weight - spacing;
-      final secondaryWidth = (1.0 - mainBlock.weight - spacing);
+      final secondaryX = mainWidth + spacing * 2;
+      final secondaryWidth = 1.0 - secondaryX;
       
-      // 主图
       blocks.add(ImageBlock(
         id: 'block_0',
         layoutBlockId: '${template.id}_0',
-        x: 0,
-        y: 0,
-        width: mainWidth,
-        height: 1.0,
-        imageData: images[0],
-        zIndex: 0,
+        x: 0, y: 0,
+        width: mainWidth, height: 1.0,
+        imageData: images[0], zIndex: 0,
       ));
 
-      // 小图纵向排列
       final secondaryCount = secondaryBlocks.length;
       final totalSpacing = spacing * (secondaryCount - 1);
       final secondaryHeight = (1.0 - totalSpacing) / secondaryCount;
       
       for (int i = 0; i < secondaryCount && i + 1 < imageCount; i++) {
+        final y = i * (secondaryHeight + spacing);
+        final isLast = i == secondaryCount - 1;
         blocks.add(ImageBlock(
           id: 'block_${i + 1}',
           layoutBlockId: '${template.id}_${i + 1}',
-          x: mainWidth + spacing * 2,
-          y: i * (secondaryHeight + spacing),
+          x: secondaryX, y: y,
           width: secondaryWidth,
-          height: secondaryHeight,
-          imageData: images[i + 1],
-          zIndex: i + 1,
+          height: isLast ? 1.0 - y : secondaryHeight,
+          imageData: images[i + 1], zIndex: i + 1,
         ));
       }
     }

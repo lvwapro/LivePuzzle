@@ -4,6 +4,7 @@ import 'package:live_puzzle/providers/puzzle_history_provider.dart';
 import 'package:live_puzzle/screens/puzzle_editor_screen.dart';
 import 'package:live_puzzle/providers/photo_provider.dart';
 import 'package:photo_manager/photo_manager.dart';
+import 'package:live_puzzle/l10n/app_localizations.dart';
 
 /// 全部历史记录页面
 class AllHistoryScreen extends ConsumerWidget {
@@ -50,9 +51,9 @@ class AllHistoryScreen extends ConsumerWidget {
                   ),
                   const SizedBox(width: 16),
                   // Title
-                  const Text(
-                    'My Studio',
-                    style: TextStyle(
+                  Text(
+                    AppLocalizations.of(context)!.myStudio,
+                    style: const TextStyle(
                       fontFamily: 'Fredoka',
                       fontSize: 24,
                       fontWeight: FontWeight.w700,
@@ -77,7 +78,7 @@ class AllHistoryScreen extends ConsumerWidget {
                           ),
                           const SizedBox(height: 16),
                           Text(
-                            '暂无历史记录',
+                            AppLocalizations.of(context)!.noHistoryTitle,
                             style: TextStyle(
                               fontSize: 16,
                               color: Colors.grey.shade600,
@@ -86,7 +87,7 @@ class AllHistoryScreen extends ConsumerWidget {
                           ),
                           const SizedBox(height: 8),
                           Text(
-                            '创建第一个拼图吧！',
+                            AppLocalizations.of(context)!.noHistorySubtitle,
                             style: TextStyle(
                               fontSize: 14,
                               color: Colors.grey.shade400,

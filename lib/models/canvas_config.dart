@@ -78,6 +78,18 @@ class CanvasConfig {
       type: type ?? this.type,
     );
   }
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is CanvasConfig &&
+          width == other.width &&
+          height == other.height &&
+          ratio == other.ratio &&
+          type == other.type;
+
+  @override
+  int get hashCode => Object.hash(width, height, ratio, type);
 }
 
 /// 画布比例类型

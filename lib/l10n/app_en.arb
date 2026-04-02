@@ -831,6 +831,15 @@
   "@privacyPolicyContent": {
     "description": "隐私政策全文"
   },
+  "styleTab": "Style",
+  "@styleTab": { "description": "样式标签" },
+  "spacing": "Spacing",
+  "@spacing": { "description": "间距" },
+  "cornerRadius": "Corners",
+  "@cornerRadius": { "description": "圆角" },
+  "backgroundColor": "Background",
+  "@backgroundColor": { "description": "背景色" },
+
   "termsOfServiceContent": "Terms of Service\n\nEffective Date: 2026-01-01\n\nWelcome to LivePuzzle. By downloading, installing, or using this application, you agree to be bound by these Terms of Service.\n\n1. Acceptance of Terms\n\nBy using LivePuzzle, you confirm that you have read, understood, and agree to these terms. If you do not agree, please do not use the App.\n\n2. Description of Service\n\nLivePuzzle is a photo editing application that allows users to:\n- Create Live Photo puzzles from multiple photos\n- Split images into grid pieces\n- Save created content to the device photo library\n\n3. User Content\n\nYou retain all rights to the photos and content you create using the App. The App does not claim ownership of any user-generated content.\n\n4. Acceptable Use\n\nYou agree to use the App only for lawful purposes and in accordance with these terms. You shall not use the App to process content that violates any applicable laws.\n\n5. Intellectual Property\n\nThe App, including its design, features, and code, is protected by intellectual property laws. You may not copy, modify, distribute, or reverse engineer the App.\n\n6. Disclaimer of Warranties\n\nThe App is provided \"as is\" without warranties of any kind. We do not guarantee that the App will be error-free or uninterrupted.\n\n7. Limitation of Liability\n\nTo the maximum extent permitted by law, we shall not be liable for any indirect, incidental, or consequential damages arising from your use of the App.\n\n8. Changes to Terms\n\nWe reserve the right to modify these terms at any time. Continued use of the App after changes constitutes acceptance of the new terms.\n\n9. Governing Law\n\nThese terms shall be governed by the laws of the jurisdiction in which the developer is located.\n\n10. Contact\n\nFor any questions regarding these terms, please contact us through the App Store listing.\n\n© 2026 LivePuzzle. All rights reserved.",
   "@termsOfServiceContent": {
     "description": "用户协议全文"

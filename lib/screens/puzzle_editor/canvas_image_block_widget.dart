@@ -25,6 +25,7 @@ class CanvasImageBlockWidget extends StatelessWidget {
   final double moveDeltaX;
   final double moveDeltaY;
   final VideoPlayerController? videoController;
+  final double cornerRadius;
 
   const CanvasImageBlockWidget({
     super.key,
@@ -36,6 +37,7 @@ class CanvasImageBlockWidget extends StatelessWidget {
     required this.moveDeltaX,
     required this.moveDeltaY,
     this.videoController,
+    this.cornerRadius = 0.0,
   });
 
   @override
@@ -125,9 +127,12 @@ class CanvasImageBlockWidget extends StatelessWidget {
       );
     }
 
+    final br = cornerRadius > 0 ? BorderRadius.circular(cornerRadius) : null;
+
     BoxDecoration? deco;
     if (isMoving && !withinBounds) {
       deco = BoxDecoration(
+        borderRadius: br,
         border: Border.all(color: const Color(0xFF4FC3F7), width: 4),
         boxShadow: [
           BoxShadow(
@@ -139,6 +144,7 @@ class CanvasImageBlockWidget extends StatelessWidget {
       );
     } else if (selected) {
       deco = BoxDecoration(
+        borderRadius: br,
         border: Border.all(color: const Color(0xFFFF85A2), width: 5),
         boxShadow: [
           BoxShadow(
@@ -150,11 +156,15 @@ class CanvasImageBlockWidget extends StatelessWidget {
       );
     }
 
+    final clipped = br != null
+        ? ClipRRect(borderRadius: br, child: imageContent)
+        : imageContent;
+
     Widget content = Container(
       width: abs.width,
       height: abs.height,
       decoration: deco,
-      child: imageContent,
+      child: clipped,
     );
 
     final posX = abs.x + (isMoving && !withinBounds ? moveDeltaX : 0);

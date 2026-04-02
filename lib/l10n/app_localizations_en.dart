@@ -573,6 +573,18 @@ class AppLocalizationsEn extends AppLocalizations {
       'Privacy Policy\n\nEffective Date: 2026-01-01\n\nLivePuzzle (\"we\", \"our\", \"the App\") respects and protects your privacy. This Privacy Policy explains how we handle information when you use our application.\n\n1. Information Collection\n\nThe App does NOT collect, upload, or share any personal data. All photo processing and puzzle creation happens entirely on your device.\n\n2. Photo Library Access\n\nThe App requires access to your photo library solely to:\n- Browse and select photos/Live Photos for puzzle creation\n- Save created puzzles to your photo album\n\nYour photos are processed locally on your device and are never transmitted to any server.\n\n3. Data Storage\n\nPuzzle history and app preferences are stored locally on your device using standard system storage. This data is not synced to any cloud service.\n\n4. Third-Party Services\n\nThe App does not integrate any third-party analytics, advertising, or tracking services.\n\n5. Children\'s Privacy\n\nThe App does not knowingly collect information from children under 13. The App is suitable for all ages as it does not collect any personal information.\n\n6. Changes to This Policy\n\nWe may update this Privacy Policy from time to time. Any changes will be reflected in the App update.\n\n7. Contact Us\n\nIf you have any questions about this Privacy Policy, please contact us through the App Store listing.\n\n© 2026 LivePuzzle. All rights reserved.';
 
   @override
+  String get styleTab => 'Style';
+
+  @override
+  String get spacing => 'Spacing';
+
+  @override
+  String get cornerRadius => 'Corners';
+
+  @override
+  String get backgroundColor => 'Background';
+
+  @override
   String get termsOfServiceContent =>
       'Terms of Service\n\nEffective Date: 2026-01-01\n\nWelcome to LivePuzzle. By downloading, installing, or using this application, you agree to be bound by these Terms of Service.\n\n1. Acceptance of Terms\n\nBy using LivePuzzle, you confirm that you have read, understood, and agree to these terms. If you do not agree, please do not use the App.\n\n2. Description of Service\n\nLivePuzzle is a photo editing application that allows users to:\n- Create Live Photo puzzles from multiple photos\n- Split images into grid pieces\n- Save created content to the device photo library\n\n3. User Content\n\nYou retain all rights to the photos and content you create using the App. The App does not claim ownership of any user-generated content.\n\n4. Acceptable Use\n\nYou agree to use the App only for lawful purposes and in accordance with these terms. You shall not use the App to process content that violates any applicable laws.\n\n5. Intellectual Property\n\nThe App, including its design, features, and code, is protected by intellectual property laws. You may not copy, modify, distribute, or reverse engineer the App.\n\n6. Disclaimer of Warranties\n\nThe App is provided \"as is\" without warranties of any kind. We do not guarantee that the App will be error-free or uninterrupted.\n\n7. Limitation of Liability\n\nTo the maximum extent permitted by law, we shall not be liable for any indirect, incidental, or consequential damages arising from your use of the App.\n\n8. Changes to Terms\n\nWe reserve the right to modify these terms at any time. Continued use of the App after changes constitutes acceptance of the new terms.\n\n9. Governing Law\n\nThese terms shall be governed by the laws of the jurisdiction in which the developer is located.\n\n10. Contact\n\nFor any questions regarding these terms, please contact us through the App Store listing.\n\n© 2026 LivePuzzle. All rights reserved.';
 }

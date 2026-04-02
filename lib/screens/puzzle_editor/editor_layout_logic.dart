@@ -99,7 +99,7 @@ extension _EditorLayoutLogic on _PuzzleEditorScreenState {
         canvas: canvas,
         template: template,
         images: images,
-        spacing: 0.0,
+        spacing: _spacing,
       );
 
       for (int i = 0;
@@ -211,5 +211,35 @@ extension _EditorLayoutLogic on _PuzzleEditorScreenState {
     }
 
     return (canvas, blocks);
+  }
+
+  /// 更新间距并重新计算布局（保留图片数据和缩放/偏移）
+  void _updateSpacing(double newSpacing) {
+    if (_currentLayout == null || _imageBlocks.isEmpty) return;
+    if (_currentLayout!.id.startsWith('long_')) return;
+
+    final images =
+        _imageBlocks.map((b) => b.imageData).whereType<Uint8List>().toList();
+    if (images.isEmpty) return;
+
+    setState(() {
+      _spacing = newSpacing;
+      final newBlocks = LayoutEngine.calculateLayout(
+        canvas: _canvasConfig,
+        template: _currentLayout!,
+        images: images,
+        spacing: newSpacing,
+      );
+
+      for (int i = 0; i < newBlocks.length && i < _imageBlocks.length; i++) {
+        newBlocks[i] = newBlocks[i].copyWith(
+          imageAspectRatio: _imageBlocks[i].imageAspectRatio,
+          scale: _imageBlocks[i].scale,
+          offsetX: _imageBlocks[i].offsetX,
+          offsetY: _imageBlocks[i].offsetY,
+        );
+      }
+      _imageBlocks = newBlocks;
+    });
   }
 }

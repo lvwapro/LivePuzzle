@@ -21,6 +21,8 @@ class DataDrivenCanvas extends StatefulWidget {
   final Map<int, VideoPlayerController?>? videoControllers;
   final int? frameEditingBlockIdx;
   final VideoPlayerController? frameEditingController;
+  final Color backgroundColor;
+  final double cornerRadius;
 
   const DataDrivenCanvas({
     super.key,
@@ -36,6 +38,8 @@ class DataDrivenCanvas extends StatefulWidget {
     this.videoControllers,
     this.frameEditingBlockIdx,
     this.frameEditingController,
+    this.backgroundColor = Colors.black,
+    this.cornerRadius = 0.0,
   });
 
   @override
@@ -428,7 +432,7 @@ class _DataDrivenCanvasState extends State<DataDrivenCanvas> {
                         width: cw,
                         height: ch,
                         decoration: BoxDecoration(
-                          color: Colors.black,
+                          color: widget.backgroundColor,
                           boxShadow: [
                             BoxShadow(
                               color: Colors.black.withValues(alpha: 0.15),
@@ -468,6 +472,7 @@ class _DataDrivenCanvasState extends State<DataDrivenCanvas> {
                                 moveDeltaX: _moveDeltaX,
                                 moveDeltaY: _moveDeltaY,
                                 videoController: vc,
+                                cornerRadius: widget.cornerRadius,
                               );
                             }),
                             // 共享边拖动条（实时预览）

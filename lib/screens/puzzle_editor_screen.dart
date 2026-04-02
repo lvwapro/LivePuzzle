@@ -57,6 +57,11 @@ class _PuzzleEditorScreenState extends ConsumerState<PuzzleEditorScreen>
   List<ImageBlock> _imageBlocks = []; // 图片块列表（使用相对坐标0-1）
   String? _selectedBlockId; // 选中的图片块ID
 
+  // 🔥 样式参数
+  double _spacing = 0.0;
+  double _cornerRadius = 0.0;
+  Color _backgroundColor = Colors.black;
+
   // 🔥 视频播放器相关
   final Map<int, VideoPlayerController?> _videoControllers = {};
   final Map<int, String?> _videoPaths = {}; // 存储视频文件路径
@@ -157,6 +162,8 @@ class _PuzzleEditorScreenState extends ConsumerState<PuzzleEditorScreen>
       frameEditingBlockIdx: isFrameEditing ? _selectedCellIndex : null,
       frameEditingController:
           isFrameEditing ? _videoControllers[_selectedCellIndex] : null,
+      backgroundColor: _backgroundColor,
+      cornerRadius: _cornerRadius,
       onBlockTap: (blockId) {
         if (_isPlayingLivePuzzle) return;
         final blockIndex = _imageBlocks.indexWhere((b) => b.id == blockId);
@@ -290,6 +297,16 @@ class _PuzzleEditorScreenState extends ConsumerState<PuzzleEditorScreen>
                         selectedRatio: _canvasConfig.ratio,
                         onLayoutSelected: (canvas, template) {
                           applyLayout(canvas, template);
+                        },
+                        spacing: _spacing,
+                        cornerRadius: _cornerRadius,
+                        backgroundColor: _backgroundColor,
+                        onSpacingChanged: (v) => _updateSpacing(v),
+                        onCornerRadiusChanged: (v) {
+                          setState(() => _cornerRadius = v);
+                        },
+                        onBackgroundColorChanged: (v) {
+                          setState(() => _backgroundColor = v);
                         },
                       ),
                     ),

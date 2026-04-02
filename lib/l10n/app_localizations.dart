@@ -1154,6 +1154,30 @@ abstract class AppLocalizations {
   /// **'Privacy Policy\n\nEffective Date: 2026-01-01\n\nLivePuzzle (\"we\", \"our\", \"the App\") respects and protects your privacy. This Privacy Policy explains how we handle information when you use our application.\n\n1. Information Collection\n\nThe App does NOT collect, upload, or share any personal data. All photo processing and puzzle creation happens entirely on your device.\n\n2. Photo Library Access\n\nThe App requires access to your photo library solely to:\n- Browse and select photos/Live Photos for puzzle creation\n- Save created puzzles to your photo album\n\nYour photos are processed locally on your device and are never transmitted to any server.\n\n3. Data Storage\n\nPuzzle history and app preferences are stored locally on your device using standard system storage. This data is not synced to any cloud service.\n\n4. Third-Party Services\n\nThe App does not integrate any third-party analytics, advertising, or tracking services.\n\n5. Children\'s Privacy\n\nThe App does not knowingly collect information from children under 13. The App is suitable for all ages as it does not collect any personal information.\n\n6. Changes to This Policy\n\nWe may update this Privacy Policy from time to time. Any changes will be reflected in the App update.\n\n7. Contact Us\n\nIf you have any questions about this Privacy Policy, please contact us through the App Store listing.\n\n© 2026 LivePuzzle. All rights reserved.'**
   String get privacyPolicyContent;
 
+  /// 样式标签
+  ///
+  /// In en, this message translates to:
+  /// **'Style'**
+  String get styleTab;
+
+  /// 间距
+  ///
+  /// In en, this message translates to:
+  /// **'Spacing'**
+  String get spacing;
+
+  /// 圆角
+  ///
+  /// In en, this message translates to:
+  /// **'Corners'**
+  String get cornerRadius;
+
+  /// 背景色
+  ///
+  /// In en, this message translates to:
+  /// **'Background'**
+  String get backgroundColor;
+
   /// 用户协议全文
   ///
   /// In en, this message translates to:

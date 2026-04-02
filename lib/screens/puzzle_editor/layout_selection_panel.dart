@@ -3,19 +3,27 @@ import '../../models/canvas_config.dart';
 import '../../models/layout_template.dart';
 import '../../l10n/app_localizations.dart';
 import 'layout_template_painter.dart';
+import 'style_selection_panel.dart';
 
 /// 布局类型标签
 enum LayoutTabType {
   puzzle,    // 拼图
   longImage, // 长图拼接
+  style,     // 样式
 }
 
 /// 布局选择面板 - 新版本（数据驱动）
 class LayoutSelectionPanel extends StatefulWidget {
   final int photoCount;
-  final String? selectedLayoutId; // 当前选中的布局ID
-  final String? selectedRatio; // 当前画布比例
+  final String? selectedLayoutId;
+  final String? selectedRatio;
   final Function(CanvasConfig canvas, LayoutTemplate template) onLayoutSelected;
+  final double spacing;
+  final double cornerRadius;
+  final Color backgroundColor;
+  final ValueChanged<double>? onSpacingChanged;
+  final ValueChanged<double>? onCornerRadiusChanged;
+  final ValueChanged<Color>? onBackgroundColorChanged;
 
   const LayoutSelectionPanel({
     super.key,
@@ -23,6 +31,12 @@ class LayoutSelectionPanel extends StatefulWidget {
     this.selectedLayoutId,
     this.selectedRatio,
     required this.onLayoutSelected,
+    this.spacing = 0.0,
+    this.cornerRadius = 0.0,
+    this.backgroundColor = Colors.black,
+    this.onSpacingChanged,
+    this.onCornerRadiusChanged,
+    this.onBackgroundColorChanged,
   });
 
   @override
@@ -111,6 +125,8 @@ class _LayoutSelectionPanelState extends State<LayoutSelectionPanel> {
         return LayoutTemplate.getLayoutsForImageCount(widget.photoCount);
       case LayoutTabType.longImage:
         return LayoutTemplate.getLongImageLayouts(widget.photoCount);
+      case LayoutTabType.style:
+        return [];
     }
   }
 
@@ -140,8 +156,10 @@ class _LayoutSelectionPanelState extends State<LayoutSelectionPanel> {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 _buildTab(l10n.puzzleTab, LayoutTabType.puzzle),
-                const SizedBox(width: 40),
+                const SizedBox(width: 30),
                 _buildTab(l10n.longImageTab, LayoutTabType.longImage),
+                const SizedBox(width: 30),
+                _buildTab(l10n.styleTab, LayoutTabType.style),
               ],
             ),
           ),
@@ -150,7 +168,21 @@ class _LayoutSelectionPanelState extends State<LayoutSelectionPanel> {
 
           // 内容区域
           Expanded(
-            child: SingleChildScrollView(
+            child: _selectedTab == LayoutTabType.style
+                ? Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: StyleSelectionPanel(
+                      spacing: widget.spacing,
+                      cornerRadius: widget.cornerRadius,
+                      backgroundColor: widget.backgroundColor,
+                      onSpacingChanged: (v) => widget.onSpacingChanged?.call(v),
+                      onCornerRadiusChanged: (v) =>
+                          widget.onCornerRadiusChanged?.call(v),
+                      onBackgroundColorChanged: (v) =>
+                          widget.onBackgroundColorChanged?.call(v),
+                    ),
+                  )
+                : SingleChildScrollView(
               padding: const EdgeInsets.all(12),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,

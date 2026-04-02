@@ -12,8 +12,8 @@ class CanvasConfig {
     required this.type,
   });
 
-  /// 从比例字符串创建画布配置（基准宽度720px，确保常见比例均为整数尺寸）
-  factory CanvasConfig.fromRatio(String ratio, {double baseWidth = 720.0}) {
+  /// 从比例字符串创建画布配置（基准宽度750px）
+  factory CanvasConfig.fromRatio(String ratio, {double baseWidth = 750.0}) {
     final parts = ratio.split(':');
     if (parts.length != 2) {
       throw ArgumentError('Invalid ratio format: $ratio');

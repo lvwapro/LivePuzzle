@@ -77,8 +77,8 @@ class CanvasImageBlockWidget extends StatelessWidget {
         coverW = abs.width;
         coverH = abs.width / contentAR;
       }
-      coverW *= block.scale;
-      coverH *= block.scale;
+      coverW *= block.scale * 1.002;
+      coverH *= block.scale * 1.002;
 
       final left = (abs.width - coverW) / 2 + previewOx;
       final top = (abs.height - coverH) / 2 + previewOy;

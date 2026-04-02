@@ -393,11 +393,6 @@ class _DataDrivenCanvasState extends State<DataDrivenCanvas> {
       ..sort((a, b) => a.zIndex.compareTo(b.zIndex));
     final cw = widget.canvasConfig.width;
     final ch = widget.canvasConfig.height;
-    debugPrint('📐 Canvas: ${cw.toStringAsFixed(1)}×${ch.toStringAsFixed(1)} ratio=${widget.canvasConfig.ratio}');
-    for (final b in sortedBlocks) {
-      final a = b.toAbsolute(cw, ch);
-      debugPrint('  📦 ${b.id}: rel(${b.x.toStringAsFixed(3)},${b.y.toStringAsFixed(3)},${b.width.toStringAsFixed(3)},${b.height.toStringAsFixed(3)}) → abs(${a.x.toStringAsFixed(1)},${a.y.toStringAsFixed(1)},${a.width.toStringAsFixed(1)},${a.height.toStringAsFixed(1)}) ar=${b.imageAspectRatio.toStringAsFixed(3)}');
-    }
 
     return LayoutBuilder(
       builder: (context, constraints) {

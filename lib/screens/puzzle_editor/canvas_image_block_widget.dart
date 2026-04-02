@@ -66,22 +66,26 @@ class CanvasImageBlockWidget extends StatelessWidget {
       contentAR = abs.imageAspectRatio;
     }
 
+    // 延伸 1px 消除相邻块反锯齿间隙（Stack 的 Clip.hardEdge 裁剪溢出）
+    final renderW = abs.width + 1.0;
+    final renderH = abs.height + 1.0;
+
     Widget imageContent;
     if ((useVideo || abs.imageData != null) && contentAR > 0) {
-      final frameAR = abs.width / abs.height;
+      final frameAR = renderW / renderH;
       double coverW, coverH;
       if (contentAR > frameAR) {
-        coverH = abs.height;
-        coverW = abs.height * contentAR;
+        coverH = renderH;
+        coverW = renderH * contentAR;
       } else {
-        coverW = abs.width;
-        coverH = abs.width / contentAR;
+        coverW = renderW;
+        coverH = renderW / contentAR;
       }
       coverW *= block.scale * 1.002;
       coverH *= block.scale * 1.002;
 
-      final left = (abs.width - coverW) / 2 + previewOx;
-      final top = (abs.height - coverH) / 2 + previewOy;
+      final left = (renderW - coverW) / 2 + previewOx;
+      final top = (renderH - coverH) / 2 + previewOy;
 
       final Widget child = useVideo
           ? VideoPlayer(videoController!)
@@ -93,8 +97,8 @@ class CanvasImageBlockWidget extends StatelessWidget {
             );
 
       imageContent = SizedBox(
-        width: abs.width,
-        height: abs.height,
+        width: renderW,
+        height: renderH,
         child: ClipRect(
           child: Stack(
             clipBehavior: Clip.none,
@@ -112,14 +116,14 @@ class CanvasImageBlockWidget extends StatelessWidget {
       );
     } else {
       imageContent = SizedBox(
-        width: abs.width,
-        height: abs.height,
+        width: renderW,
+        height: renderH,
         child: abs.imageData != null
             ? Image.memory(
                 abs.imageData!,
                 fit: BoxFit.cover,
-                width: abs.width,
-                height: abs.height,
+                width: renderW,
+                height: renderH,
                 gaplessPlayback: true,
                 filterQuality: FilterQuality.high,
               )
@@ -137,8 +141,8 @@ class CanvasImageBlockWidget extends StatelessWidget {
     Widget content;
     if (isMoving && !withinBounds) {
       content = SizedBox(
-        width: abs.width,
-        height: abs.height,
+        width: renderW,
+        height: renderH,
         child: Stack(
           clipBehavior: Clip.none,
           children: [
@@ -162,8 +166,8 @@ class CanvasImageBlockWidget extends StatelessWidget {
       );
     } else if (selected) {
       content = SizedBox(
-        width: abs.width,
-        height: abs.height,
+        width: renderW,
+        height: renderH,
         child: Stack(
           clipBehavior: Clip.none,
           children: [
@@ -187,8 +191,8 @@ class CanvasImageBlockWidget extends StatelessWidget {
       );
     } else {
       content = SizedBox(
-        width: abs.width,
-        height: abs.height,
+        width: renderW,
+        height: renderH,
         child: clipped,
       );
     }

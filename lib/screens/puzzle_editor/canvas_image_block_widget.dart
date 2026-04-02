@@ -129,43 +129,69 @@ class CanvasImageBlockWidget extends StatelessWidget {
 
     final br = cornerRadius > 0 ? BorderRadius.circular(cornerRadius) : null;
 
-    BoxDecoration? deco;
-    if (isMoving && !withinBounds) {
-      deco = BoxDecoration(
-        borderRadius: br,
-        border: Border.all(color: const Color(0xFF4FC3F7), width: 4),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFF4FC3F7).withValues(alpha: 0.5),
-            blurRadius: 16,
-            spreadRadius: 4,
-          ),
-        ],
-      );
-    } else if (selected) {
-      deco = BoxDecoration(
-        borderRadius: br,
-        border: Border.all(color: const Color(0xFFFF85A2), width: 5),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFFFF85A2).withValues(alpha: 0.4),
-            blurRadius: 14,
-            spreadRadius: 3,
-          ),
-        ],
-      );
-    }
-
     final clipped = br != null
         ? ClipRRect(borderRadius: br, child: imageContent)
         : imageContent;
 
-    Widget content = Container(
-      width: abs.width,
-      height: abs.height,
-      decoration: deco,
-      child: clipped,
-    );
+    // 选中/拖动边框用 Stack 叠加，避免 Container decoration border 内缩子视图
+    Widget content;
+    if (isMoving && !withinBounds) {
+      content = SizedBox(
+        width: abs.width,
+        height: abs.height,
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            Positioned.fill(child: clipped),
+            Positioned.fill(
+              child: Container(
+                decoration: BoxDecoration(
+                  borderRadius: br,
+                  border: Border.all(color: const Color(0xFF4FC3F7), width: 4),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFF4FC3F7).withValues(alpha: 0.5),
+                      blurRadius: 16, spreadRadius: 4,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    } else if (selected) {
+      content = SizedBox(
+        width: abs.width,
+        height: abs.height,
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            Positioned.fill(child: clipped),
+            Positioned.fill(
+              child: Container(
+                decoration: BoxDecoration(
+                  borderRadius: br,
+                  border: Border.all(color: const Color(0xFFFF85A2), width: 5),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFFFF85A2).withValues(alpha: 0.4),
+                      blurRadius: 14, spreadRadius: 3,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    } else {
+      content = SizedBox(
+        width: abs.width,
+        height: abs.height,
+        child: clipped,
+      );
+    }
 
     final posX = abs.x + (isMoving && !withinBounds ? moveDeltaX : 0);
     final posY = abs.y + (isMoving && !withinBounds ? moveDeltaY : 0);

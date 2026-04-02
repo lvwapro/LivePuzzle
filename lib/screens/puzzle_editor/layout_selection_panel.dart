@@ -52,11 +52,14 @@ class _LayoutSelectionPanelState extends State<LayoutSelectionPanel> {
   void initState() {
     super.initState();
     _selectedLayoutId = widget.selectedLayoutId;
-    // 🔥 同步画布比例
+    // 同步画布比例（仅预设比例可同步，自定义比例保持默认 1:1）
     if (widget.selectedRatio != null) {
-      _selectedRatio = widget.selectedRatio!;
+      final validRatios = _ratios.map((r) => r['ratio']).toSet();
+      if (validRatios.contains(widget.selectedRatio)) {
+        _selectedRatio = widget.selectedRatio!;
+      }
     }
-    // 🔥 根据初始布局ID自动切换到对应标签
+    // 根据初始布局ID自动切换到对应标签
     if (_selectedLayoutId != null) {
       if (_selectedLayoutId!.startsWith('long_')) {
         _selectedTab = LayoutTabType.longImage;
@@ -82,11 +85,14 @@ class _LayoutSelectionPanelState extends State<LayoutSelectionPanel> {
         });
       }
     }
-    // 🔥 同步画布比例更新
+    // 同步画布比例更新（仅预设比例）
     if (widget.selectedRatio != null && widget.selectedRatio != oldWidget.selectedRatio) {
-      setState(() {
-        _selectedRatio = widget.selectedRatio!;
-      });
+      final validRatios = _ratios.map((r) => r['ratio']).toSet();
+      if (validRatios.contains(widget.selectedRatio)) {
+        setState(() {
+          _selectedRatio = widget.selectedRatio!;
+        });
+      }
     }
   }
 
@@ -107,13 +113,21 @@ class _LayoutSelectionPanelState extends State<LayoutSelectionPanel> {
 
   /// 切换比例后，自动用当前布局重新 apply
   void _applyCurrentLayoutWithNewRatio() {
-    if (_selectedLayoutId == null) return;
-    final layouts = _getCurrentLayouts();
-    final template = layouts.cast<LayoutTemplate?>().firstWhere(
-          (t) => t?.id == _selectedLayoutId,
-          orElse: () => null,
-        );
+    final puzzleLayouts =
+        LayoutTemplate.getLayoutsForImageCount(widget.photoCount);
+
+    LayoutTemplate? template;
+    if (_selectedLayoutId != null) {
+      template = puzzleLayouts.cast<LayoutTemplate?>().firstWhere(
+            (t) => t?.id == _selectedLayoutId,
+            orElse: () => null,
+          );
+    }
+    // 当前布局不在拼图列表中（如来自长图标签），回退到第一个拼图布局
+    template ??= puzzleLayouts.isNotEmpty ? puzzleLayouts.first : null;
+
     if (template != null) {
+      setState(() => _selectedLayoutId = template!.id);
       widget.onLayoutSelected(_getCurrentCanvas(), template);
     }
   }
@@ -331,6 +345,13 @@ class _LayoutSelectionPanelState extends State<LayoutSelectionPanel> {
       onTap: () {
         setState(() {
           _selectedTab = type;
+          // 切换到拼图标签时，若当前比例不在预设列表中则重置为 1:1
+          if (type == LayoutTabType.puzzle) {
+            final validRatios = _ratios.map((r) => r['ratio']).toSet();
+            if (!validRatios.contains(_selectedRatio)) {
+              _selectedRatio = '1:1';
+            }
+          }
         });
       },
       child: Column(

@@ -51,6 +51,9 @@ class _DataDrivenCanvasState extends State<DataDrivenCanvas> {
   double _scale = 1.0;
   bool _needsRecenter = true;
 
+  double _prevVW = 0;
+  double _prevVH = 0;
+
   final Map<int, Offset> _pointers = {};
   Offset? _lastMidpoint;
   double? _lastPointerDistance;
@@ -396,11 +399,14 @@ class _DataDrivenCanvasState extends State<DataDrivenCanvas> {
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        if (_needsRecenter &&
-            constraints.maxWidth > 0 &&
-            constraints.maxHeight > 0) {
-          _computeCenter(constraints.maxWidth, constraints.maxHeight);
+        final vw = constraints.maxWidth;
+        final vh = constraints.maxHeight;
+        if (vw > 0 && vh > 0 &&
+            (_needsRecenter || vw != _prevVW || vh != _prevVH)) {
+          _computeCenter(vw, vh);
           _needsRecenter = false;
+          _prevVW = vw;
+          _prevVH = vh;
         }
 
         return Listener(

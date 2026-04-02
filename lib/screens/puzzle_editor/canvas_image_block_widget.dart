@@ -137,7 +137,6 @@ class CanvasImageBlockWidget extends StatelessWidget {
         ? ClipRRect(borderRadius: br, child: imageContent)
         : imageContent;
 
-    // 选中/拖动边框用 Stack 叠加，避免 Container decoration border 内缩子视图
     Widget content;
     if (isMoving && !withinBounds) {
       content = SizedBox(
@@ -148,17 +147,8 @@ class CanvasImageBlockWidget extends StatelessWidget {
           children: [
             Positioned.fill(child: clipped),
             Positioned.fill(
-              child: Container(
-                decoration: BoxDecoration(
-                  borderRadius: br,
-                  border: Border.all(color: const Color(0xFF4FC3F7), width: 4),
-                  boxShadow: [
-                    BoxShadow(
-                      color: const Color(0xFF4FC3F7).withValues(alpha: 0.5),
-                      blurRadius: 16, spreadRadius: 4,
-                    ),
-                  ],
-                ),
+              child: CustomPaint(
+                painter: _SwapHintPainter(),
               ),
             ),
           ],
@@ -173,17 +163,8 @@ class CanvasImageBlockWidget extends StatelessWidget {
           children: [
             Positioned.fill(child: clipped),
             Positioned.fill(
-              child: Container(
-                decoration: BoxDecoration(
-                  borderRadius: br,
-                  border: Border.all(color: const Color(0xFFFF85A2), width: 5),
-                  boxShadow: [
-                    BoxShadow(
-                      color: const Color(0xFFFF85A2).withValues(alpha: 0.4),
-                      blurRadius: 14, spreadRadius: 3,
-                    ),
-                  ],
-                ),
+              child: CustomPaint(
+                painter: _CornerBracketPainter(cornerRadius: cornerRadius),
               ),
             ),
           ],
@@ -209,4 +190,69 @@ class CanvasImageBlockWidget extends StatelessWidget {
       ),
     );
   }
+}
+
+/// 选中状态的四角角标指示器（不遮挡图片内容）
+class _CornerBracketPainter extends CustomPainter {
+  final double cornerRadius;
+  _CornerBracketPainter({this.cornerRadius = 0.0});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = const Color(0xFFFF85A2)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 3.0
+      ..strokeCap = StrokeCap.round;
+
+    final armLen = size.shortestSide * 0.15;
+    final r = cornerRadius;
+
+    // 左上角
+    canvas.drawLine(Offset(0, armLen), Offset(0, r), paint);
+    if (r > 0) {
+      canvas.drawArc(Rect.fromLTWH(0, 0, r * 2, r * 2), 3.14, 0.5 * 3.14, false, paint);
+    }
+    canvas.drawLine(Offset(r, 0), Offset(armLen, 0), paint);
+
+    // 右上角
+    canvas.drawLine(Offset(size.width - armLen, 0), Offset(size.width - r, 0), paint);
+    if (r > 0) {
+      canvas.drawArc(Rect.fromLTWH(size.width - r * 2, 0, r * 2, r * 2), -0.5 * 3.14, 0.5 * 3.14, false, paint);
+    }
+    canvas.drawLine(Offset(size.width, r), Offset(size.width, armLen), paint);
+
+    // 左下角
+    canvas.drawLine(Offset(0, size.height - armLen), Offset(0, size.height - r), paint);
+    if (r > 0) {
+      canvas.drawArc(Rect.fromLTWH(0, size.height - r * 2, r * 2, r * 2), 0.5 * 3.14, 0.5 * 3.14, false, paint);
+    }
+    canvas.drawLine(Offset(r, size.height), Offset(armLen, size.height), paint);
+
+    // 右下角
+    canvas.drawLine(Offset(size.width - armLen, size.height), Offset(size.width - r, size.height), paint);
+    if (r > 0) {
+      canvas.drawArc(Rect.fromLTWH(size.width - r * 2, size.height - r * 2, r * 2, r * 2), 0, 0.5 * 3.14, false, paint);
+    }
+    canvas.drawLine(Offset(size.width, size.height - r), Offset(size.width, size.height - armLen), paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant _CornerBracketPainter old) =>
+      cornerRadius != old.cornerRadius;
+}
+
+/// 拖动交换提示（半透明蓝色边框）
+class _SwapHintPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = const Color(0xFF4FC3F7)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 4.0;
+    canvas.drawRect(Offset.zero & size, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

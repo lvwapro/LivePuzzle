@@ -77,10 +77,18 @@ extension _EditorExportLogic on _PuzzleEditorScreenState {
 
       final isLongImageLayout = _currentLayout?.id == 'long_horizontal' ||
           _currentLayout?.id == 'long_vertical';
+      final bgColor = _backgroundColor;
+      final bgColorInt = ((bgColor.a * 255).round() << 24) |
+          ((bgColor.r * 255).round() << 16) |
+          ((bgColor.g * 255).round() << 8) |
+          (bgColor.b * 255).round();
+
       final layoutConfig = {
         'canvasWidth': _canvasConfig.width,
         'canvasHeight': _canvasConfig.height,
         'isLongImage': isLongImageLayout,
+        'backgroundColor': bgColorInt,
+        'cornerRadius': _cornerRadius,
         'blocks': _imageBlocks
             .map((block) => {
                   'x': block.x,
@@ -150,6 +158,9 @@ extension _EditorExportLogic on _PuzzleEditorScreenState {
             lastRatio: _canvasConfig.ratio,
             lastCoverFrameTimeMs: coverMs,
             lastBlockTransforms: blockTransforms,
+            lastSpacing: _spacing,
+            lastCornerRadius: _cornerRadius,
+            lastBackgroundColor: bgColorInt,
           );
           // 不等待历史记录写入，立即跳转
           ref.read(puzzleHistoryProvider.notifier).addHistory(history);
@@ -202,12 +213,14 @@ extension _EditorExportLogic on _PuzzleEditorScreenState {
     final double canvasW = ratio >= 1.0 ? maxSide : maxSide * ratio;
     final double canvasH = ratio >= 1.0 ? maxSide / ratio : maxSide;
 
+    final radiusPx = _cornerRadius / _canvasConfig.width * canvasW;
+
     final recorder = ui.PictureRecorder();
     final canvas =
         Canvas(recorder, Rect.fromLTWH(0, 0, canvasW, canvasH));
     canvas.drawRect(
       Rect.fromLTWH(0, 0, canvasW, canvasH),
-      Paint()..color = const Color(0xFF000000),
+      Paint()..color = _backgroundColor,
     );
 
     for (int i = 0; i < _imageBlocks.length; i++) {
@@ -230,7 +243,6 @@ extension _EditorExportLogic on _PuzzleEditorScreenState {
         final dstW = dstRect.width;
         final dstH = dstRect.height;
 
-        // 与原生 compositeHighResStill 一致：BoxFit.cover + userScale + pan
         final userScale = block.scale.clamp(0.1, double.infinity);
         final baseScale =
             math.max(dstW / srcW, dstH / srcH) * 1.002 * userScale;
@@ -242,7 +254,12 @@ extension _EditorExportLogic on _PuzzleEditorScreenState {
         final drawY = dstRect.top + (dstH - scaledH) / 2.0 + panY;
 
         canvas.save();
-        canvas.clipRect(dstRect);
+        if (radiusPx > 0) {
+          canvas.clipRRect(RRect.fromRectAndRadius(
+              dstRect, Radius.circular(radiusPx)));
+        } else {
+          canvas.clipRect(dstRect);
+        }
         canvas.drawImageRect(
           image,
           Rect.fromLTWH(0, 0, srcW, srcH),

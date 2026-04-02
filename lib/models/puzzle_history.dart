@@ -17,6 +17,12 @@ class PuzzleHistory {
   final List<int>? lastCoverFrameTimeMs;
   /// 每个区块的变换状态 [{layoutBlockId, offsetX, offsetY, scale}, ...]
   final List<Map<String, dynamic>>? lastBlockTransforms;
+  /// 样式：间距（相对值）
+  final double? lastSpacing;
+  /// 样式：圆角（画布像素）
+  final double? lastCornerRadius;
+  /// 样式：背景色 ARGB 整数
+  final int? lastBackgroundColor;
 
   const PuzzleHistory({
     required this.id,
@@ -28,6 +34,9 @@ class PuzzleHistory {
     this.lastRatio,
     this.lastCoverFrameTimeMs,
     this.lastBlockTransforms,
+    this.lastSpacing,
+    this.lastCornerRadius,
+    this.lastBackgroundColor,
   });
 
   /// 从JSON创建
@@ -54,6 +63,9 @@ class PuzzleHistory {
       lastRatio: json['lastRatio'] as String?,
       lastCoverFrameTimeMs: coverMs,
       lastBlockTransforms: blockTransforms,
+      lastSpacing: (json['lastSpacing'] as num?)?.toDouble(),
+      lastCornerRadius: (json['lastCornerRadius'] as num?)?.toDouble(),
+      lastBackgroundColor: json['lastBackgroundColor'] as int?,
     );
   }
 
@@ -69,6 +81,9 @@ class PuzzleHistory {
       if (lastRatio != null) 'lastRatio': lastRatio,
       if (lastCoverFrameTimeMs != null) 'lastCoverFrameTimeMs': lastCoverFrameTimeMs,
       if (lastBlockTransforms != null) 'lastBlockTransforms': lastBlockTransforms,
+      if (lastSpacing != null) 'lastSpacing': lastSpacing,
+      if (lastCornerRadius != null) 'lastCornerRadius': lastCornerRadius,
+      if (lastBackgroundColor != null) 'lastBackgroundColor': lastBackgroundColor,
     };
   }
 

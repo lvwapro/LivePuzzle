@@ -85,6 +85,19 @@ extension _EditorSessionLoad on _PuzzleEditorScreenState {
         _canvasConfig = canvas;
         _currentLayout = template;
 
+        // 恢复样式参数
+        if (useRestore) {
+          _spacing = restore.lastSpacing ?? 0.0;
+          _cornerRadius = restore.lastCornerRadius ?? 0.0;
+          if (restore.lastBackgroundColor != null) {
+            final c = restore.lastBackgroundColor!;
+            _backgroundColor = Color.fromARGB(
+              (c >> 24) & 0xFF, (c >> 16) & 0xFF,
+              (c >> 8) & 0xFF, c & 0xFF,
+            );
+          }
+        }
+
         for (int i = 0; i < selectedAssets.length; i++) {
           if (!_coverFrames.containsKey(i)) {
             _coverFrames[i] = null;

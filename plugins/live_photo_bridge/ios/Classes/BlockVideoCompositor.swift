@@ -61,10 +61,6 @@ final class BlockVideoCompositor: NSObject, AVVideoCompositing {
         CVPixelBufferLockBaseAddress(outBuf, [])
         defer { CVPixelBufferUnlockBaseAddress(outBuf, []) }
 
-        if let addr = CVPixelBufferGetBaseAddress(outBuf) {
-            memset(addr, 0, CVPixelBufferGetBytesPerRow(outBuf) * Int(renderSize.height))
-        }
-
         guard let ctx = CGContext(
             data: CVPixelBufferGetBaseAddress(outBuf),
             width: Int(renderSize.width),
@@ -77,6 +73,10 @@ final class BlockVideoCompositor: NSObject, AVVideoCompositing {
             request.finish(with: CompositorError.compositionFailed)
             return
         }
+
+        // 填充背景色
+        ctx.setFillColor(setup.config.backgroundColor.cgColor)
+        ctx.fill(CGRect(origin: .zero, size: renderSize))
 
         for info in setup.trackInfos {
             guard info.blockIndex < setup.config.blocks.count else { continue }
@@ -138,9 +138,19 @@ final class BlockVideoCompositor: NSObject, AVVideoCompositing {
         let srcH = max(1.0, min(imgH - srcY, dstH / coverScale))
 
         let cgY = renderSize.height - dstY - dstH
+        let clipRect = CGRect(x: dstX, y: cgY, width: dstW, height: dstH)
+        let radiusPx = CGFloat(setup.config.cornerRadius) /
+            CGFloat(setup.config.canvasWidth) * renderSize.width
 
         ctx.saveGState()
-        ctx.clip(to: CGRect(x: dstX, y: cgY, width: dstW, height: dstH))
+        if radiusPx > 0 {
+            let path = CGPath(roundedRect: clipRect, cornerWidth: radiusPx,
+                              cornerHeight: radiusPx, transform: nil)
+            ctx.addPath(path)
+            ctx.clip()
+        } else {
+            ctx.clip(to: clipRect)
+        }
 
         if let cgImg = ciContext.createCGImage(ciImg, from: CGRect(x: srcX, y: srcY, width: srcW, height: srcH)) {
             ctx.draw(cgImg, in: CGRect(x: dstX, y: cgY, width: srcW * coverScale, height: srcH * coverScale))

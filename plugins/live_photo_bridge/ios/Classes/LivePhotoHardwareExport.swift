@@ -41,12 +41,27 @@ extension LivePhotoBridgePlugin {
         }
 
         let isLongImage = layoutConfig["isLongImage"] as? Bool ?? false
+
+        let bgColor: UIColor
+        if let bgInt = layoutConfig["backgroundColor"] as? Int {
+          let a = CGFloat((bgInt >> 24) & 0xFF) / 255.0
+          let r = CGFloat((bgInt >> 16) & 0xFF) / 255.0
+          let g = CGFloat((bgInt >> 8) & 0xFF) / 255.0
+          let b = CGFloat(bgInt & 0xFF) / 255.0
+          bgColor = UIColor(red: r, green: g, blue: b, alpha: a)
+        } else {
+          bgColor = .black
+        }
+        let cornerRadius = layoutConfig["cornerRadius"] as? Double ?? 0.0
+
         let config = HardwareVideoCompositor.CompositorConfig(
           canvasWidth: canvasWidth,
           canvasHeight: canvasHeight,
           blocks: blocks,
           coverTimes: coverTimes,
-          isLongImage: isLongImage
+          isLongImage: isLongImage,
+          backgroundColor: bgColor,
+          cornerRadius: cornerRadius
         )
 
         let allStatic = assetIds.allSatisfy { !self.assetHasPairedVideo(assetId: $0) }
@@ -360,8 +375,10 @@ extension LivePhotoBridgePlugin {
     defer { UIGraphicsEndImageContext() }
     guard let ctx = UIGraphicsGetCurrentContext() else { return nil }
 
-    UIColor.black.setFill()
+    config.backgroundColor.setFill()
     UIRectFill(CGRect(origin: .zero, size: coverSize))
+
+    let radiusPx = CGFloat(config.cornerRadius) / canvasW * coverW
 
     for (i, image) in sourceImages.enumerated() {
       guard i < config.blocks.count else { break }
@@ -376,7 +393,6 @@ extension LivePhotoBridgePlugin {
       let imgW = image.size.width
       let imgH = image.size.height
       guard imgW > 0, imgH > 0 else { continue }
-      // BoxFit.cover：略放大缩放比(1.002)，避免浮点误差导致 scaled 略小于 dst 而出现左侧/上侧黑边
       let userScale = max(CGFloat(block.scale), 0.1)
       let scale = max(dstW / imgW, dstH / imgH) * 1.002 * userScale
       let scaledW = imgW * scale
@@ -387,7 +403,13 @@ extension LivePhotoBridgePlugin {
       let drawY = dstY + (dstH - scaledH) / 2.0 + panY
 
       ctx.saveGState()
-      ctx.clip(to: dstRect)
+      if radiusPx > 0 {
+        let roundedPath = UIBezierPath(roundedRect: dstRect, cornerRadius: radiusPx)
+        ctx.addPath(roundedPath.cgPath)
+        ctx.clip()
+      } else {
+        ctx.clip(to: dstRect)
+      }
       image.draw(in: CGRect(x: drawX, y: drawY, width: scaledW, height: scaledH))
       ctx.restoreGState()
     }

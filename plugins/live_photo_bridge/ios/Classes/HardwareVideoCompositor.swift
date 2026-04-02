@@ -24,6 +24,8 @@ class HardwareVideoCompositor {
         let blocks: [LayoutBlock]
         let coverTimes: [Int]   // 毫秒
         let isLongImage: Bool   // 长图拼接模式（纵向/横向长图）
+        let backgroundColor: UIColor
+        let cornerRadius: Double  // 画布坐标像素
     }
 
     private struct SourceTrackInfo {

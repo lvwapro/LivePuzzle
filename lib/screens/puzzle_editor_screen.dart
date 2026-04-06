@@ -57,6 +57,9 @@ class _PuzzleEditorScreenState extends ConsumerState<PuzzleEditorScreen>
   List<ImageBlock> _imageBlocks = []; // 图片块列表（使用相对坐标0-1）
   String? _selectedBlockId; // 选中的图片块ID
 
+  // 防止 applyLayout 异步竞争覆写最新状态
+  int _layoutVersion = 0;
+
   // 🔥 样式参数
   double _spacing = 0.0;
   double _cornerRadius = 0.0;
@@ -286,9 +289,9 @@ class _PuzzleEditorScreenState extends ConsumerState<PuzzleEditorScreen>
                   ),
                 ),
 
-                // 工具栏/布局面板（加载中/帧选择器弹出时隐藏）
-                if (!_isInitialLoading && !_isPlayingLivePuzzle && !hasVideoReady)
-                  if (_editorState == EditorState.global)
+                // 底部面板区域：始终保留 280px 高度，保持画布视口一致
+                if (!_isInitialLoading && !_isPlayingLivePuzzle)
+                  if (_editorState == EditorState.global && !hasVideoReady)
                     SizedBox(
                       height: 280,
                       child: LayoutSelectionPanel(
@@ -297,6 +300,9 @@ class _PuzzleEditorScreenState extends ConsumerState<PuzzleEditorScreen>
                         selectedRatio: _canvasConfig.ratio,
                         onLayoutSelected: (canvas, template) {
                           applyLayout(canvas, template);
+                        },
+                        onRatioChanged: (newRatio) {
+                          _syncRatioChange(newRatio);
                         },
                         spacing: _spacing,
                         cornerRadius: _cornerRadius,
@@ -309,7 +315,9 @@ class _PuzzleEditorScreenState extends ConsumerState<PuzzleEditorScreen>
                           setState(() => _backgroundColor = v);
                         },
                       ),
-                    ),
+                    )
+                  else
+                    const SizedBox(height: 280),
               ],
             ),
 

@@ -83,14 +83,41 @@ class CanvasImageBlockWidget extends StatelessWidget {
       final left = (abs.width - coverW) / 2 + previewOx;
       final top = (abs.height - coverH) / 2 + previewOy;
 
-      final Widget child = useVideo
-          ? VideoPlayer(videoController!)
-          : Image.memory(
-              abs.imageData!,
-              fit: BoxFit.fill,
-              gaplessPlayback: true,
-              filterQuality: FilterQuality.high,
-            );
+      // 视频渲染：缩略图打底 + FittedBox.cover 确保视频填满，
+      // 避免 VideoPlayer 默认 letterbox 模式在帧编辑时露出黑边
+      final Widget child;
+      if (useVideo) {
+        final vs = videoController!.value.size;
+        child = Stack(
+          fit: StackFit.expand,
+          children: [
+            if (abs.imageData != null)
+              Image.memory(
+                abs.imageData!,
+                fit: BoxFit.fill,
+                gaplessPlayback: true,
+                filterQuality: FilterQuality.high,
+              ),
+            if (vs.width > 0 && vs.height > 0)
+              FittedBox(
+                fit: BoxFit.cover,
+                clipBehavior: Clip.hardEdge,
+                child: SizedBox(
+                  width: vs.width,
+                  height: vs.height,
+                  child: VideoPlayer(videoController!),
+                ),
+              ),
+          ],
+        );
+      } else {
+        child = Image.memory(
+          abs.imageData!,
+          fit: BoxFit.fill,
+          gaplessPlayback: true,
+          filterQuality: FilterQuality.high,
+        );
+      }
 
       imageContent = SizedBox(
         width: abs.width,
@@ -129,43 +156,50 @@ class CanvasImageBlockWidget extends StatelessWidget {
 
     final br = cornerRadius > 0 ? BorderRadius.circular(cornerRadius) : null;
 
-    BoxDecoration? deco;
-    if (isMoving && !withinBounds) {
-      deco = BoxDecoration(
-        borderRadius: br,
-        border: Border.all(color: const Color(0xFF4FC3F7), width: 4),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFF4FC3F7).withValues(alpha: 0.5),
-            blurRadius: 16,
-            spreadRadius: 4,
-          ),
-        ],
-      );
-    } else if (selected) {
-      deco = BoxDecoration(
-        borderRadius: br,
-        border: Border.all(color: const Color(0xFFFF85A2), width: 5),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFFFF85A2).withValues(alpha: 0.4),
-            blurRadius: 14,
-            spreadRadius: 3,
-          ),
-        ],
-      );
-    }
-
     final clipped = br != null
         ? ClipRRect(borderRadius: br, child: imageContent)
         : imageContent;
 
-    Widget content = Container(
-      width: abs.width,
-      height: abs.height,
-      decoration: deco,
-      child: clipped,
-    );
+    // 边框用 Stack 叠加，不影响图片尺寸
+    Widget content;
+    BoxDecoration? borderDeco;
+    if (isMoving && !withinBounds) {
+      borderDeco = BoxDecoration(
+        borderRadius: br,
+        border: Border.all(color: const Color(0xFF4FC3F7), width: 3),
+      );
+    } else if (selected) {
+      borderDeco = BoxDecoration(
+        borderRadius: br,
+        border: Border.all(
+          color: const Color(0xFFFF85A2).withValues(alpha: 0.7),
+          width: 2,
+        ),
+      );
+    }
+
+    if (borderDeco != null) {
+      content = SizedBox(
+        width: abs.width,
+        height: abs.height,
+        child: Stack(
+          children: [
+            Positioned.fill(child: clipped),
+            Positioned.fill(
+              child: IgnorePointer(
+                child: Container(decoration: borderDeco),
+              ),
+            ),
+          ],
+        ),
+      );
+    } else {
+      content = SizedBox(
+        width: abs.width,
+        height: abs.height,
+        child: clipped,
+      );
+    }
 
     final posX = abs.x + (isMoving && !withinBounds ? moveDeltaX : 0);
     final posY = abs.y + (isMoving && !withinBounds ? moveDeltaY : 0);

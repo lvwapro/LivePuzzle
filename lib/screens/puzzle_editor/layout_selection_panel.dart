@@ -18,6 +18,7 @@ class LayoutSelectionPanel extends StatefulWidget {
   final String? selectedLayoutId;
   final String? selectedRatio;
   final Function(CanvasConfig canvas, LayoutTemplate template) onLayoutSelected;
+  final ValueChanged<String>? onRatioChanged;
   final double spacing;
   final double cornerRadius;
   final Color backgroundColor;
@@ -31,6 +32,7 @@ class LayoutSelectionPanel extends StatefulWidget {
     this.selectedLayoutId,
     this.selectedRatio,
     required this.onLayoutSelected,
+    this.onRatioChanged,
     this.spacing = 0.0,
     this.cornerRadius = 0.0,
     this.backgroundColor = Colors.black,
@@ -217,7 +219,12 @@ class _LayoutSelectionPanelState extends State<LayoutSelectionPanel> {
                                 setState(() {
                                   _selectedRatio = newRatio;
                                 });
-                                _applyCurrentLayoutWithNewRatio();
+                                // 优先使用直接回调通知编辑器
+                                if (widget.onRatioChanged != null) {
+                                  widget.onRatioChanged!(newRatio);
+                                } else {
+                                  _applyCurrentLayoutWithNewRatio();
+                                }
                               },
                               child: Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),

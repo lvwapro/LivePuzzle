@@ -57,13 +57,15 @@ extension _EditorLayoutLogic on _PuzzleEditorScreenState {
 
     if (images.isEmpty) return;
 
+    final version = ++_layoutVersion;
+
     final isLongImage =
         template.id == 'long_horizontal' || template.id == 'long_vertical';
 
     if (isLongImage) {
       final (longCanvas, longBlocks) =
           await calculateLongImageCanvasAndBlocks(template, images);
-      if (!mounted) return;
+      if (!mounted || _layoutVersion != version) return;
       setState(() {
         _canvasConfig = longCanvas;
         _currentLayout = template;
@@ -73,11 +75,6 @@ extension _EditorLayoutLogic on _PuzzleEditorScreenState {
       });
       return;
     }
-
-    setState(() {
-      _canvasConfig = canvas;
-      _currentLayout = template;
-    });
 
     final aspectRatios = <double>[];
     for (final imgData in images) {
@@ -90,6 +87,9 @@ extension _EditorLayoutLogic on _PuzzleEditorScreenState {
         aspectRatios.add(1.0);
       }
     }
+
+    // 异步解码期间如果有新的比例/布局变更，放弃本次过期更新
+    if (!mounted || _layoutVersion != version) return;
 
     setState(() {
       _canvasConfig = canvas;
@@ -213,6 +213,77 @@ extension _EditorLayoutLogic on _PuzzleEditorScreenState {
     return (canvas, blocks);
   }
 
+  /// 同步切换画布比例（保留所有图片数据、缩放和偏移）
+  void _syncRatioChange(String newRatio) {
+    if (_currentLayout == null || _imageBlocks.isEmpty) {
+      // ignore: avoid_print
+      print('⚠️ _syncRatioChange: layout=$_currentLayout blocks=${_imageBlocks.length}');
+      return;
+    }
+    final newCanvas = CanvasConfig.fromRatio(newRatio);
+    final images =
+        _imageBlocks.map((b) => b.imageData).whereType<Uint8List>().toList();
+    if (images.isEmpty) {
+      // ignore: avoid_print
+      print('⚠️ _syncRatioChange: no images in blocks');
+      return;
+    }
+
+    ++_layoutVersion;
+    setState(() {
+      final oldBlocks = _imageBlocks;
+      _canvasConfig = newCanvas;
+      _imageBlocks = LayoutEngine.calculateLayout(
+        canvas: newCanvas,
+        template: _currentLayout!,
+        images: images,
+        spacing: _spacing,
+      );
+      final cw = newCanvas.width;
+      final ch = newCanvas.height;
+      for (int i = 0; i < _imageBlocks.length && i < oldBlocks.length; i++) {
+        final oldScale = oldBlocks[i].scale;
+        var oldOx = oldBlocks[i].offsetX;
+        var oldOy = oldBlocks[i].offsetY;
+
+        // 用新区块尺寸重新校验偏移量范围
+        final abs = _imageBlocks[i].toAbsolute(cw, ch);
+        final imgAR = oldBlocks[i].imageAspectRatio;
+        if (imgAR > 0 && abs.width > 0 && abs.height > 0) {
+          final frameAR = abs.width / abs.height;
+          double overflowX = 0, overflowY = 0;
+          if (imgAR > frameAR) {
+            overflowX = (abs.height * imgAR - abs.width) / 2;
+          } else {
+            overflowY = (abs.width / imgAR - abs.height) / 2;
+          }
+          final maxOx =
+              overflowX * oldScale + abs.width * (oldScale - 1) / 2;
+          final maxOy =
+              overflowY * oldScale + abs.height * (oldScale - 1) / 2;
+          oldOx = oldOx.clamp(-maxOx, maxOx);
+          oldOy = oldOy.clamp(-maxOy, maxOy);
+        }
+
+        _imageBlocks[i] = _imageBlocks[i].copyWith(
+          imageAspectRatio: oldBlocks[i].imageAspectRatio,
+          scale: oldScale,
+          offsetX: oldOx,
+          offsetY: oldOy,
+        );
+      }
+      // ignore: avoid_print
+      print('✅ _syncRatioChange: ratio=$newRatio canvas=${newCanvas.width}×${newCanvas.height} '
+          'blocks=${_imageBlocks.length} spacing=$_spacing');
+      for (int i = 0; i < _imageBlocks.length; i++) {
+        final b = _imageBlocks[i];
+        // ignore: avoid_print
+        print('  block_$i: rel(${b.x.toStringAsFixed(3)},${b.y.toStringAsFixed(3)},'
+            '${b.width.toStringAsFixed(3)},${b.height.toStringAsFixed(3)}) hasImg=${b.imageData != null}');
+      }
+    });
+  }
+
   /// 更新间距并重新计算布局（保留图片数据和缩放/偏移）
   void _updateSpacing(double newSpacing) {
     if (_currentLayout == null || _imageBlocks.isEmpty) return;
@@ -231,12 +302,37 @@ extension _EditorLayoutLogic on _PuzzleEditorScreenState {
         spacing: newSpacing,
       );
 
+      final cw = _canvasConfig.width;
+      final ch = _canvasConfig.height;
       for (int i = 0; i < newBlocks.length && i < _imageBlocks.length; i++) {
+        final oldScale = _imageBlocks[i].scale;
+        var oldOx = _imageBlocks[i].offsetX;
+        var oldOy = _imageBlocks[i].offsetY;
+        final imgAR = _imageBlocks[i].imageAspectRatio;
+
+        // 间距变化后区块尺寸改变，重新校验偏移量
+        final abs = newBlocks[i].toAbsolute(cw, ch);
+        if (imgAR > 0 && abs.width > 0 && abs.height > 0) {
+          final frameAR = abs.width / abs.height;
+          double overflowX = 0, overflowY = 0;
+          if (imgAR > frameAR) {
+            overflowX = (abs.height * imgAR - abs.width) / 2;
+          } else {
+            overflowY = (abs.width / imgAR - abs.height) / 2;
+          }
+          final maxOx =
+              overflowX * oldScale + abs.width * (oldScale - 1) / 2;
+          final maxOy =
+              overflowY * oldScale + abs.height * (oldScale - 1) / 2;
+          oldOx = oldOx.clamp(-maxOx, maxOx);
+          oldOy = oldOy.clamp(-maxOy, maxOy);
+        }
+
         newBlocks[i] = newBlocks[i].copyWith(
-          imageAspectRatio: _imageBlocks[i].imageAspectRatio,
-          scale: _imageBlocks[i].scale,
-          offsetX: _imageBlocks[i].offsetX,
-          offsetY: _imageBlocks[i].offsetY,
+          imageAspectRatio: imgAR,
+          scale: oldScale,
+          offsetX: oldOx,
+          offsetY: oldOy,
         );
       }
       _imageBlocks = newBlocks;

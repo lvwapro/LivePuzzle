@@ -64,6 +64,7 @@ class _DataDrivenCanvasState extends State<DataDrivenCanvas> {
 
   // 边缘拖动（调整占比）
   bool _isDraggingEdge = false;
+  String _lastRenderKey = '';
   SharedEdge? _draggingEdge;
   double _edgeDragDelta = 0; // 相对坐标偏移
 
@@ -83,6 +84,47 @@ class _DataDrivenCanvasState extends State<DataDrivenCanvas> {
     final s = math.min(vw / cw, vh / ch) * 0.95;
     _scale = s;
     _translation = Offset((vw - cw * s) / 2, (vh - ch * s) / 2);
+  }
+
+  /// 安全网：确保 blocks 覆盖满画布（纵向和横向）
+  void _ensureBlocksCoverage(List<ImageBlock> blocks) {
+    if (blocks.isEmpty) return;
+
+    // 纵向覆盖
+    double maxBottom = 0;
+    int bottomIdx = 0;
+    for (int i = 0; i < blocks.length; i++) {
+      final bottom = blocks[i].y + blocks[i].height;
+      if (bottom > maxBottom) {
+        maxBottom = bottom;
+        bottomIdx = i;
+      }
+    }
+    if (maxBottom < 0.999) {
+      // ignore: avoid_print
+      print('⚠️ 安全网修正: 纵向覆盖 ${maxBottom.toStringAsFixed(4)} < 1.0，扩展 block_$bottomIdx');
+      blocks[bottomIdx] = blocks[bottomIdx].copyWith(
+        height: 1.0 - blocks[bottomIdx].y,
+      );
+    }
+
+    // 横向覆盖
+    double maxRight = 0;
+    int rightIdx = 0;
+    for (int i = 0; i < blocks.length; i++) {
+      final right = blocks[i].x + blocks[i].width;
+      if (right > maxRight) {
+        maxRight = right;
+        rightIdx = i;
+      }
+    }
+    if (maxRight < 0.999) {
+      // ignore: avoid_print
+      print('⚠️ 安全网修正: 横向覆盖 ${maxRight.toStringAsFixed(4)} < 1.0，扩展 block_$rightIdx');
+      blocks[rightIdx] = blocks[rightIdx].copyWith(
+        width: 1.0 - blocks[rightIdx].x,
+      );
+    }
   }
 
   void _resetView() {
@@ -394,6 +436,22 @@ class _DataDrivenCanvasState extends State<DataDrivenCanvas> {
     final cw = widget.canvasConfig.width;
     final ch = widget.canvasConfig.height;
 
+    // 安全网：确保 blocks 覆盖满画布（修正未知来源的覆盖缺口）
+    _ensureBlocksCoverage(sortedBlocks);
+
+    // 控制台日志（只在变化时打印）
+    final renderKey = '${cw}_${ch}_${sortedBlocks.length}_${sortedBlocks.map((b) => '${b.y.toStringAsFixed(4)}_${b.height.toStringAsFixed(4)}_${b.x.toStringAsFixed(4)}_${b.width.toStringAsFixed(4)}').join('|')}';
+    if (renderKey != _lastRenderKey) {
+      _lastRenderKey = renderKey;
+      // ignore: avoid_print
+      print('🎨 RENDER: ${cw.toStringAsFixed(0)}×${ch.toStringAsFixed(0)} '
+          'ratio=${widget.canvasConfig.ratio} blk=${sortedBlocks.length}');
+      for (final b in sortedBlocks) {
+        // ignore: avoid_print
+        print('  📦 ${b.id}: (${b.x.toStringAsFixed(3)},${b.y.toStringAsFixed(3)},${b.width.toStringAsFixed(3)},${b.height.toStringAsFixed(3)}) img=${b.imageData != null}');
+      }
+    }
+
     return LayoutBuilder(
       builder: (context, constraints) {
         if (_needsRecenter &&
@@ -491,6 +549,7 @@ class _DataDrivenCanvasState extends State<DataDrivenCanvas> {
                     ),
                   ),
                 ),
+                // debug overlay 已移除
               ],
             ),
           ),

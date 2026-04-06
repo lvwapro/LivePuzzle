@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>编辑器布局架构图</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #1a1a2e; color: #eee; padding: 24px; }
+  h1 { text-align: center; margin-bottom: 8px; color: #FF85A2; font-size: 22px; }
+  .subtitle { text-align: center; color: #aaa; font-size: 13px; margin-bottom: 24px; }
+  .container { display: flex; gap: 24px; justify-content: center; flex-wrap: wrap; }
+  .phone { width: 260px; background: #16213e; border-radius: 20px; padding: 12px; box-shadow: 0 4px 24px rgba(0,0,0,0.4); }
+  .phone-title { text-align: center; font-weight: 700; font-size: 14px; margin-bottom: 8px; padding: 4px 12px; border-radius: 8px; }
+  .phone-title.ok { background: #2d6a4f; color: #95d5b2; }
+  .phone-title.bad { background: #6a2d2d; color: #f5a3a3; }
+  .phone-title.fix { background: #2d4a6a; color: #a3d5f5; }
+  .screen { border-radius: 12px; overflow: hidden; border: 2px solid #334; }
+  .widget { position: relative; font-size: 10px; display: flex; flex-direction: column; }
+  .header { background: #fff; color: #FF4D7D; font-weight: 700; text-align: center; padding: 6px 0; font-size: 11px; border-bottom: 1px solid #ffe0e8; }
+  .safe-area { background: #fff; height: 18px; font-size: 8px; color: #ccc; text-align: center; line-height: 18px; }
+  .canvas-viewport { background: #E8E8E8; position: relative; display: flex; align-items: center; justify-content: center; }
+  .canvas-box { background: #000; position: relative; overflow: hidden; border-radius: 2px; box-shadow: 0 2px 8px rgba(0,0,0,0.3); }
+  .block { position: absolute; border: 1px solid rgba(255,255,255,0.2); display: flex; align-items: center; justify-content: center; font-size: 9px; color: rgba(255,255,255,0.8); font-weight: 600; }
+  .block-0 { background: linear-gradient(135deg, #e76f51, #f4a261); }
+  .block-1 { background: linear-gradient(135deg, #264653, #2a9d8f); }
+  .panel { background: #fff; border-top: 1px solid #eee; text-align: center; color: #666; font-size: 10px; display: flex; align-items: center; justify-content: center; font-weight: 600; }
+  .panel-label { background: #FF85A2; color: #fff; padding: 2px 8px; border-radius: 10px; font-size: 9px; }
+  .sheet { background: #fff; border-radius: 10px 10px 0 0; text-align: center; color: #666; font-size: 10px; display: flex; align-items: center; justify-content: center; box-shadow: 0 -2px 8px rgba(0,0,0,0.1); position: relative; z-index: 2; }
+  .sheet-handle { width: 28px; height: 3px; background: #ddd; border-radius: 2px; margin: 0 auto 4px; }
+  .black-area { background: #000; display: flex; align-items: center; justify-content: center; color: #f55; font-size: 9px; font-weight: 700; border: 2px dashed #f55; }
+  .spacer { background: #fff; display: flex; align-items: center; justify-content: center; color: #ccc; font-size: 9px; border: 1px dashed #ddd; }
+  .arrow { text-align: center; color: #FF85A2; font-size: 20px; margin-top: 40px; }
+  .note { margin-top: 24px; background: #16213e; border-radius: 12px; padding: 16px; max-width: 820px; margin-left: auto; margin-right: auto; border: 1px solid #334; }
+  .note h3 { color: #FF85A2; font-size: 14px; margin-bottom: 8px; }
+  .note p { color: #ccc; font-size: 12px; line-height: 1.6; }
+  .note code { background: #0f3460; padding: 1px 5px; border-radius: 3px; color: #e2b352; font-size: 11px; }
+  .label { position: absolute; right: 2px; top: 1px; font-size: 7px; color: rgba(255,255,255,0.5); }
+  .dim-label { font-size: 8px; color: #888; text-align: center; margin-top: 2px; }
+  .highlight { color: #f55; font-weight: 700; }
+  .legend { display: flex; gap: 12px; justify-content: center; margin: 16px 0; flex-wrap: wrap; }
+  .legend-item { display: flex; align-items: center; gap: 4px; font-size: 11px; color: #aaa; }
+  .legend-box { width: 14px; height: 14px; border-radius: 3px; border: 1px solid #555; }
+</style>
+</head>
+<body>
+<h1>PuzzleEditor 编辑区渲染架构</h1>
+<p class="subtitle">以 4:3 横版 + 2张图为例 | iPhone 14 (390×844 逻辑像素)</p>
+
+<div class="legend">
+  <div class="legend-item"><div class="legend-box" style="background:#E8E8E8"></div> 视口背景 (0xFFE8E8E8)</div>
+  <div class="legend-item"><div class="legend-box" style="background:#000"></div> 画布背景 (Colors.black)</div>
+  <div class="legend-item"><div class="legend-box" style="background:linear-gradient(135deg,#e76f51,#f4a261)"></div> 图片块 Block_0</div>
+  <div class="legend-item"><div class="legend-box" style="background:linear-gradient(135deg,#264653,#2a9d8f)"></div> 图片块 Block_1</div>
+  <div class="legend-item"><div class="legend-box" style="background:#fff;border-color:#FF85A2"></div> UI面板</div>
+</div>
+
+<div class="container">
+  <!-- State 1: Global (未选中) -->
+  <div>
+    <div class="phone">
+      <div class="phone-title ok">状态1: 全局模式 (未选中)</div>
+      <div class="screen">
+        <div class="safe-area">SafeArea ~59px</div>
+        <div class="header">← LivePuzzle ▶ 完成</div>
+        <!-- Canvas viewport: ~469px mapped to ~180px -->
+        <div class="canvas-viewport" style="height:180px;">
+          <span class="label">Expanded 视口 ~469px</span>
+          <!-- Canvas 4:3 = 750x562.5, scale≈0.494, visual≈370x278 → mapped -->
+          <div class="canvas-box" style="width:160px;height:120px;">
+            <span class="label" style="color:rgba(255,255,255,0.3)">750×562</span>
+            <div class="block block-0" style="left:0;top:0;width:100%;height:50%;">Block_0</div>
+            <div class="block block-1" style="left:0;top:50%;width:100%;height:50%;">Block_1</div>
+          </div>
+        </div>
+        <!-- Layout Panel: 280px mapped to ~108px -->
+        <div class="panel" style="height:108px;flex-direction:column;gap:4px;">
+          <span class="panel-label">LayoutSelectionPanel</span>
+          <span style="font-size:8px;color:#aaa;">280px | 比例 + 布局模板</span>
+        </div>
+      </div>
+    </div>
+    <div class="dim-label">✅ 画布完全覆盖，无黑色区域</div>
+  </div>
+
+  <div class="arrow">→</div>
+
+  <!-- State 2: Single mode (选中图片，BUG!) -->
+  <div>
+    <div class="phone">
+      <div class="phone-title bad">状态2: 选中图片 (当前 BUG)</div>
+      <div class="screen">
+        <div class="safe-area">SafeArea ~59px</div>
+        <div class="header">← LivePuzzle ▶ 完成</div>
+        <!-- Canvas viewport grows! Now ~749px mapped to ~290px -->
+        <div class="canvas-viewport" style="height:220px;">
+          <span class="label">Expanded 视口 ~749px ⬆️+280!</span>
+          <!-- Canvas stays at OLD position, not recentered! -->
+          <div style="position:absolute;top:30px;left:50%;transform:translateX(-50%);">
+            <div class="canvas-box" style="width:160px;height:120px;">
+              <span class="label" style="color:rgba(255,255,255,0.3)">位置不变!</span>
+              <div class="block block-0" style="left:0;top:0;width:100%;height:50%;">Block_0</div>
+              <div class="block block-1" style="left:0;top:50%;width:100%;height:50%;">Block_1</div>
+            </div>
+          </div>
+          <!-- Black area below canvas -->
+          <div style="position:absolute;bottom:0;left:0;right:0;height:60px;display:flex;align-items:center;justify-content:center;">
+            <div class="black-area" style="width:90%;height:90%;border-radius:4px;">
+              ⚠️ 多余空间(黑色?)
+            </div>
+          </div>
+        </div>
+        <!-- DraggableScrollableSheet overlaying bottom -->
+        <div class="sheet" style="height:72px;flex-direction:column;gap:2px;">
+          <div class="sheet-handle"></div>
+          <span style="font-size:9px;color:#FF4D7D;font-weight:600;">帧选择器</span>
+          <span style="font-size:7px;color:#aaa;">DraggableScrollableSheet 22%</span>
+        </div>
+      </div>
+    </div>
+    <div class="dim-label highlight">❌ LayoutPanel 消失 → 视口+280px → 底部出现多余空间</div>
+  </div>
+
+  <div class="arrow">→</div>
+
+  <!-- State 3: Fix -->
+  <div>
+    <div class="phone">
+      <div class="phone-title fix">状态3: 修复方案</div>
+      <div class="screen">
+        <div class="safe-area">SafeArea ~59px</div>
+        <div class="header">← LivePuzzle ▶ 完成</div>
+        <!-- Canvas viewport stays same! ~469px -->
+        <div class="canvas-viewport" style="height:180px;">
+          <span class="label">Expanded 视口 ~469px (不变!)</span>
+          <div class="canvas-box" style="width:160px;height:120px;">
+            <span class="label" style="color:rgba(255,255,255,0.3)">750×562</span>
+            <div class="block block-0" style="left:0;top:0;width:100%;height:50%;">Block_0</div>
+            <div class="block block-1" style="left:0;top:50%;width:100%;height:50%;">Block_1</div>
+          </div>
+        </div>
+        <!-- Spacer replaces LayoutPanel -->
+        <div class="spacer" style="height:36px;">
+          占位 280px (不可见)
+        </div>
+        <!-- Sheet overlays spacer -->
+        <div class="sheet" style="height:72px;flex-direction:column;gap:2px;">
+          <div class="sheet-handle"></div>
+          <span style="font-size:9px;color:#FF4D7D;font-weight:600;">帧选择器</span>
+          <span style="font-size:7px;color:#aaa;">覆盖在占位区上方</span>
+        </div>
+      </div>
+    </div>
+    <div class="dim-label" style="color:#95d5b2;">✅ 视口高度不变 → 画布位置不变 → 无多余空间</div>
+  </div>
+</div>
+
+<div class="note">
+  <h3>问题根因分析</h3>
+  <p>
+    <strong>Widget 树层级：</strong>
+    <code>Scaffold</code> → <code>Stack</code> → <code>Column</code>[Header, <code>Expanded</code>(Canvas), Panel?]
+    + <code>DraggableScrollableSheet</code>(overlay)
+  </p>
+  <p style="margin-top:8px;">
+    <strong>触发条件：</strong>选中图片 → <code>EditorState.single</code> → LayoutSelectionPanel(280px) 从 Column 中移除
+    → <code>Expanded</code> 画布区域 <span style="color:#f55">高度增加 ~280px</span>
+    → 但 <code>DataDrivenCanvas</code> 的 <code>_needsRecenter</code> = false（因为 canvasConfig 和 imageBlocks 未变）
+    → 画布保持在旧位置和旧缩放 → 底部出现多余空间（显示画布背景色=黑色）
+  </p>
+  <p style="margin-top:8px;">
+    <strong>修复方案：</strong>在 Single 状态下，用一个 <span style="color:#a3d5f5">280px 的空白占位</span>
+    替代 LayoutSelectionPanel，保持 Column 布局一致。<code>Expanded</code> 画布视口高度不变，
+    画布位置不需要重新计算，从根本上消除多余空间。<code>DraggableScrollableSheet</code> 仍作为 Stack overlay 显示在占位区上方。
+  </p>
+</div>
+
+</body>
+</html>
